@@ -87,6 +87,7 @@ jobs:
           curl -L -o /tmp/arm-toolchain.tar.xz \
             https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
           sudo tar -xJf /tmp/arm-toolchain.tar.xz -C /opt
+          sudo ln -s /opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf /opt/arm-gnu-toolchain
           echo "/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
 
       - name: Cross-compile (dynamic, -Os)
