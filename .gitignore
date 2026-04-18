@@ -1,0 +1,34 @@
+# Build
+build*/
+out/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+compile_commands.json
+_deps/
+
+# Compiled objects
+*.o
+*.obj
+*.so
+*.dylib
+*.a
+*.lib
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.clangd/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db

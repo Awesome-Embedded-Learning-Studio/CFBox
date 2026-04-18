@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Native build + test ───────────────────────────────────────
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++-13
+
+      - name: Configure (Debug)
+        run: cmake -B build -DCMAKE_CXX_COMPILER=g++-13
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Integration tests
+        run: bash tests/integration/run_all.sh
+
+  # ── Release build with size report ───────────────────────────
+  release-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++-13
+
+      - name: Configure (Release, -Os)
+        run: >
+          cmake -B build-release
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=g++-13
+          -DCFBOX_OPTIMIZE_FOR_SIZE=ON
+
+      - name: Build
+        run: cmake --build build-release
+
+      - name: Measure binary size
+        run: |
+          echo "=== -Os Release (dynamic) ==="
+          size build-release/cfbox
+          strip -o /tmp/cfbox-stripped build-release/cfbox
+          echo "Stripped size: $(wc -c < /tmp/cfbox-stripped) bytes"
+
+  # ── Cross-compilation (aarch64 + armhf) ──────────────────────
+  cross-compile:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: aarch64
+            toolchain: Toolchain-aarch64.cmake
+            compiler_pkg: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            strip: aarch64-linux-gnu-strip
+          - target: armhf
+            toolchain: Toolchain-armhf.cmake
+            compiler_pkg: ""
+            strip: arm-none-linux-gnueabihf-strip
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross-compiler (aarch64)
+        if: matrix.target == 'aarch64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ${{ matrix.compiler_pkg }}
+
+      - name: Install cross-compiler (armhf)
+        if: matrix.target == 'armhf'
+        run: |
+          curl -L -o /tmp/arm-toolchain.tar.xz \
+            https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
+          sudo tar -xJf /tmp/arm-toolchain.tar.xz -C /opt
+          echo "/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
+
+      - name: Cross-compile (dynamic, -Os)
+        run: |
+          cmake -B build-${{ matrix.target }} \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCFBOX_OPTIMIZE_FOR_SIZE=ON
+          cmake --build build-${{ matrix.target }}
+
+      - name: Verify target binary
+        run: |
+          file build-${{ matrix.target }}/cfbox
+          size build-${{ matrix.target }}/cfbox
+          ${{ matrix.strip }} -o /tmp/cfbox-${{ matrix.target }}-stripped build-${{ matrix.target }}/cfbox
+          echo "Stripped size: $(wc -c < /tmp/cfbox-${{ matrix.target }}-stripped) bytes"
+
+      - name: Cross-compile (static)
+        run: |
+          cmake -B build-${{ matrix.target }}-static \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCFBOX_OPTIMIZE_FOR_SIZE=ON \
+            -DCFBOX_STATIC_LINK=ON
+          cmake --build build-${{ matrix.target }}-static
+
+      - name: Verify static binary
+        run: |
+          file build-${{ matrix.target }}-static/cfbox
+          size build-${{ matrix.target }}-static/cfbox
