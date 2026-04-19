@@ -19,6 +19,7 @@ extern auto ls_main(int argc, char* argv[]) -> int;
 extern auto grep_main(int argc, char* argv[]) -> int;
 extern auto find_main(int argc, char* argv[]) -> int;
 extern auto sed_main(int argc, char* argv[]) -> int;
+extern auto init_main(int argc, char* argv[]) -> int;
 
 // registry — one line per applet, easy to generate/extend
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -38,4 +39,5 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
     {"grep",   grep_main,   "search patterns in text"},
     {"find",   find_main,   "search for files in directory hierarchy"},
     {"sed",    sed_main,    "stream editor for filtering and transforming text"},
+    {"init",   init_main,   "system init for boot testing (PID 1)"},
 });

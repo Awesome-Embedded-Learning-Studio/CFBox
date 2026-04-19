@@ -25,10 +25,17 @@ jobs:
         run: cmake --build build
 
       - name: Unit tests
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --verbose
 
       - name: Integration tests
         run: bash tests/integration/run_all.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-test-results
+          path: build/Testing/
 
   # ── Release build with size report ───────────────────────────
   release-size:
@@ -57,6 +64,12 @@ jobs:
           size build-release/cfbox
           strip -o /tmp/cfbox-stripped build-release/cfbox
           echo "Stripped size: $(wc -c < /tmp/cfbox-stripped) bytes"
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cfbox-x86_64-release
+          path: /tmp/cfbox-stripped
 
   # ── Cross-compilation (aarch64 + armhf) ──────────────────────
   cross-compile:
@@ -118,3 +131,138 @@ jobs:
         run: |
           file build-${{ matrix.target }}-static/cfbox
           size build-${{ matrix.target }}-static/cfbox
+
+      - name: Upload static binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cfbox-${{ matrix.target }}-static
+          path: build-${{ matrix.target }}-static/cfbox
+
+  # ── QEMU user-mode emulation tests ──────────────────────────────
+  qemu-user-test:
+    needs: cross-compile
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [aarch64, armhf]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU user-mode
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+
+      - name: Download static binary
+        uses: actions/download-artifact@v4
+        with:
+          name: cfbox-${{ matrix.target }}-static
+          path: build-${{ matrix.target }}-static
+
+      - name: Make binary executable
+        run: chmod +x build-${{ matrix.target }}-static/cfbox
+
+      - name: Smoke test
+        run: |
+          if [[ "${{ matrix.target }}" == "armhf" ]]; then
+            QEMU_BIN=qemu-arm-static
+          else
+            QEMU_BIN=qemu-${{ matrix.target }}-static
+          fi
+          $QEMU_BIN build-${{ matrix.target }}-static/cfbox --list
+          $QEMU_BIN build-${{ matrix.target }}-static/cfbox echo "Hello from ${{ matrix.target }}"
+
+      - name: Integration tests under QEMU
+        run: |
+          if [[ "${{ matrix.target }}" == "armhf" ]]; then
+            QEMU_BIN=qemu-arm-static
+          else
+            QEMU_BIN=qemu-${{ matrix.target }}-static
+          fi
+          # Create a wrapper script so test scripts work without modification
+          wrapper="$(mktemp /tmp/cfbox-qemu-wrapper-XXXXXX.sh)"
+          echo "#!/bin/sh" > "$wrapper"
+          echo "exec $QEMU_BIN $(pwd)/build-${{ matrix.target }}-static/cfbox \"\$@\"" >> "$wrapper"
+          chmod +x "$wrapper"
+          CFBOX="$wrapper" bash tests/integration/run_all.sh
+
+  # ── QEMU system-mode emulation tests (main / release-* only) ─────
+  qemu-system-test:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-')
+    needs: cross-compile
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [aarch64, armhf]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-arm cpio flex bison libelf-dev
+
+      - name: Install armhf cross-compiler
+        if: matrix.target == 'armhf'
+        run: |
+          curl -L -o /tmp/arm-toolchain.tar.xz \
+            https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
+          sudo tar -xJf /tmp/arm-toolchain.tar.xz -C /opt
+          sudo ln -s /opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf /opt/arm-gnu-toolchain
+          echo "/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
+
+      - name: Download static binary
+        uses: actions/download-artifact@v4
+        with:
+          name: cfbox-${{ matrix.target }}-static
+          path: build-${{ matrix.target }}-static
+
+      - name: Make binary executable
+        run: chmod +x build-${{ matrix.target }}-static/cfbox
+
+      - name: Determine kernel config
+        id: kernel
+        run: |
+          if [[ "${{ matrix.target }}" == "aarch64" ]]; then
+            echo "arch=arm64" >> "$GITHUB_OUTPUT"
+            echo "image=arch/arm64/boot/Image" >> "$GITHUB_OUTPUT"
+            echo "defconfig=defconfig" >> "$GITHUB_OUTPUT"
+            echo "cross=aarch64-linux-gnu-" >> "$GITHUB_OUTPUT"
+          else
+            echo "arch=arm" >> "$GITHUB_OUTPUT"
+            echo "image=arch/arm/boot/zImage" >> "$GITHUB_OUTPUT"
+            echo "defconfig=multi_v7_defconfig" >> "$GITHUB_OUTPUT"
+            echo "cross=arm-none-linux-gnueabihf-" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache Linux kernel
+        id: cache-kernel
+        uses: actions/cache@v4
+        with:
+          path: |
+            third_party/linux/${{ steps.kernel.outputs.image }}
+            third_party/linux/.config
+          key: linux-kernel-${{ matrix.target }}-${{ hashFiles('third_party/linux/Makefile') }}-${{ steps.kernel.outputs.defconfig }}
+
+      - name: Build Linux kernel
+        if: steps.cache-kernel.outputs.cache-hit != 'true'
+        run: |
+          cd third_party/linux
+          make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} ${{ steps.kernel.outputs.defconfig }}
+          make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} -j$(nproc)
+        timeout-minutes: 30
+
+      - name: Build initramfs (CFBox only, no busybox)
+        run: |
+          bash scripts/build_initramfs.sh \
+            --arch ${{ matrix.target }} \
+            --cfbox build-${{ matrix.target }}-static/cfbox \
+            --output build/${{ matrix.target }}-initramfs.cpio
+
+      - name: Run QEMU system-mode test
+        run: |
+          bash scripts/qemu_system_test.sh \
+            --arch ${{ matrix.target }} \
+            --kernel third_party/linux/${{ steps.kernel.outputs.image }} \
+            --initramfs build/${{ matrix.target }}-initramfs.cpio \
+            --timeout 120

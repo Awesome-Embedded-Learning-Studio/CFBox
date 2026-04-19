@@ -32,3 +32,28 @@ _deps/
 # OS
 .DS_Store
 Thumbs.db
+
+# Kernel build artifacts
+third_party/linux/**/*.o
+third_party/linux/**/*.cmd
+third_party/linux/**/*.ko
+third_party/linux/**/*.mod
+third_party/linux/**/*.mod.c
+third_party/linux/**/.*.cmd
+third_party/linux/**/.*.d
+third_party/linux/Module.symvers
+third_party/linux/Modules.symvers
+third_party/linux/System.map
+third_party/linux/vmlinux
+third_party/linux/arch/arm64/boot/Image
+third_party/linux/arch/arm64/boot/Image.gz
+third_party/linux/arch/arm/boot/zImage
+third_party/linux/arch/arm/boot/Image
+third_party/linux/.config
+third_party/linux/.config.old
+third_party/linux/include/config/
+third_party/linux/include/generated/
+third_party/linux/scripts/mod/
+third_party/linux/tools/objtool/objtool
+third_party/linux/source
+third_party/linux/*.cpio
