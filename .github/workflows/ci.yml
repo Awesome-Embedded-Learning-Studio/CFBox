@@ -237,7 +237,7 @@ jobs:
           else
             echo "arch=arm" >> "$GITHUB_OUTPUT"
             echo "image=arch/arm/boot/zImage" >> "$GITHUB_OUTPUT"
-            echo "defconfig=multi_v7_defconfig" >> "$GITHUB_OUTPUT"
+            echo "defconfig=vexpress_defconfig" >> "$GITHUB_OUTPUT"
             echo "cross=arm-none-linux-gnueabihf-" >> "$GITHUB_OUTPUT"
           fi
 
@@ -248,6 +248,7 @@ jobs:
           path: |
             third_party/linux/${{ steps.kernel.outputs.image }}
             third_party/linux/.config
+            ${{ matrix.target == 'armhf' && 'third_party/linux/arch/arm/boot/dts/arm/vexpress-v2p-ca9.dtb' || '' }}
           key: linux-kernel-${{ matrix.target }}-${{ hashFiles('third_party/linux/Makefile') }}-${{ steps.kernel.outputs.defconfig }}
 
       - name: Build Linux kernel
@@ -256,7 +257,7 @@ jobs:
           cd third_party/linux
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} ${{ steps.kernel.outputs.defconfig }}
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} -j$(nproc)
-        timeout-minutes: 30
+        timeout-minutes: 15
 
       - name: Build initramfs (CFBox only, no busybox)
         run: |
