@@ -70,29 +70,23 @@ case "$arch" in
     *)       qemu_bin="qemu-$arch-static" ;;
 esac
 
-# Try running cfbox directly; if it fails (foreign arch), use QEMU wrapper
+# Determine how to run the cross-compiled cfbox --list
+# Symlinks must use relative paths (cfbox, not absolute) for the initramfs.
 if "$initramfs/bin/cfbox" --list >/dev/null 2>&1; then
-    "$project_dir/scripts/gen_links.sh" "$initramfs/bin"
+    list_cmd="$initramfs/bin/cfbox"
+elif command -v "$qemu_bin" &>/dev/null; then
+    list_cmd="$qemu_bin $initramfs/bin/cfbox"
 else
-    if ! command -v "$qemu_bin" &>/dev/null; then
-        echo "ERROR: $qemu_bin needed to run cross-compiled cfbox --list"
-        exit 1
-    fi
-    # Create wrapper just for `--list` invocation
-    qemu_wrapper="$(mktemp /tmp/cfbox-genlinks-XXXXXX.sh)"
-    echo "#!/bin/sh" > "$qemu_wrapper"
-    echo "exec $qemu_bin $initramfs/bin/cfbox \"\$@\"" >> "$qemu_wrapper"
-    chmod +x "$qemu_wrapper"
-
-    # Get applet list via QEMU wrapper, create symlinks to the real binary
-    while IFS= read -r line; do
-        name=$(echo "$line" | awk '{print $1}')
-        [[ -z "$name" ]] && continue
-        ln -sf cfbox "$initramfs/bin/$name"
-        echo "  linked $name"
-    done < <("$qemu_wrapper" --list)
-    rm -f "$qemu_wrapper"
+    echo "ERROR: $qemu_bin needed to run cross-compiled cfbox --list"
+    exit 1
 fi
+
+while IFS= read -r line; do
+    name=$(echo "$line" | awk '{print $1}')
+    [[ -z "$name" ]] && continue
+    ln -sf cfbox "$initramfs/bin/$name"
+    echo "  linked $name"
+done < <($list_cmd --list)
 
 # Create /init symlink — the kernel executes this first.
 # CFBox's init applet will detect PID 1 and mount filesystems automatically.

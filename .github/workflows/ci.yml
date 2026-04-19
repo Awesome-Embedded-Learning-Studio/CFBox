@@ -241,9 +241,9 @@ jobs:
             echo "cross=arm-none-linux-gnueabihf-" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Cache Linux kernel
+      - name: Restore Linux kernel cache
         id: cache-kernel
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             third_party/linux/${{ steps.kernel.outputs.image }}
@@ -257,6 +257,16 @@ jobs:
           cd third_party/linux
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} ${{ steps.kernel.outputs.defconfig }}
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} -j$(nproc)
+
+      - name: Save Linux kernel cache
+        if: steps.cache-kernel.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            third_party/linux/${{ steps.kernel.outputs.image }}
+            third_party/linux/.config
+            ${{ matrix.target == 'armhf' && 'third_party/linux/arch/arm/boot/dts/arm/vexpress-v2p-ca9.dtb' || '' }}
+          key: linux-kernel-${{ matrix.target }}-${{ hashFiles('third_party/linux/Makefile') }}-${{ steps.kernel.outputs.defconfig }}
 
 
       - name: Build initramfs (CFBox only, no busybox)
