@@ -15,7 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(cfbox_compiler_flags INTERFACE)
 
 target_compile_options(cfbox_compiler_flags INTERFACE
-    -Wall -Wextra -Wpedantic
+    -Wall -Wextra -Wpedantic -Werror
     -Wconversion
     -Wshadow
     -Wnon-virtual-dtor

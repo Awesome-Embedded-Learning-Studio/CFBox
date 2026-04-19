@@ -52,7 +52,7 @@ auto glob_match(std::string_view pattern, std::string_view text) -> bool {
 
 struct Predicate {
     enum Type { Name, TypeMatch, MaxDepth, Exec };
-    Type type;
+    Type type = Name;
     std::string value;        // for -name pattern, -type char
     int numeric = 0;          // for -maxdepth
     std::vector<std::string> exec_cmd; // for -exec
@@ -64,18 +64,24 @@ auto parse_predicates(int argc, char* argv[], int start) -> std::vector<Predicat
     while (i < argc) {
         std::string_view arg{argv[i]};
         if (arg == "-name" && i + 1 < argc) {
-            preds.push_back({Predicate::Name, argv[i + 1]});
+            preds.push_back({});
+            preds.back().type = Predicate::Name;
+            preds.back().value = argv[i + 1];
             i += 2;
         } else if (arg == "-type" && i + 1 < argc) {
-            preds.push_back({Predicate::TypeMatch, argv[i + 1]});
+            preds.push_back({});
+            preds.back().type = Predicate::TypeMatch;
+            preds.back().value = argv[i + 1];
             i += 2;
         } else if (arg == "-maxdepth" && i + 1 < argc) {
-            Predicate p{Predicate::MaxDepth, {}, std::atoi(argv[i + 1])};
-            preds.push_back(std::move(p));
+            preds.push_back({});
+            preds.back().type = Predicate::MaxDepth;
+            preds.back().numeric = std::atoi(argv[i + 1]);
             i += 2;
         } else if (arg == "-exec") {
             ++i;
-            Predicate p{Predicate::Exec};
+            Predicate p;
+            p.type = Predicate::Exec;
             while (i < argc) {
                 std::string_view token{argv[i]};
                 if (token == ";" || token == "\\;") break;

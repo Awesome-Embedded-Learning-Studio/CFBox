@@ -100,8 +100,8 @@ else
 fi
 
 # default path (current dir) — just test it doesn't crash
-# Resolve CFBOX to absolute path before cd
-ABS_CFBOX="$(cd "$(dirname "$0")/../.." && pwd)/build/cfbox"
+# Use CFBOX env var (respects QEMU wrapper) with absolute path
+ABS_CFBOX="$(cd "$(dirname "$CFBOX")" && pwd)/$(basename "$CFBOX")"
 cd "$tmpdir"
 set +e
 "$ABS_CFBOX" find -name "file1.txt" >/dev/null 2>&1
