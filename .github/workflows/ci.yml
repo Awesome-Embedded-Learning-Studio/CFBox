@@ -232,13 +232,15 @@ jobs:
           if [[ "${{ matrix.target }}" == "aarch64" ]]; then
             echo "arch=arm64" >> "$GITHUB_OUTPUT"
             echo "image=arch/arm64/boot/Image" >> "$GITHUB_OUTPUT"
-            echo "defconfig=defconfig" >> "$GITHUB_OUTPUT"
+            echo "defconfig=allnoconfig" >> "$GITHUB_OUTPUT"
             echo "cross=aarch64-linux-gnu-" >> "$GITHUB_OUTPUT"
+            echo "extra_config=configs/qemu-virt-aarch64.config" >> "$GITHUB_OUTPUT"
           else
             echo "arch=arm" >> "$GITHUB_OUTPUT"
             echo "image=arch/arm/boot/zImage" >> "$GITHUB_OUTPUT"
             echo "defconfig=vexpress_defconfig" >> "$GITHUB_OUTPUT"
             echo "cross=arm-none-linux-gnueabihf-" >> "$GITHUB_OUTPUT"
+            echo "extra_config=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Restore Linux kernel cache
@@ -256,6 +258,13 @@ jobs:
         run: |
           cd third_party/linux
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} ${{ steps.kernel.outputs.defconfig }}
+          if [[ -n "${{ steps.kernel.outputs.extra_config }}" ]]; then
+            while IFS='=' read -r key val; do
+              [[ -z "$key" || "$key" =~ ^# ]] && continue
+              ./scripts/config --enable "$key"
+            done < "${{ github.workspace }}/${{ steps.kernel.outputs.extra_config }}"
+            make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} olddefconfig
+          fi
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} -j$(nproc)
 
       - name: Save Linux kernel cache
