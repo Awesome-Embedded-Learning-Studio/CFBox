@@ -257,7 +257,7 @@ jobs:
           cd third_party/linux
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} ${{ steps.kernel.outputs.defconfig }}
           make ARCH=${{ steps.kernel.outputs.arch }} CROSS_COMPILE=${{ steps.kernel.outputs.cross }} -j$(nproc)
-        timeout-minutes: 15
+
 
       - name: Build initramfs (CFBox only, no busybox)
         run: |
