@@ -15,12 +15,12 @@ protected:
     void SetUp() override {
         test_dir_ = "/tmp/cfbox_test_" + std::to_string(::getpid());
         std::string cmd = "mkdir -p " + test_dir_;
-        std::system(cmd.c_str());
+        (void)std::system(cmd.c_str());
     }
 
     void TearDown() override {
         std::string cmd = "rm -rf " + test_dir_;
-        std::system(cmd.c_str());
+        (void)std::system(cmd.c_str());
     }
 
     auto test_file(const std::string& name) const -> std::string {
