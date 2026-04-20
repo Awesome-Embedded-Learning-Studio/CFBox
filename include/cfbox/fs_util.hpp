@@ -112,6 +112,18 @@ inline auto rename(std::string_view old_path, std::string_view new_path) -> base
     return {};
 }
 
+inline auto create_hard_link(std::string_view target, std::string_view link_path) -> base::Result<void> {
+    std::error_code ec;
+    std::filesystem::create_hard_link(
+        std::filesystem::path{target},
+        std::filesystem::path{link_path},
+        ec);
+    if (ec) {
+        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
+    }
+    return {};
+}
+
 inline auto current_path() -> base::Result<std::string> {
     std::error_code ec;
     auto p = std::filesystem::current_path(ec);

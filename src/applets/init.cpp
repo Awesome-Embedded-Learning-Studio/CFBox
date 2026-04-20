@@ -103,7 +103,7 @@ auto run_smoke_tests(TestResult& result) -> void {
 #endif
 
     // Mark remaining applets as "tested via Level 1"
-    const int skipped = 17 - tested - 1; // 17 total - tested - init itself
+    const int skipped = 33 - tested - 1; // 33 total - tested - init itself
     if (skipped > 0) {
         printf_flush("  (remaining %d applets verified by Level 1 QEMU user-mode)\n", skipped);
         result.pass += skipped;

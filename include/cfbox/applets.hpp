@@ -55,6 +55,54 @@ extern auto sed_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_INIT
 extern auto init_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_TRUE
+extern auto true_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_FALSE
+extern auto false_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_YES
+extern auto yes_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PWD
+extern auto pwd_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_BASENAME
+extern auto basename_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_DIRNAME
+extern auto dirname_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_UNAME
+extern auto uname_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_NPROC
+extern auto nproc_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_LINK
+extern auto link_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_HOSTNAME
+extern auto hostname_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_LOGNAME
+extern auto logname_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_WHOAMI
+extern auto whoami_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_TTY
+extern auto tty_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_SLEEP
+extern auto sleep_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_ID
+extern auto id_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_TEST
+extern auto test_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -108,5 +156,54 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_INIT
     {"init",   init_main,   "system init for boot testing (PID 1)"},
+#endif
+#if CFBOX_ENABLE_TRUE
+    {"true",   true_main,   "do nothing, exit with status 0"},
+#endif
+#if CFBOX_ENABLE_FALSE
+    {"false",  false_main,  "do nothing, exit with status 1"},
+#endif
+#if CFBOX_ENABLE_YES
+    {"yes",    yes_main,    "output a string repeatedly until killed"},
+#endif
+#if CFBOX_ENABLE_PWD
+    {"pwd",    pwd_main,    "print working directory"},
+#endif
+#if CFBOX_ENABLE_BASENAME
+    {"basename", basename_main, "strip directory and suffix from file names"},
+#endif
+#if CFBOX_ENABLE_DIRNAME
+    {"dirname",  dirname_main,  "strip last component from file name"},
+#endif
+#if CFBOX_ENABLE_UNAME
+    {"uname",  uname_main,  "print system information"},
+#endif
+#if CFBOX_ENABLE_NPROC
+    {"nproc",  nproc_main,  "print number of available processors"},
+#endif
+#if CFBOX_ENABLE_LINK
+    {"link",   link_main,   "create a hard link"},
+#endif
+#if CFBOX_ENABLE_HOSTNAME
+    {"hostname", hostname_main, "show or set the system host name"},
+#endif
+#if CFBOX_ENABLE_LOGNAME
+    {"logname", logname_main,  "print the user's login name"},
+#endif
+#if CFBOX_ENABLE_WHOAMI
+    {"whoami", whoami_main, "print effective user ID"},
+#endif
+#if CFBOX_ENABLE_TTY
+    {"tty",    tty_main,    "print the file name of the terminal connected to stdin"},
+#endif
+#if CFBOX_ENABLE_SLEEP
+    {"sleep",  sleep_main,  "delay for a specified amount of time"},
+#endif
+#if CFBOX_ENABLE_ID
+    {"id",     id_main,     "print real and effective user and group IDs"},
+#endif
+#if CFBOX_ENABLE_TEST
+    {"test",   test_main,   "evaluate conditional expression"},
+    {"[",      test_main,   "evaluate conditional expression"},
 #endif
 });
