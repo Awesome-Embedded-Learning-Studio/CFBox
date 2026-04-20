@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_FIND
 
 using namespace cfbox::test;
 
@@ -84,3 +87,5 @@ TEST(FindTest, NameAndTypeCombined) {
     EXPECT_NE(out.find("data.txt"), std::string::npos);
     EXPECT_EQ(out.find("docs.txt"), std::string::npos);
 }
+
+#endif // CFBOX_ENABLE_FIND

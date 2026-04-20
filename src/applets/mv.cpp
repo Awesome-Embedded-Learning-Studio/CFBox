@@ -4,8 +4,18 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "mv",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "move or rename files",
+    .usage   = "mv [OPTIONS] SOURCE... DEST",
+    .options = "  -f     do not prompt before overwriting",
+    .extra   = "",
+};
 
 auto do_move(const std::string& src, const std::string& dst, bool force) -> int {
     if (!cfbox::fs::exists(src)) {
@@ -70,6 +80,9 @@ auto mv_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {
         cfbox::args::OptSpec{'f', false},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool force = parsed.has('f');
 

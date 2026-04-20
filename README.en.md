@@ -8,12 +8,12 @@ A minimalist BusyBox alternative written in modern C++23.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C++23](https://img.shields.io/badge/C++23-00599C?logo=cplusplus)](https://en.cppreference.com/w/cpp/23)
 [![CMake](https://img.shields.io/badge/CMake-3.26+-064F8C?logo=cmake)](https://cmake.org/)
-[![Tests](https://img.shields.io/badge/Tests-124_passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-149_passing-brightgreen)](tests/)
 [![Applets](https://img.shields.io/badge/Applets-17-brightgreen)](src/applets/)
 
 ## Overview
 
-CFBox is a single-executable Unix utility collection distributed via symbolic links. All development is complete — 17 applets implemented and tested, with a CI pipeline covering native builds, cross-compilation, and QEMU user/system-mode testing across 5 stages.
+CFBox is a single-executable Unix utility collection distributed via symbolic links. 17 applets implemented and tested, with a CI pipeline covering native builds, cross-compilation, and QEMU user/system-mode testing across 5 stages. Features configurable CMake builds (per-applet toggles), GNU-style long options, and colored help output.
 
 **Design philosophy:** Simplicity first — Modern C++ (`std::expected`) — Embedded-friendly (cross-compilation, static linking)
 
@@ -25,8 +25,8 @@ cmake -B build
 cmake --build build
 
 # Test
-ctest --test-dir build --output-on-failure   # 108 GTest unit tests
-bash tests/integration/run_all.sh            # 16 integration test scripts
+ctest --test-dir build --output-on-failure   # 149 GTest unit tests
+bash tests/integration/run_all.sh            # 17 integration test scripts
 
 # Run via subcommand
 ./build/cfbox echo "Hello, World!"
@@ -42,7 +42,7 @@ echo "Hello, World!"   # now calls cfbox via symlink
 
 | Applet | Supported Flags / Features |
 |--------|----------------------------|
-| `echo` | `-n` (no trailing newline), `-e` (interpret escape sequences) |
+| `echo` | `-n` (no trailing newline), `-e` (interpret escape sequences), all applets support `--help` / `--version` |
 | `printf` | Format strings (`%s` `%d` `%f` `%c` `%%`), format reuse |
 | `cat` | `-n` (number lines), `-b` (number non-blank), `-A` (show non-printing), stdin passthrough |
 | `head` | `-n N` (first N lines), `-c N` (first N bytes), multi-file headers |
@@ -57,16 +57,16 @@ echo "Hello, World!"   # now calls cfbox via symlink
 
 | Applet | Supported Flags / Features |
 |--------|----------------------------|
-| `mkdir` | `-p` (create parents), `-m MODE` (permissions) |
-| `rm` | `-r` (recursive), `-f` (force), `-i` (interactive), `/` safety check |
-| `cp` | `-r` (recursive), `-p` (preserve permissions), multi-file to directory |
+| `mkdir` | `-p`/`--parents` (create parents), `-m`/`--mode MODE` (permissions) |
+| `rm` | `-r`/`--recursive` (recursive), `-f`/`--force` (force), `-i` (interactive), `/` safety check |
+| `cp` | `-r`/`--recursive` (recursive), `-p`/`--preserve` (preserve permissions), multi-file to directory |
 | `mv` | `-f` (force overwrite), cross-filesystem fallback (copy + remove) |
 
 ### Directory & Search
 
 | Applet | Supported Flags / Features |
 |--------|----------------------------|
-| `ls` | `-a` (show hidden), `-l` (long format), `-h` (human-readable sizes) |
+| `ls` | `-a`/`--all` (show hidden), `-l`/`--long` (long format), `-h`/`--human-readable` (human-readable sizes) |
 | `find` | `-name PATTERN` (glob), `-type [f\|d\|l]`, `-maxdepth N`, `-exec CMD {} ;` |
 
 ### System
@@ -97,22 +97,30 @@ echo "Hello, World!"   # now calls cfbox via symlink
 cfbox/
 ├── CMakeLists.txt
 ├── cmake/
-│   ├── compile/CompilerFlag.cmake     # Compiler warnings & optimization flags
-│   ├── third_party/CPM.cmake         # CPM dependency manager
-│   └── toolchain/                    # Cross-compilation toolchains
+│   ├── Config.cmake                  # Per-applet configuration (CFBOX_ENABLE_xxx options)
+│   ├── compile/CompilerFlag.cmake    # Compiler warnings & optimization flags
+│   ├── third_party/CPM.cmake        # CPM dependency manager
+│   └── toolchain/                   # Cross-compilation toolchains
 ├── configs/
-│   └── qemu-virt-aarch64.config      # Minimal QEMU aarch64 kernel config
-├── document/                          # Detailed documentation
-├── include/cfbox/                     # Public headers
+│   └── qemu-virt-aarch64.config     # Minimal QEMU aarch64 kernel config
+├── document/                         # Detailed documentation
+├── include/cfbox/
+│   ├── applet_config.hpp.in         # CMake-generated config (version + enable flags)
+│   ├── applet.hpp / applets.hpp     # Registry & dispatch
+│   ├── args.hpp                     # Short + long option argument parser
+│   ├── help.hpp                     # --help / --version help system
+│   ├── term.hpp                     # ANSI colored output (NO_COLOR support)
+│   ├── utf8.hpp                     # Unicode-aware width/count utilities
+│   └── ...                          # error.hpp, io.hpp, fs_util.hpp, escape.hpp
 ├── src/
-│   ├── main.cpp                      # Dispatch entry
-│   └── applets/                      # 17 command implementations
+│   ├── main.cpp                     # Dispatch entry
+│   └── applets/                     # 17 command implementations
 ├── tests/
-│   ├── unit/                         # GTest unit tests (108 cases)
-│   └── integration/                  # Shell integration tests (16 scripts)
-├── scripts/                          # Build, test, install scripts
-├── .github/workflows/ci.yml          # CI pipeline
-└── CONTRIBUTING.md                    # Contributing guide
+│   ├── unit/                        # GTest unit tests (149 cases)
+│   └── integration/                 # Shell integration tests (17 scripts)
+├── scripts/                         # Build, test, install scripts
+├── .github/workflows/ci.yml         # CI pipeline
+└── CONTRIBUTING.md                   # Contributing guide
 ```
 
 ## Contributing

@@ -5,8 +5,19 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "rm",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "remove files or directories",
+    .usage   = "rm [OPTIONS] FILE...",
+    .options = "  -r     remove directories and their contents recursively\n"
+               "  -f     ignore nonexistent files, never prompt",
+    .extra   = "",
+};
 
 auto is_root_path(std::string_view path) -> bool {
     // Remove trailing slashes for comparison
@@ -21,10 +32,13 @@ auto is_root_path(std::string_view path) -> bool {
 
 auto rm_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {
-        cfbox::args::OptSpec{'r', false},
-        cfbox::args::OptSpec{'f', false},
-        cfbox::args::OptSpec{'i', false},
+        cfbox::args::OptSpec{'r', false, "recursive"},
+        cfbox::args::OptSpec{'f', false, "force"},
+        cfbox::args::OptSpec{'i', false, "interactive"},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool recursive = parsed.has('r');
     bool force = parsed.has('f');

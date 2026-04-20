@@ -14,7 +14,22 @@
 #include <unistd.h>
 #include <vector>
 
+#include <cfbox/help.hpp>
+
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "find",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "search for files in a directory hierarchy",
+    .usage   = "find [PATH] [PREDICATE]...",
+    .options = "  Predicates:\n"
+               "    -name PATTERN   match filename (glob)\n"
+               "    -type [f|d|l]   match file type\n"
+               "    -maxdepth N     descend at most N levels\n"
+               "    -exec CMD {} ;  execute command on matches",
+    .extra   = "",
+};
 
 // Simple fnmatch-style glob matching: supports * ? and literal chars
 auto glob_match(std::string_view pattern, std::string_view text) -> bool {
@@ -233,6 +248,13 @@ auto do_find(const std::filesystem::path& root, const std::vector<Predicate>& pr
 } // namespace
 
 auto find_main(int argc, char* argv[]) -> int {
+    // Handle --help/--version before any other processing
+    for (int i = 1; i < argc; ++i) {
+        std::string_view arg{argv[i]};
+        if (arg == "--help")    { cfbox::help::print_help(HELP); return 0; }
+        if (arg == "--version") { cfbox::help::print_version(HELP); return 0; }
+    }
+
     if (argc < 2) {
         // default: find .
         return do_find(".", {});

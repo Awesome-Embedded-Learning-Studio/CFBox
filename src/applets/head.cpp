@@ -3,9 +3,20 @@
 #include <string_view>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "head",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "output the first part of files",
+    .usage   = "head [OPTIONS] [FILE]...",
+    .options = "  -n N   output the first N lines (default 10)\n"
+               "  -c N   output the first N bytes",
+    .extra   = "",
+};
 
 auto head_lines(const std::vector<std::string>& lines, long n) -> void {
     long count = (n >= 0) ? n : static_cast<long>(lines.size()) + n;
@@ -55,6 +66,9 @@ auto head_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'n', true},
         cfbox::args::OptSpec{'c', true},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool use_lines = true;
     long n_lines = 10;

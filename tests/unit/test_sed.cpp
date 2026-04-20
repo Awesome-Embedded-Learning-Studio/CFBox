@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_SED
 
 using namespace cfbox::test;
 
@@ -108,3 +111,5 @@ TEST(SedTest, MissingScript) {
     capture_stdout([&]{ rc = sed_main(1, argv); return 0; });
     EXPECT_NE(rc, 0);
 }
+
+#endif // CFBOX_ENABLE_SED

@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_UNIQ
 
 using namespace cfbox::test;
 
@@ -63,3 +66,5 @@ TEST(UniqTest, EmptyFile) {
     auto out = capture_stdout([&]{ return uniq_main(2, argv); });
     EXPECT_EQ(out, "");
 }
+
+#endif // CFBOX_ENABLE_UNIQ

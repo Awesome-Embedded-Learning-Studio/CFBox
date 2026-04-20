@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_GREP
 
 using namespace cfbox::test;
 
@@ -99,3 +102,5 @@ TEST(GrepTest, MissingPattern) {
     capture_stdout([&]{ rc = grep_main(1, argv); return 0; });
     EXPECT_EQ(rc, 2);
 }
+
+#endif // CFBOX_ENABLE_GREP

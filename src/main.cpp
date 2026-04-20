@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include <cfbox/applets.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
 
@@ -43,6 +44,10 @@ auto main(int argc, char* argv[]) -> int {
 
     if (cmd == "--list") {
         print_list();
+        return 0;
+    }
+    if (cmd == "--version") {
+        cfbox::help::print_cfbox_version();
         return 0;
     }
     if (cmd == "--help") {

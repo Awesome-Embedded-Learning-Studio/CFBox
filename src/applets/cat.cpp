@@ -2,9 +2,21 @@
 #include <string_view>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "cat",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "concatenate files and print on the standard output",
+    .usage   = "cat [OPTIONS] [FILE]...",
+    .options = "  -n     number all output lines\n"
+               "  -b     number nonempty output lines\n"
+               "  -A     show all nonprinting chars, display $ at end of line",
+    .extra   = "",
+};
 
 auto print_visible_char(unsigned char c) -> void {
     if (c >= 128) {
@@ -68,6 +80,9 @@ auto cat_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'b', false},
         cfbox::args::OptSpec{'A', false},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool n_flag = parsed.has('n');
     bool b_flag = parsed.has('b');

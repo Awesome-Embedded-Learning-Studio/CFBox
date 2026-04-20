@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_SORT
 
 using namespace cfbox::test;
 
@@ -75,3 +78,5 @@ TEST(SortTest, EmptyFile) {
     auto out = capture_stdout([&]{ return sort_main(2, argv); });
     EXPECT_EQ(out, "");
 }
+
+#endif // CFBOX_ENABLE_SORT
