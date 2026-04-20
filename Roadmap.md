@@ -2,7 +2,7 @@
 
 ## Context
 
-CFBox 是一个 C++23 BusyBox 替代品，当前版本有 33 个 applet。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
+CFBox 是一个 C++23 BusyBox 替代品，当前版本有 78 个 applet。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
 
 **目标**：全面对齐 BusyBox，覆盖嵌入式、容器、救援和通用场景。Shell 是最关键的组件，必须最先实现。
 
@@ -16,11 +16,13 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 33 个 applet。项目
 |------|------|------------|-------------|------|
 | 0 | 构建系统现代化 ✅ | 0 | CMake 配置、help 系统、UTF-8、彩色输出 | 17 |
 | 1 | POSIX Shell + Coreutils I ✅ | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
-| 2 | Coreutils II + findutils | ~41 | 流处理管线、校验和框架 | ~75 |
-| 3 | 编辑器 + 归档 + 压缩 | ~15 | 终端抽象、压缩框架 | ~90 |
-| 4 | 进程/Init + util-linux | ~38 | /proc 解析器、TUI 框架 | ~128 |
-| 5 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~163 |
+| 2 | Coreutils II + findutils ✅ | ~44 | 流处理管线、校验和框架 | ~78 |
+| 3 | 编辑器 + 归档 + 压缩 | ~15 | 终端抽象、压缩框架 | ~93 |
+| 4 | 进程/Init + util-linux | ~38 | /proc 解析器、TUI 框架 | ~131 |
+| 5 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~166 |
 | 6 | 剩余组件 + 集成验证 | ~40+ | POSIX 验证、容器替换测试 | ~200+ |
+
+**当前状态**：Phase 0-2 已完成，78 个 applet，246 单元测试 + 49 集成测试全部通过。
 
 ---
 
@@ -85,27 +87,37 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ---
 
-## Phase 2：Coreutils 第二批 + findutils/xargs
+## Phase 2：Coreutils 第二批 + findutils/xargs ✅
 
 **目标**：完成剩余 coreutils，添加 xargs，建立流处理管线基础设施。
 
-### Coreutils 第二批（中等复杂度，100-400 行/个）
+### 基础设施 ✅
 
-**文本处理**：`date`, `env`, `printenv`, `seq`, `tee`, `touch`, `tr`, `fold`, `expand`, `nl`, `paste`, `cut`, `comm`, `cksum`, `md5sum`, `sum`, `shred`, `shuf`, `factor`, `tac`, `od`, `split`
+1. **流管线** `include/cfbox/stream.hpp` ✅：`for_each_line()`、`split_fields()`、`split_whitespace()`、`LineProcessor` 虚基类 + `run_processor()`。
 
-**系统/文件**：`timeout`, `nice`, `nohup`, `expr`, `hostid`, `install`, `readlink`, `realpath`, `rmdir`, `unlink`, `truncate`, `tsort`, `ln`, `mktemp`, `mkfifo`, `mknod`, `du`, `df`, `stat`, `sync`, `usleep`, `who`
+2. **校验和** `include/cfbox/checksum.hpp` ✅：CRC-32（POSIX）、MD5（RFC 1321 完整实现）、BSD/SysV `sum`。
 
-### findutils
-- **xargs**：从 stdin 构建参数列表执行命令，支持 `-n`, `-I`, `-0`, `-p`, `-r`
+3. **fs_util.hpp 扩展** ✅：`create_symlink()`、`read_symlink()`、`canonical()`、`resize_file()`、`space()`。
 
-### 基础设施
-- **流管线** `include/cfbox/stream.hpp`：逐行处理、字段分割
-- **校验和** `include/cfbox/checksum.hpp`：MD5, SHA-256 实现
+### Coreutils 第二批 ✅（44 个 applet）
 
-### 验证
-- `find . -name "*.cpp" | xargs grep "main"` 端到端工作
-- `date`, `seq 1 10`, `tr a-z A-Z` 与 GNU 行为一致
-- 所有新 applet 通过单元 + 集成测试
+**文本处理** ✅：`date`, `env`, `printenv`, `seq`, `tee`, `touch`, `tr`, `fold`, `expand`, `nl`, `paste`, `cut`, `comm`, `cksum`, `md5sum`, `sum`, `shuf`, `factor`, `tac`, `od`, `split`
+
+**系统/文件** ✅：`timeout`, `nice`, `nohup`, `expr`, `hostid`, `install`, `readlink`, `realpath`, `rmdir`, `unlink`, `truncate`, `tsort`, `ln`, `mktemp`, `mkfifo`, `mknod`, `du`, `df`, `stat`, `sync`, `usleep`, `who`
+
+### findutils ✅
+- **xargs** ✅：从 stdin 构建参数列表执行命令，支持 `-n`, `-I`, `-0`, `-r`, `-t`
+
+### 验证 ✅
+- `echo -e "main.cpp\nCMakeLists.txt" | cfbox xargs -n1 echo` 端到端工作 ✅
+- `cfbox date +%Y`、`cfbox seq 3`、`echo hello | cfbox tr a-z A-Z` 行为正确 ✅
+- `cfbox factor 42` → `42: 2 3 7` ✅
+- `cfbox expr 2 + 3` → `5` ✅
+- `echo "a:b:c" | cfbox cut -d: -f2` → `b` ✅
+- `echo -n "test" | cfbox md5sum -` → `098f6bcd4621d373cade4e832627b4f6` ✅
+- 所有新 applet 通过 --help / --version ✅
+- **246 单元测试** 全部通过 ✅
+- **49 集成测试** 全部通过 ✅
 
 ---
 
@@ -263,8 +275,11 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ## 关键文件
 
-- `include/cfbox/applets.hpp`——注册表从 17 增长到 200+
+- `include/cfbox/applets.hpp`——注册表从 17 增长到 78（目标 200+）
 - `include/cfbox/args.hpp`——扩展长选项支持
 - `include/cfbox/error.hpp`——所有 applet 的错误处理基础
+- `include/cfbox/stream.hpp`——流处理管线（逐行处理、字段分割）
+- `include/cfbox/checksum.hpp`——校验和框架（CRC-32、MD5、BSD/SysV sum）
+- `include/cfbox/fs_util.hpp`——文件系统工具（symlink、canonical、resize 等）
 - `CMakeLists.txt`——从简单构建演进为配置化选择
 - `src/applets/init.cpp`——从简单 init 扩展为完整 init 系统
