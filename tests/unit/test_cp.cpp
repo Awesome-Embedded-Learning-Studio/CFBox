@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_CP
 
 using namespace cfbox::test;
 
@@ -63,3 +66,5 @@ TEST(CpTest, SourceNotExist) {
     char* argv[] = {a0, a1, a2};
     EXPECT_NE(cp_main(3, argv), 0);
 }
+
+#endif // CFBOX_ENABLE_CP

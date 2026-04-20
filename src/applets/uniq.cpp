@@ -4,9 +4,21 @@
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "uniq",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "report or omit repeated lines",
+    .usage   = "uniq [OPTIONS] [INPUT [OUTPUT]]",
+    .options = "  -c     prefix lines by the number of occurrences\n"
+               "  -d     only print duplicate lines\n"
+               "  -u     only print unique lines",
+    .extra   = "",
+};
 
 struct UniqOptions {
     bool count = false;
@@ -50,6 +62,9 @@ auto uniq_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'d', false},
         cfbox::args::OptSpec{'u', false},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     UniqOptions opts;
     opts.count = parsed.has('c');

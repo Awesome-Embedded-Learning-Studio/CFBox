@@ -6,9 +6,21 @@
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "sort",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "sort lines of text",
+    .usage   = "sort [OPTIONS] [FILE]...",
+    .options = "  -r     reverse the result of comparisons\n"
+               "  -n     compare according to string numerical value\n"
+               "  -u     output only the first of an equal run",
+    .extra   = "",
+};
 
 struct SortOptions {
     bool reverse = false;
@@ -65,11 +77,14 @@ auto sort_lines(std::vector<std::string>& lines, const SortOptions& opts) -> voi
 
 auto sort_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {
-        cfbox::args::OptSpec{'r', false},
-        cfbox::args::OptSpec{'n', false},
-        cfbox::args::OptSpec{'u', false},
-        cfbox::args::OptSpec{'k', true},
+        cfbox::args::OptSpec{'r', false, "reverse"},
+        cfbox::args::OptSpec{'n', false, "numeric-sort"},
+        cfbox::args::OptSpec{'u', false, "unique"},
+        cfbox::args::OptSpec{'k', true, "key"},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     SortOptions opts;
     opts.reverse = parsed.has('r');

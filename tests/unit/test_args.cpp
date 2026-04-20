@@ -130,3 +130,122 @@ TEST(ArgsTest, ValueFlagMissingValue) {
     ASSERT_TRUE(r.get('n').has_value());
     EXPECT_EQ(r.get('n').value(), "");
 }
+
+// ── long option: bool flag ───────────────────────────────────
+
+TEST(ArgsTest, LongBoolFlag) {
+    char a0[] = "prog", a1[] = "--recursive";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {OptSpec{'r', false, "recursive"}});
+    EXPECT_TRUE(r.has('r'));
+    EXPECT_TRUE(r.has_long("recursive"));
+}
+
+TEST(ArgsTest, LongBoolFlagHasAny) {
+    char a0[] = "prog", a1[] = "--recursive";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {OptSpec{'r', false, "recursive"}});
+    EXPECT_TRUE(r.has_any('r', "recursive"));
+}
+
+TEST(ArgsTest, ShortFlagHasAny) {
+    char a0[] = "prog", a1[] = "-r";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {OptSpec{'r', false, "recursive"}});
+    EXPECT_TRUE(r.has_any('r', "recursive"));
+}
+
+// ── long option: value via = ──────────────────────────────────
+
+TEST(ArgsTest, LongValueEquals) {
+    char a0[] = "prog", a1[] = "--name=foo";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {OptSpec{'n', true, "name"}});
+    EXPECT_TRUE(r.has('n'));
+    ASSERT_TRUE(r.get('n').has_value());
+    EXPECT_EQ(r.get('n').value(), "foo");
+    EXPECT_TRUE(r.has_long("name"));
+    ASSERT_TRUE(r.get_long("name").has_value());
+    EXPECT_EQ(r.get_long("name").value(), "foo");
+}
+
+// ── long option: value via separate arg ───────────────────────
+
+TEST(ArgsTest, LongValueSeparate) {
+    char a0[] = "prog", a1[] = "--name", a2[] = "bar";
+    char* argv[] = {a0, a1, a2};
+    auto r = parse(3, argv, {OptSpec{'n', true, "name"}});
+    EXPECT_TRUE(r.has('n'));
+    ASSERT_TRUE(r.get('n').has_value());
+    EXPECT_EQ(r.get('n').value(), "bar");
+}
+
+// ── unregistered long option (--help, --version) ─────────────
+
+TEST(ArgsTest, UnregisteredLongOption) {
+    char a0[] = "prog", a1[] = "--help";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {});
+    EXPECT_TRUE(r.has_long("help"));
+    EXPECT_FALSE(r.get_long("help").has_value());
+}
+
+TEST(ArgsTest, UnregisteredLongOptionWithValue) {
+    char a0[] = "prog", a1[] = "--version";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {});
+    EXPECT_TRUE(r.has_long("version"));
+}
+
+// ── long + short mixed ───────────────────────────────────────
+
+TEST(ArgsTest, LongAndShortMixed) {
+    char a0[] = "prog", a1[] = "-r", a2[] = "--force", a3[] = "file";
+    char* argv[] = {a0, a1, a2, a3};
+    auto r = parse(4, argv, {OptSpec{'r', false, "recursive"}, OptSpec{'f', false, "force"}});
+    EXPECT_TRUE(r.has('r'));
+    EXPECT_TRUE(r.has_long("force"));
+    EXPECT_TRUE(r.has('f'));
+    ASSERT_EQ(r.positional().size(), 1u);
+    EXPECT_EQ(r.positional()[0], "file");
+}
+
+// ── get_any works for both forms ─────────────────────────────
+
+TEST(ArgsTest, GetAnyLongForm) {
+    char a0[] = "prog", a1[] = "--mode=fast";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {OptSpec{'m', true, "mode"}});
+    ASSERT_TRUE(r.get_any('m', "mode").has_value());
+    EXPECT_EQ(r.get_any('m', "mode").value(), "fast");
+}
+
+TEST(ArgsTest, GetAnyShortForm) {
+    char a0[] = "prog", a1[] = "-m", a2[] = "fast";
+    char* argv[] = {a0, a1, a2};
+    auto r = parse(3, argv, {OptSpec{'m', true, "mode"}});
+    ASSERT_TRUE(r.get_any('m', "mode").has_value());
+    EXPECT_EQ(r.get_any('m', "mode").value(), "fast");
+}
+
+// ── double dash still stops with long option specs ────────────
+
+TEST(ArgsTest, DoubleDashStopsWithLongOptions) {
+    char a0[] = "prog", a1[] = "--", a2[] = "--recursive";
+    char* argv[] = {a0, a1, a2};
+    auto r = parse(3, argv, {OptSpec{'r', false, "recursive"}});
+    EXPECT_FALSE(r.has('r'));
+    EXPECT_FALSE(r.has_long("recursive"));
+    ASSERT_EQ(r.positional().size(), 1u);
+    EXPECT_EQ(r.positional()[0], "--recursive");
+}
+
+// ── OptSpec backward compatibility: no long_name still works ─
+
+TEST(ArgsTest, OptSpecNoLongNameBackCompat) {
+    char a0[] = "prog", a1[] = "-n", a2[] = "hello";
+    char* argv[] = {a0, a1, a2};
+    auto r = parse(3, argv, {OptSpec{'n', false}});
+    EXPECT_TRUE(r.has('n'));
+    EXPECT_EQ(r.positional()[0], "hello");
+}

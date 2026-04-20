@@ -15,12 +15,22 @@ include(cmake/third_party/CPM.cmake)
 # ── Compiler flags ────────────────────────────────────────────
 include(cmake/compile/CompilerFlag.cmake)
 
-# ── Applet sources (shared between main exe and tests) ────────
-file(GLOB_RECURSE CFBOX_APPLET_SOURCES CONFIGURE_DEPENDS src/applets/*.cpp)
+# ── Applet configuration ─────────────────────────────────────
+include(cmake/Config.cmake)
+
+# ── Applet sources (conditional on config) ───────────────────
+set(CFBOX_APPLET_SOURCES)
+foreach(applet IN LISTS CFBOX_APPLETS)
+    string(TOUPPER "${applet}" APPLET_UPPER)
+    if(CFBOX_ENABLE_${APPLET_UPPER})
+        list(APPEND CFBOX_APPLET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/applets/${applet}.cpp)
+    endif()
+endforeach()
 
 # ── Main executable ───────────────────────────────────────────
 add_executable(cfbox src/main.cpp ${CFBOX_APPLET_SOURCES})
 target_include_directories(cfbox PUBLIC include)
+target_include_directories(cfbox PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_link_libraries(cfbox PRIVATE cfbox_compiler_flags)
 
 # ── GTest via CPM (FetchContent) ──────────────────────────────
@@ -39,6 +49,7 @@ if(GTest_ADDED)
     if(CFBOX_TEST_SOURCES)
         add_executable(cfbox_tests ${CFBOX_TEST_SOURCES} ${CFBOX_APPLET_SOURCES})
         target_include_directories(cfbox_tests PUBLIC include)
+        target_include_directories(cfbox_tests PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
         target_link_libraries(cfbox_tests PRIVATE
             cfbox_compiler_flags
             GTest::gtest_main

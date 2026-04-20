@@ -8,11 +8,15 @@ CFBox 是单一可执行文件，通过两种方式调用子命令：
 2. **子命令语法：** 若 `argv[0]` 未匹配任何 applet，则将 `argv[1]` 作为子命令名查找（如 `cfbox echo ...`）。
 
 ```cpp
-// include/cfbox/applets.hpp
+// include/cfbox/applets.hpp — 条件编译的注册表
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
+#if CFBOX_ENABLE_ECHO
     {"echo",   echo_main,   "display text"},
+#endif
+#if CFBOX_ENABLE_CAT
     {"cat",    cat_main,    "concatenate files"},
-    // ... 共 17 个条目
+#endif
+    // ... 共 17 个条目，每个由 #if 守卫
 });
 ```
 
@@ -22,10 +26,15 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 |--------|------|
 | [error.hpp](../include/cfbox/error.hpp) | `std::expected<T, Error>` 及 `CFBOX_TRY` 宏用于错误传播 |
 | [applet.hpp](../include/cfbox/applet.hpp) | `AppEntry` 结构体与 `find_applet()` 模板查找 |
-| [args.hpp](../include/cfbox/args.hpp) | 命令行参数解析器 — 短标志、带值标志、`--` 分隔符、位置参数 |
+| [applets.hpp](../include/cfbox/applets.hpp) | `APPLET_REGISTRY` 注册表，每个条目由 `#if CFBOX_ENABLE_xxx` 守卫 |
+| [applet_config.hpp.in](../include/cfbox/applet_config.hpp.in) | CMake 生成的配置头文件：`CFBOX_ENABLE_<APPLET>` 宏和 `CFBOX_VERSION_STRING` |
+| [args.hpp](../include/cfbox/applets.hpp) | 命令行参数解析器 — 短标志、长选项（`--recursive`）、带值标志、`--` 分隔符、位置参数 |
 | [io.hpp](../include/cfbox/io.hpp) | 文件 I/O 工具 — `read_all`、`read_lines`、`read_all_stdin`、`write_all`、`split_lines` |
 | [fs_util.hpp](../include/cfbox/fs_util.hpp) | 返回 `Result<T>` 的文件系统封装 — `exists`、`mkdir_recursive`、`copy_recursive`、`rename` 等 |
 | [escape.hpp](../include/cfbox/escape.hpp) | `echo` / `printf` 的转义序列处理（`\n`、`\t`、`\0NNN` 等） |
+| [help.hpp](../include/cfbox/help.hpp) | 帮助系统 — `HelpEntry` 结构体、`print_help()`、`print_version()`，支持彩色输出 |
+| [term.hpp](../include/cfbox/term.hpp) | 终端颜色输出 — ANSI SGR 辅助函数，尊重 `NO_COLOR` 环境变量 |
+| [utf8.hpp](../include/cfbox/utf8.hpp) | UTF-8 工具 — Unicode 感知的代码点计数、终端显示宽度计算、截断 |
 
 ## 错误处理
 
@@ -39,21 +48,64 @@ auto content = CFBOX_TRY(cfbox::io::read_all(path));
 
 ## 参数解析
 
-[args.hpp](../include/cfbox/args.hpp) 提供统一的参数解析器：
+[args.hpp](../include/cfbox/args.hpp) 提供统一的参数解析器，支持短选项和 GNU 风格长选项：
 
 ```cpp
 auto parsed = cfbox::args::parse(argc, argv, {
-    {'n', false},   // -n 无值标志
-    {'e', false},   // -e 无值标志
-    {'m', true},    // -m 需要值（如 -m 755 或 -m755）
+    {'r', false, "recursive"},  // -r 或 --recursive，无值标志
+    {'n', false, ""},           // -n 仅短选项
+    {'m', true,  "mode"},       // -m 755 或 --mode=755 或 --mode 755
 });
 
-if (parsed.has('n')) { /* ... */ }
-auto mode = parsed.get('m');  // std::optional<std::string_view>
-auto files = parsed.positional();  // const std::vector<std::string_view>&
+if (parsed.has('r')) { /* ... */ }                 // 短选项查询
+if (parsed.has_long("recursive")) { /* ... */ }    // 长选项查询
+if (parsed.has_any('r', "recursive")) { /* ... }   // 两者任一
+auto mode = parsed.get_any('m', "mode");           // 从短或长形式获取值
+auto files = parsed.positional();
 ```
 
-支持的语法：短标志组合（`-ne`）、带值标志（`-n5` 或 `-n 5`）、`--` 分隔符。
+支持的语法：短标志组合（`-ne`）、带值标志（`-n5` 或 `-n 5`）、长选项（`--recursive`、`--mode=755`）、`--` 分隔符。未注册的长选项（如 `--help`、`--version`）仍存储在结果中供 applet 检查。
+
+## 帮助系统
+
+每个 applet 定义一个 `HelpEntry` 常量：
+
+```cpp
+static constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "echo",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "display a line of text",
+    .usage   = "echo [OPTIONS] [STRING]...",
+    .options = "  -n     do not output trailing newline\n"
+               "  -e     enable backslash escape interpretation",
+    .extra   = "",
+};
+```
+
+在 `parse()` 之后检查 `--help` / `--version`：
+
+```cpp
+if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
+```
+
+`print_help()` 输出格式化的帮助文本（带彩色标题和使用说明），自动追加 `--help` / `--version` 选项。当 `NO_COLOR` 环境变量设置时自动禁用颜色。
+
+## CMake 配置系统
+
+[cmake/Config.cmake](../cmake/Config.cmake) 提供 per-applet 编译选项：
+
+```bash
+# 禁用单个 applet
+cmake -DCFBOX_ENABLE_GREP=OFF ..
+
+# 使用预设 profile
+cmake -DCFBOX_PROFILE=minimal ..   # 仅核心文件操作 applet
+cmake -DCFBOX_PROFILE=embedded ..  # 除文本处理外全部启用
+cmake -DCFBOX_PROFILE=desktop ..   # 全部启用
+```
+
+配置通过 `configure_file()` 生成 `include/cfbox/applet_config.hpp`，包含 `CFBOX_ENABLE_<APPLET>` 宏（0 或 1）和 `CFBOX_VERSION_STRING`。
 
 ## Applet 注册
 
@@ -63,29 +115,34 @@ auto files = parsed.positional();  // const std::vector<std::string_view>&
 auto echo_main(int argc, char* argv[]) -> int;
 ```
 
-添加新 applet 只需：
+添加新 applet 需要：
 1. 实现 `_main` 函数
-2. 在 [applets.hpp](../include/cfbox/applets.hpp) 声明
-3. 在 `APPLET_REGISTRY` 添加条目
+2. 在 [applets.hpp](../include/cfbox/applets.hpp) 用 `#if CFBOX_ENABLE_xxx` 守卫声明
+3. 在 `APPLET_REGISTRY` 用 `#if` 守卫添加条目
+4. 在 `cmake/Config.cmake` 的 `CFBOX_APPLETS` 列表中添加名字
+5. 定义 `HelpEntry` 常量并处理 `--help`/`--version`
 
 详见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
 
 ## 测试体系
 
-### 单元测试（108 个用例）
+### 单元测试（149 个用例）
 
 基于 GoogleTest（通过 CPM 获取），位于 [tests/unit/](../tests/unit/)：
 
 - [test_capture.hpp](../tests/unit/test_capture.hpp) — 测试工具：stdout 捕获、临时目录
 - 各 applet 独立测试文件（`test_echo.cpp`、`test_grep.cpp` 等）
+- 基础设施测试：`test_args.cpp`、`test_help.cpp`、`test_term.cpp`、`test_utf8.cpp` 等
+- Applet 测试文件由 `#if CFBOX_ENABLE_xxx` 守卫，禁用 applet 时自动跳过
 
 运行：`ctest --test-dir build --output-on-failure`
 
-### 集成测试（16 个脚本）
+### 集成测试（17 个脚本）
 
 Shell 脚本位于 [tests/integration/](../tests/integration/)，与 GNU coreutils 行为对比：
 
 - [helpers.sh](../tests/integration/helpers.sh) — `assert_output()`、`assert_exit()` 等断言函数
 - 各 applet 独立测试脚本
+- [test_help.sh](../tests/integration/test_help.sh) — 验证所有 applet 的 `--help` 和 `--version`
 
 运行：`bash tests/integration/run_all.sh`

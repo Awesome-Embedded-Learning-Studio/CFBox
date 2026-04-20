@@ -5,8 +5,18 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/escape.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "printf",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "format and print data",
+    .usage   = "printf FORMAT [ARG]...",
+    .options = "  FORMAT  printf format string",
+    .extra   = "",
+};
 
 // Extract a full format spec: %[flags][width][.precision]specifier
 // Returns (format_str, arg_consumed) where format_str is like "%.2f"
@@ -125,6 +135,10 @@ auto count_specs(std::string_view fmt) -> std::size_t {
 
 auto printf_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {});
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
+
     const auto& pos = parsed.positional();
     if (pos.empty()) return 0;
 

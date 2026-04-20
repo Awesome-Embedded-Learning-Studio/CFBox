@@ -3,9 +3,20 @@
 #include <string_view>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "tail",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "output the last part of files",
+    .usage   = "tail [OPTIONS] [FILE]...",
+    .options = "  -n N   output the last N lines (default 10)\n"
+               "  -c N   output the last N bytes",
+    .extra   = "",
+};
 
 auto tail_lines(const std::vector<std::string>& lines, long n, bool from_start) -> void {
     if (from_start) {
@@ -71,6 +82,9 @@ auto tail_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'n', true},
         cfbox::args::OptSpec{'c', true},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool use_lines = true;
     bool use_bytes = false;

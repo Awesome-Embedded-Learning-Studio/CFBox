@@ -3,9 +3,22 @@
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "wc",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "print newline, word, and byte counts",
+    .usage   = "wc [OPTIONS] [FILE]...",
+    .options = "  -l     print newline counts\n"
+               "  -w     print word counts\n"
+               "  -c     print byte counts\n"
+               "  -m     print character counts (alias for -c)",
+    .extra   = "",
+};
 
 struct WcCounts {
     long lines = 0;
@@ -49,6 +62,9 @@ auto wc_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'c', false},
         cfbox::args::OptSpec{'m', false},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool show_lines = parsed.has('l');
     bool show_words = parsed.has('w');

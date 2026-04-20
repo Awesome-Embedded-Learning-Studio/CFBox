@@ -4,9 +4,20 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "cp",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "copy files and directories",
+    .usage   = "cp [OPTIONS] SOURCE... DEST",
+    .options = "  -r     copy directories recursively\n"
+               "  -p     preserve mode, ownership, and timestamps",
+    .extra   = "",
+};
 
 auto copy_preserve(const std::string& src, const std::string& dst) -> int {
     // Copy the file first
@@ -32,9 +43,12 @@ auto copy_preserve(const std::string& src, const std::string& dst) -> int {
 
 auto cp_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {
-        cfbox::args::OptSpec{'r', false},
-        cfbox::args::OptSpec{'p', false},
+        cfbox::args::OptSpec{'r', false, "recursive"},
+        cfbox::args::OptSpec{'p', false, "preserve"},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool recursive = parsed.has('r');
     bool preserve = parsed.has('p');

@@ -11,9 +11,20 @@
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "sed",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "stream editor for filtering and transforming text",
+    .usage   = "sed [OPTIONS] SCRIPT [FILE]...",
+    .options = "  -e SCRIPT  add the script to the commands to be executed\n"
+               "  -n         suppress automatic printing of pattern space",
+    .extra   = "",
+};
 
 struct Address {
     enum Type { None, Line, Last, Range };
@@ -279,6 +290,9 @@ auto sed_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'n', false},
         cfbox::args::OptSpec{'e', true},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     bool suppress = parsed.has('n');
 

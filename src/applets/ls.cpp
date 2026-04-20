@@ -8,6 +8,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
 
@@ -209,14 +210,28 @@ auto list_path(const std::string& path, const LsOptions& opts, bool show_header)
     return list_directory(path, opts);
 }
 
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "ls",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "list directory contents",
+    .usage   = "ls [OPTIONS] [FILE]...",
+    .options = "  -a     do not ignore entries starting with .\n"
+               "  -l     use a long listing format\n"
+               "  -h     print sizes in human readable format",
+    .extra   = "",
+};
+
 } // namespace
 
 auto ls_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {
-        cfbox::args::OptSpec{'a', false},
-        cfbox::args::OptSpec{'l', false},
-        cfbox::args::OptSpec{'h', false},
+        cfbox::args::OptSpec{'a', false, "all"},
+        cfbox::args::OptSpec{'l', false, "long"},
+        cfbox::args::OptSpec{'h', false, "human-readable"},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     LsOptions opts;
     opts.all = parsed.has('a');

@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_MKDIR
 
 using namespace cfbox::test;
 
@@ -52,3 +55,5 @@ TEST(MkdirTest, MultipleDirs) {
     EXPECT_TRUE(std::filesystem::exists(tmp.path / "dir1"));
     EXPECT_TRUE(std::filesystem::exists(tmp.path / "dir2"));
 }
+
+#endif // CFBOX_ENABLE_MKDIR

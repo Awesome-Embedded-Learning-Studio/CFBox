@@ -13,9 +13,26 @@
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "grep",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "search patterns in text",
+    .usage   = "grep [OPTIONS] PATTERN [FILE]...",
+    .options = "  -E     extended regex\n"
+               "  -i     ignore case\n"
+               "  -v     invert match\n"
+               "  -n     print line numbers\n"
+               "  -r     recursive search\n"
+               "  -c     print only a count of matching lines\n"
+               "  -l     print only names of files with matches\n"
+               "  -q     quiet mode",
+    .extra   = "",
+};
 
 struct GrepOptions {
     bool extended = false;
@@ -107,15 +124,18 @@ auto grep_recursive(const std::string& pattern, const GrepOptions& opts,
 
 auto grep_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {
-        cfbox::args::OptSpec{'E', false},
-        cfbox::args::OptSpec{'i', false},
-        cfbox::args::OptSpec{'v', false},
-        cfbox::args::OptSpec{'n', false},
-        cfbox::args::OptSpec{'r', false},
-        cfbox::args::OptSpec{'c', false},
-        cfbox::args::OptSpec{'l', false},
-        cfbox::args::OptSpec{'q', false},
+        cfbox::args::OptSpec{'E', false, "extended-regexp"},
+        cfbox::args::OptSpec{'i', false, "ignore-case"},
+        cfbox::args::OptSpec{'v', false, "invert-match"},
+        cfbox::args::OptSpec{'n', false, "line-number"},
+        cfbox::args::OptSpec{'r', false, "recursive"},
+        cfbox::args::OptSpec{'c', false, "count"},
+        cfbox::args::OptSpec{'l', false, "files-with-matches"},
+        cfbox::args::OptSpec{'q', false, "quiet"},
     });
+
+    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     GrepOptions opts;
     opts.extended = parsed.has('E');

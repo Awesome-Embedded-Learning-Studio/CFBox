@@ -31,10 +31,10 @@ Release builds use `-O2` by default and enable LTO. For size-optimized builds, a
 ## Running Tests
 
 ```bash
-# Unit tests (108 GTest cases)
+# Unit tests (149 GTest cases)
 ctest --test-dir build --output-on-failure
 
-# Integration tests (16 shell scripts comparing against GNU coreutils)
+# Integration tests (17 shell scripts comparing against GNU coreutils)
 bash tests/integration/run_all.sh
 ```
 
@@ -138,12 +138,36 @@ The CI pipeline ([ci.yml](.github/workflows/ci.yml)) runs on every push/PR to `m
 
 1. Create `src/applets/<name>.cpp` with signature `auto <name>_main(int argc, char* argv[]) -> int`.
    - Add a comment header listing supported flags and known differences from GNU.
-2. Declare the function in [applets.hpp](include/cfbox/applets.hpp).
-3. Add one entry to `APPLET_REGISTRY` in [applets.hpp](include/cfbox/applets.hpp).
-4. Add GTest unit tests in `tests/unit/test_<name>.cpp` (see [test_capture.hpp](tests/unit/test_capture.hpp) for stdout capture and `TempDir` utilities).
-5. Add shell integration tests in `tests/integration/test_<name>.sh` following the pattern in existing scripts.
+   - Add a `constexpr cfbox::help::HelpEntry HELP` constant in the anonymous namespace.
+   - Handle `--help` / `--version` right after `args::parse()`:
+     ```cpp
+     if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
+     if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
+     ```
+2. Declare the function in [applets.hpp](include/cfbox/applets.hpp), guarded by `#if CFBOX_ENABLE_<UPPER>`.
+3. Add one entry to `APPLET_REGISTRY` in [applets.hpp](include/cfbox/applets.hpp), also guarded by `#if CFBOX_ENABLE_<UPPER>`.
+4. Add the applet name to the `CFBOX_APPLETS` list in [cmake/Config.cmake](cmake/Config.cmake).
+5. Add a `#cmakedefine01 CFBOX_ENABLE_<UPPER>` line to [include/cfbox/applet_config.hpp.in](include/cfbox/applet_config.hpp.in).
+6. Add GTest unit tests in `tests/unit/test_<name>.cpp` (see [test_capture.hpp](tests/unit/test_capture.hpp) for stdout capture and `TempDir` utilities). Guard the test file with `#if CFBOX_ENABLE_<UPPER>`.
+7. Add shell integration tests in `tests/integration/test_<name>.sh` following the pattern in existing scripts.
 
-> **Note:** The `init` applet is special — it runs as PID 1 in QEMU system-mode tests. Regular applets should not need special PID 1 handling.
+> **Note:** The `init` applet is special — it runs as PID 1 in QEMU system-mode tests and uses manual `argv` scanning instead of `args::parse()`. Regular applets should not need special PID 1 handling.
+
+## Build Configuration
+
+CFBox supports per-applet configuration via CMake options:
+
+```bash
+# Disable individual applets
+cmake -DCFBOX_ENABLE_GREP=OFF -DCFBOX_ENABLE_SED=OFF ..
+
+# Use preset profiles
+cmake -DCFBOX_PROFILE=minimal ..   # Only core file operations
+cmake -DCFBOX_PROFILE=embedded ..  # Everything except optional text processing
+cmake -DCFBOX_PROFILE=desktop ..   # All applets enabled (default)
+```
+
+Available profiles: `minimal` (echo, cat, ls, cp, mv, rm, mkdir, grep), `embedded` (all except sort/uniq/sed), `desktop`/`full` (all enabled).
 
 ## Submitting Changes
 

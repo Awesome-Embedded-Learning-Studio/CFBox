@@ -1,6 +1,9 @@
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
+#include <cfbox/applet_config.hpp>
+
+#if CFBOX_ENABLE_LS
 
 using namespace cfbox::test;
 
@@ -71,3 +74,5 @@ TEST(LsTest, SingleFileNoDirectory) {
     auto out = capture_stdout([&]{ return ls_main(2, argv); });
     EXPECT_EQ(out, "only.txt\n");
 }
+
+#endif // CFBOX_ENABLE_LS

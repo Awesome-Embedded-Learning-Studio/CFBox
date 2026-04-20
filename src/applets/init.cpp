@@ -1,5 +1,6 @@
 #include <cstdarg>
 #include <cstdio>
+#include <string_view>
 
 #include <sys/mount.h>
 #include <sys/reboot.h>
@@ -8,8 +9,19 @@
 
 #include <cfbox/applet.hpp>
 #include <cfbox/applets.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
+
+constexpr cfbox::help::HelpEntry HELP = {
+    .name    = "init",
+    .version = CFBOX_VERSION_STRING,
+    .one_line = "system init for boot testing (PID 1)",
+    .usage   = "init",
+    .options = "",
+    .extra   = "Designed for QEMU-based boot testing. Mounts /proc, /sys, /dev\n"
+               "and runs applet smoke tests before powering off.",
+};
 
 auto printf_flush [[gnu::format(printf, 1, 2)]] (const char* fmt, ...) -> int {
     va_list ap;
@@ -26,6 +38,9 @@ struct TestResult {
 };
 
 auto run_smoke_tests(TestResult& result) -> void {
+    int tested = 0;
+
+#if CFBOX_ENABLE_ECHO
     // Build argv on the stack (no heap allocation)
     char echo_name[] = "echo";
     char echo_arg[] = "hello";
@@ -38,7 +53,10 @@ auto run_smoke_tests(TestResult& result) -> void {
         printf_flush("  FAIL: echo\n");
         ++result.fail;
     }
+    ++tested;
+#endif
 
+#if CFBOX_ENABLE_CAT
     char cat_name[] = "cat";
     char cat_arg[] = "/proc/version";
     char* cat_argv[] = { cat_name, cat_arg, nullptr };
@@ -50,7 +68,10 @@ auto run_smoke_tests(TestResult& result) -> void {
         printf_flush("  FAIL: cat\n");
         ++result.fail;
     }
+    ++tested;
+#endif
 
+#if CFBOX_ENABLE_LS
     char ls_name[] = "ls";
     char ls_arg[] = "/";
     char* ls_argv[] = { ls_name, ls_arg, nullptr };
@@ -62,7 +83,10 @@ auto run_smoke_tests(TestResult& result) -> void {
         printf_flush("  FAIL: ls\n");
         ++result.fail;
     }
+    ++tested;
+#endif
 
+#if CFBOX_ENABLE_WC
     char wc_name[] = "wc";
     char wc_arg1[] = "-l";
     char wc_arg2[] = "/proc/cpuinfo";
@@ -75,18 +99,26 @@ auto run_smoke_tests(TestResult& result) -> void {
         printf_flush("  FAIL: wc\n");
         ++result.fail;
     }
+    ++tested;
+#endif
 
     // Mark remaining applets as "tested via Level 1"
-    constexpr int skipped = 13; // 17 total - 4 tested - init itself
-    printf_flush("  (remaining %d applets verified by Level 1 QEMU user-mode)\n", skipped);
-    result.pass += skipped;
+    const int skipped = 17 - tested - 1; // 17 total - tested - init itself
+    if (skipped > 0) {
+        printf_flush("  (remaining %d applets verified by Level 1 QEMU user-mode)\n", skipped);
+        result.pass += skipped;
+    }
 }
 
 } // anonymous namespace
 
 auto init_main(int argc, char* argv[]) -> int {
-    (void)argc;
-    (void)argv;
+    // Handle --help/--version (no args::parse for init)
+    for (int i = 1; i < argc; ++i) {
+        std::string_view arg{argv[i]};
+        if (arg == "--help")    { cfbox::help::print_help(HELP); return 0; }
+        if (arg == "--version") { cfbox::help::print_version(HELP); return 0; }
+    }
 
     bool is_pid1 = (getpid() == 1);
 
