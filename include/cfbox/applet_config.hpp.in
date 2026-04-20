@@ -37,3 +37,4 @@
 #cmakedefine01 CFBOX_ENABLE_SLEEP
 #cmakedefine01 CFBOX_ENABLE_ID
 #cmakedefine01 CFBOX_ENABLE_TEST
+#cmakedefine01 CFBOX_ENABLE_SH

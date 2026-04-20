@@ -10,6 +10,7 @@ set(CFBOX_APPLETS
     basename dirname uname nproc link
     hostname logname whoami tty
     sleep id test
+    sh
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)

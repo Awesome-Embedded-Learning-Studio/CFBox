@@ -20,9 +20,17 @@ include(cmake/Config.cmake)
 
 # ── Applet sources (conditional on config) ───────────────────
 set(CFBOX_APPLET_SOURCES)
+
+# Multi-file applets
+if(CFBOX_ENABLE_SH)
+    file(GLOB_RECURSE SH_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/applets/sh/*.cpp)
+    list(APPEND CFBOX_APPLET_SOURCES ${SH_SOURCES})
+endif()
+
+# Single-file applets
 foreach(applet IN LISTS CFBOX_APPLETS)
     string(TOUPPER "${applet}" APPLET_UPPER)
-    if(CFBOX_ENABLE_${APPLET_UPPER})
+    if(NOT applet STREQUAL "sh" AND CFBOX_ENABLE_${APPLET_UPPER})
         list(APPEND CFBOX_APPLET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/applets/${applet}.cpp)
     endif()
 endforeach()

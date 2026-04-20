@@ -103,6 +103,9 @@ extern auto id_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_TEST
 extern auto test_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_SH
+extern auto sh_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -205,5 +208,8 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #if CFBOX_ENABLE_TEST
     {"test",   test_main,   "evaluate conditional expression"},
     {"[",      test_main,   "evaluate conditional expression"},
+#endif
+#if CFBOX_ENABLE_SH
+    {"sh",     sh_main,     "POSIX shell command interpreter"},
 #endif
 });
