@@ -2,7 +2,7 @@
 
 ## Context
 
-CFBox 是一个 C++23 BusyBox 替代品，当前版本有 17 个 applet（echo, printf, cat, head, tail, wc, sort, uniq, grep, sed, mkdir, rm, cp, mv, ls, find, init）。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
+CFBox 是一个 C++23 BusyBox 替代品，当前版本有 33 个 applet。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
 
 **目标**：全面对齐 BusyBox，覆盖嵌入式、容器、救援和通用场景。Shell 是最关键的组件，必须最先实现。
 
@@ -15,7 +15,7 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 17 个 applet（echo, 
 | 阶段 | 主题 | 新增 Applet | 核心基础设施 | 累计 |
 |------|------|------------|-------------|------|
 | 0 | 构建系统现代化 ✅ | 0 | CMake 配置、help 系统、UTF-8、彩色输出 | 17 |
-| 1 | POSIX Shell + Coreutils I | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
+| 1 | POSIX Shell + Coreutils I 🔨 | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
 | 2 | Coreutils II + findutils | ~41 | 流处理管线、校验和框架 | ~75 |
 | 3 | 编辑器 + 归档 + 压缩 | ~15 | 终端抽象、压缩框架 | ~90 |
 | 4 | 进程/Init + util-linux | ~38 | /proc 解析器、TUI 框架 | ~128 |
@@ -48,9 +48,15 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 17 个 applet（echo, 
 
 ---
 
-## Phase 1：POSIX Shell + Coreutils 第一批（最高优先级）
+## Phase 1：POSIX Shell + Coreutils 第一批 🔨
 
 **目标**：实现交互式 POSIX Shell——这是在真实 Linux 上使用的基础。同时实现简单的 coreutils 建立势头。
+
+### Coreutils 第一批 ✅
+
+16 个简单 coreutils 已完成，覆盖脚本基础所需：
+
+`basename` ✅, `dirname` ✅, `true` ✅, `false` ✅, `yes` ✅, `sleep` ✅, `pwd` ✅, `tty` ✅, `uname` ✅, `whoami` ✅, `hostname` ✅, `id` ✅, `logname` ✅, `nproc` ✅, `test` ✅, `link` ✅
 
 ### Shell 架构（`src/applets/sh/`）
 
@@ -70,10 +76,6 @@ Shell 是最复杂的单一组件，按模块拆分：
 ### 需要的基础设施
 - **进程管理** `include/cfbox/process.hpp`：fork/exec/pipe/dup2/waitpid RAII 封装
 - **信号处理** `include/cfbox/signal.hpp`：RAII 信号处理器
-
-### Coreutils 第一批（简单 applet，50-200 行/个）
-
-`basename`, `dirname`, `true`, `false`, `yes`, `sleep`, `pwd`, `tty`, `uname`, `whoami`, `hostname`, `id`, `logname`, `nproc`, `test`, `link`
 
 ### 验证
 - `./cfbox sh -c "echo hello | wc -l"` 管道工作

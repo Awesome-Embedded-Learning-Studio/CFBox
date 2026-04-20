@@ -71,7 +71,7 @@ auto id_main(int argc, char* argv[]) -> int {
         int ngroups = getgroups(0, nullptr);
         if (ngroups > 0) {
             groups.resize(static_cast<std::size_t>(ngroups));
-            getgroups(ngroups, groups.data());
+            if (getgroups(ngroups, groups.data()) < 0) groups.clear();
         }
 
         bool first = true;
@@ -102,7 +102,8 @@ auto id_main(int argc, char* argv[]) -> int {
     int ngroups = getgroups(0, nullptr);
     if (ngroups > 0) {
         groups.resize(static_cast<std::size_t>(ngroups));
-        getgroups(ngroups, groups.data());
+        int ret = getgroups(ngroups, groups.data());
+        if (ret < 0) groups.clear();
         std::fputs(" groups=", stdout);
         bool first = true;
         for (auto g : groups) {
