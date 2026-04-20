@@ -184,9 +184,8 @@ jobs:
           chmod +x "$wrapper"
           CFBOX="$wrapper" bash tests/integration/run_all.sh
 
-  # ── QEMU system-mode emulation tests (main / release-* only) ─────
+  # ── QEMU system-mode emulation tests ─────
   qemu-system-test:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-')
     needs: cross-compile
     runs-on: ubuntu-latest
     strategy:
