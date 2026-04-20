@@ -2,7 +2,7 @@
 
 ## Context
 
-CFBox 是一个 C++23 BusyBox 替代品，当前版本有 17 个 applet（echo, printf, cat, head, tail, wc, sort, uniq, grep, sed, mkdir, rm, cp, mv, ls, find, init）。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
+CFBox 是一个 C++23 BusyBox 替代品，当前版本有 33 个 applet。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
 
 **目标**：全面对齐 BusyBox，覆盖嵌入式、容器、救援和通用场景。Shell 是最关键的组件，必须最先实现。
 
@@ -15,7 +15,7 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 17 个 applet（echo, 
 | 阶段 | 主题 | 新增 Applet | 核心基础设施 | 累计 |
 |------|------|------------|-------------|------|
 | 0 | 构建系统现代化 ✅ | 0 | CMake 配置、help 系统、UTF-8、彩色输出 | 17 |
-| 1 | POSIX Shell + Coreutils I | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
+| 1 | POSIX Shell + Coreutils I ✅ | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
 | 2 | Coreutils II + findutils | ~41 | 流处理管线、校验和框架 | ~75 |
 | 3 | 编辑器 + 归档 + 压缩 | ~15 | 终端抽象、压缩框架 | ~90 |
 | 4 | 进程/Init + util-linux | ~38 | /proc 解析器、TUI 框架 | ~128 |
@@ -48,32 +48,33 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 17 个 applet（echo, 
 
 ---
 
-## Phase 1：POSIX Shell + Coreutils 第一批（最高优先级）
+## Phase 1：POSIX Shell + Coreutils 第一批 ✅
 
 **目标**：实现交互式 POSIX Shell——这是在真实 Linux 上使用的基础。同时实现简单的 coreutils 建立势头。
 
-### Shell 架构（`src/applets/sh/`）
+### Coreutils 第一批 ✅
 
-Shell 是最复杂的单一组件，按模块拆分：
+16 个简单 coreutils 已完成，覆盖脚本基础所需：
 
-| 模块 | 文件 | 功能 |
+`basename` ✅, `dirname` ✅, `true` ✅, `false` ✅, `yes` ✅, `sleep` ✅, `pwd` ✅, `tty` ✅, `uname` ✅, `whoami` ✅, `hostname` ✅, `id` ✅, `logname` ✅, `nproc` ✅, `test` ✅, `link` ✅
+
+### POSIX Shell ✅
+
+Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，~2400 行）：
+
+| 模块 | 文件 | 状态 |
 |------|------|------|
-| 词法分析 | `sh_lexer.cpp` | 分词、引号处理、here-document |
-| 语法解析 | `sh_parser.cpp` | AST 构建：管道、列表、复合命令、函数定义 |
-| 执行器 | `sh_executor.cpp` | AST 遍历执行，fork/exec，管道/重定向设置 |
-| 内建命令 | `sh_builtins.cpp` | cd, export, exit, test, read, trap, umask, eval, source 等 |
-| 行编辑 | `sh_lineedit.cpp` | 原生实现（不依赖 readline）：行编辑、历史记录、Tab 补全 |
-| 作业控制 | `sh_jobs.cpp` | 进程组、会话管理、jobs/fg/bg、Ctrl+Z |
-| 变量系统 | `sh_vars.cpp` | 环境变量、Shell 变量、特殊参数、位置参数 |
-| 词展开 | `sh_expand.cpp` | 波浪号、参数展开、命令替换、算术展开、文件名展开 |
+| 共享类型 | `sh.hpp` | ✅ AST 节点、Token、ShellState |
+| 词法分析 | `sh_lexer.cpp` | ✅ 分词、引号、$展开、运算符 |
+| 语法解析 | `sh_parser.cpp` | ✅ 递归下降：管道、列表、if/while/for、子shell、花括号组 |
+| 执行器 | `sh_executor.cpp` | ✅ fork/exec/pipe、重定向 < > >>、内置命令 |
+| 内建命令 | `sh_builtins.cpp` | ✅ echo/cd/pwd/export/exit/set/unset/shift/read/eval/source |
+| 词展开 | `sh_expand.cpp` | ✅ $VAR、${VAR}、$?、$$、$#/$@/$*、命令替换、波浪号、glob |
+| 变量系统 | `sh_vars.cpp` | ✅ 变量存储、环境同步、位置参数、特殊参数 |
 
-### 需要的基础设施
-- **进程管理** `include/cfbox/process.hpp`：fork/exec/pipe/dup2/waitpid RAII 封装
-- **信号处理** `include/cfbox/signal.hpp`：RAII 信号处理器
+**已实现功能**：管道 `|`、重定向 `< > >>`、`&&` `||`、`if/elif/else/fi`、`while/until/do/done`、`for/in/do/done`、子shell `()`、花括号组 `{}`、变量赋值、变量展开、命令替换 `$(...)`、tilde 展开、glob 展开、15 个内置命令。
 
-### Coreutils 第一批（简单 applet，50-200 行/个）
-
-`basename`, `dirname`, `true`, `false`, `yes`, `sleep`, `pwd`, `tty`, `uname`, `whoami`, `hostname`, `id`, `logname`, `nproc`, `test`, `link`
+**待后续迭代**：here-document `<<`、函数定义、算术展开 `$(( ))`、行编辑（readline 风格）、作业控制（jobs/fg/bg）、`case/esac`。
 
 ### 验证
 - `./cfbox sh -c "echo hello | wc -l"` 管道工作

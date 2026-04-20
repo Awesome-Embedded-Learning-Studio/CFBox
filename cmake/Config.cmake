@@ -6,6 +6,11 @@ include_guard()
 set(CFBOX_APPLETS
     echo printf cat head tail wc sort uniq
     mkdir rm cp mv ls grep find sed init
+    true false yes pwd
+    basename dirname uname nproc link
+    hostname logname whoami tty
+    sleep id test
+    sh
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)
