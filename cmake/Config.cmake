@@ -11,6 +11,16 @@ set(CFBOX_APPLETS
     hostname logname whoami tty
     sleep id test
     sh
+    printenv hostid sync usleep rmdir unlink who env
+    readlink realpath touch truncate stat install mktemp
+    ln mkfifo mknod du
+    seq tee tac fold expand
+    cut paste nl comm tr
+    cksum md5sum sum
+    date od split shuf factor
+    timeout nice nohup df
+    expr tsort
+    xargs
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)

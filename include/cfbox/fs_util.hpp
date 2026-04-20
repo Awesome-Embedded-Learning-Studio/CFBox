@@ -191,4 +191,52 @@ inline auto hard_link_count(std::string_view path) -> base::Result<std::uintmax_
     return count;
 }
 
+inline auto create_symlink(std::string_view target, std::string_view link_path) -> base::Result<void> {
+    std::error_code ec;
+    std::filesystem::create_symlink(
+        std::filesystem::path{target},
+        std::filesystem::path{link_path},
+        ec);
+    if (ec) {
+        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
+    }
+    return {};
+}
+
+inline auto read_symlink(std::string_view path) -> base::Result<std::string> {
+    std::error_code ec;
+    auto p = std::filesystem::read_symlink(std::filesystem::path{path}, ec);
+    if (ec) {
+        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
+    }
+    return p.string();
+}
+
+inline auto canonical(std::string_view path) -> base::Result<std::string> {
+    std::error_code ec;
+    auto p = std::filesystem::canonical(std::filesystem::path{path}, ec);
+    if (ec) {
+        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
+    }
+    return p.string();
+}
+
+inline auto resize_file(std::string_view path, std::uintmax_t new_size) -> base::Result<void> {
+    std::error_code ec;
+    std::filesystem::resize_file(std::filesystem::path{path}, new_size, ec);
+    if (ec) {
+        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
+    }
+    return {};
+}
+
+inline auto space(std::string_view path) -> base::Result<std::filesystem::space_info> {
+    std::error_code ec;
+    auto info = std::filesystem::space(std::filesystem::path{path}, ec);
+    if (ec) {
+        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
+    }
+    return info;
+}
+
 } // namespace cfbox::fs
