@@ -21,6 +21,8 @@ set(CFBOX_APPLETS
     timeout nice nohup df
     expr tsort
     xargs
+    gzip gunzip diff cmp patch ed tar cpio ar unzip
+    awk
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)

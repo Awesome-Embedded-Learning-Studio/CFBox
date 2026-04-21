@@ -26,11 +26,15 @@ if(CFBOX_ENABLE_SH)
     file(GLOB_RECURSE SH_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/applets/sh/*.cpp)
     list(APPEND CFBOX_APPLET_SOURCES ${SH_SOURCES})
 endif()
+if(CFBOX_ENABLE_AWK)
+    file(GLOB_RECURSE AWK_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/applets/awk/*.cpp)
+    list(APPEND CFBOX_APPLET_SOURCES ${AWK_SOURCES})
+endif()
 
 # Single-file applets
 foreach(applet IN LISTS CFBOX_APPLETS)
     string(TOUPPER "${applet}" APPLET_UPPER)
-    if(NOT applet STREQUAL "sh" AND CFBOX_ENABLE_${APPLET_UPPER})
+    if(NOT applet STREQUAL "sh" AND NOT applet STREQUAL "awk" AND CFBOX_ENABLE_${APPLET_UPPER})
         list(APPEND CFBOX_APPLET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/applets/${applet}.cpp)
     endif()
 endforeach()
@@ -39,7 +43,7 @@ endforeach()
 add_executable(cfbox src/main.cpp ${CFBOX_APPLET_SOURCES})
 target_include_directories(cfbox PUBLIC include)
 target_include_directories(cfbox PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
-target_link_libraries(cfbox PRIVATE cfbox_compiler_flags)
+target_link_libraries(cfbox PRIVATE cfbox_compiler_flags z)
 
 # ── GTest via CPM (FetchContent) ──────────────────────────────
 if(NOT CMAKE_CROSSCOMPILING)
@@ -61,6 +65,7 @@ if(GTest_ADDED)
         target_link_libraries(cfbox_tests PRIVATE
             cfbox_compiler_flags
             GTest::gtest_main
+            z
         )
 
         include(GoogleTest)
