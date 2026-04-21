@@ -17,12 +17,13 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 78 个 applet。项目
 | 0 | 构建系统现代化 ✅ | 0 | CMake 配置、help 系统、UTF-8、彩色输出 | 17 |
 | 1 | POSIX Shell + Coreutils I ✅ | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
 | 2 | Coreutils II + findutils ✅ | ~44 | 流处理管线、校验和框架 | ~78 |
-| 3 | 编辑器 + 归档 + 压缩 | ~15 | 终端抽象、压缩框架 | ~93 |
-| 4 | 进程/Init + util-linux | ~38 | /proc 解析器、TUI 框架 | ~131 |
-| 5 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~166 |
-| 6 | 剩余组件 + 集成验证 | ~40+ | POSIX 验证、容器替换测试 | ~200+ |
+| 3 | 归档 + 压缩 + 文本处理 ✅ | ~15 | 终端抽象、压缩框架 | ~93 |
+| 4 | vi 可视化编辑器 | 1 | TUI 框架、屏幕渲染、键盘映射 | ~94 |
+| 5 | 进程/Init + util-linux | ~38 | /proc 解析器 | ~132 |
+| 6 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~167 |
+| 7 | 剩余组件 + 集成验证 | ~40+ | POSIX 验证、容器替换测试 | ~200+ |
 
-**当前状态**：Phase 0-2 已完成，78 个 applet，246 单元测试 + 49 集成测试全部通过。
+**当前状态**：Phase 0-3 已完成，93 个 applet，259 单元测试 + 54 集成测试全部通过。
 
 ---
 
@@ -121,43 +122,82 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ---
 
-## Phase 3：编辑器 + 归档 + 压缩
+## Phase 3：归档 + 压缩 + 文本处理 ✅
 
 **目标**：实现让 CFBox 能够独立进行系统管理的重量级组件。
 
-### 编辑器
-- **awk**（`src/applets/awk/`）：完整 AWK 实现——词法/语法/解释器，模式-动作、BEGIN/END、字段、关联数组、printf、用户函数、正则匹配。目标 POSIX awk 兼容。第二复杂组件。
-- **vi**（`src/applets/vi/`）：完整可视化编辑器——命令模式、插入模式、ex 命令行、缓冲区管理、光标移动、搜索替换、撤销。
-- **diff** + **cmp**：文件比较，支持 unified/context/normal 格式
-- **patch**：应用 diff 输出
-- **ed**：行编辑器
+### 文本处理
+- **awk**（`src/applets/awk/`，~1266 行）✅：完整 AWK 实现——词法/语法/解释器，模式-动作、BEGIN/END、字段、关联数组、printf、用户函数、正则匹配、内置函数（length/substr/split/gsub/match/sprintf）。
+- **diff** ✅ + **cmp** ✅：LCS 文件比较，支持 normal 和 unified (-u) 格式
+- **patch** ✅：支持 normal 和 unified diff 输入，diff | patch 往返验证通过
+- **ed** ✅：行编辑器，支持 a/i/d/p/n/w/q/$ 及带文件名的 w 命令
 
 ### 归档
-- **tar**（`src/applets/tar/`）：创建/提取/列出，支持 ustar/GNU/pax 格式
-- **cpio**：initramfs 必需，支持 newc/odc 格式
-- **ar**：静态库管理
-- **unzip**：ZIP 提取
-- **dpkg_deb** / **rpm**：基本包提取
+- **tar** ✅（`src/applets/tar.cpp`，~180 行）：创建/提取/列出，ustar 格式，支持 `-C` 目录切换、目录递归
+- **cpio** ✅：newc 格式，initramfs 就绪
+- **ar** ✅：静态库管理，创建/列出/提取
+- **unzip** ✅：ZIP 提取，支持 stored 和 deflated 方法
 
-### 压缩（`include/cfbox/compress/`）
-- **gzip/gunzip**：DEFLATE 算法
-- **xz/unxz**：LZMA2 格式（初期可链接 liblzma）
-- **zstd**：（初期可链接 libzstd）
+### 压缩
+- **gzip/gunzip** ✅：基于 zlib 的 DEFLATE 压缩/解压，文件和 stdin/stdout 双模式
 
-### 基础设施
-- **终端抽象** `include/cfbox/terminal.hpp`：termios raw 模式、转义序列、终端大小、备用屏幕缓冲区
-- **压缩框架**：流式压缩/解压接口，允许 tar 透明处理 .tar.gz/.tar.xz
+### 基础设施 ✅
+- **终端抽象** `include/cfbox/terminal.hpp` ✅：RawMode RAII、终端大小检测、光标控制、备用屏幕缓冲区、视频属性
+- **压缩框架** `include/cfbox/compress.hpp` ✅：gzip 压缩/解压接口
 
-### 验证
-- `echo "hello" | gzip | gunzip` 往返正确
-- `tar cf - /etc | tar tf -` 列出文件
-- `awk '{print $1}' file` 输出正确
-- vi 能打开、编辑、保存文件（自动化测试）
-- `diff file1 file2 | patch file1` 往返正确
+### 验证 ✅
+- `echo "hello" | gzip | gunzip` 往返正确 ✅
+- `tar -cf archive.tar -C DIR files && tar -xf archive.tar` 创建/提取/列出正确 ✅
+- `awk '{print $1}' file` / `awk '{s+=$1}END{print s}'` 输出正确 ✅
+- `diff file1 file2 | patch file1` 往返正确（normal 和 unified 格式） ✅
+- 259 单元测试 + 54 集成测试全部通过 ✅
 
 ---
 
-## Phase 4：进程管理 + Init 系统 + util-linux
+## Phase 4：vi 可视化编辑器
+
+**目标**：实现完整的 vi 可视化编辑器——CFBox 中最复杂的单一组件，需要独立的终端交互框架。
+
+### 核心功能
+- **命令模式**：光标移动（h/j/k/l/w/b/e/G/gg/0/$）、删除（x/dd/dw/d$）、复制粘贴（yy/p/P）、撤销/重做（u/Ctrl-R）
+- **插入模式**：i/a/I/A/o/O 进入，Esc 退出，文本输入
+- **ex 命令行**：:w/:q/:wq/:q!/:e/:r/:%s/:%g/:Number/:%!（外部命令过滤）
+- **搜索替换**：/pattern 向前搜索、?pattern 向后搜索、n/N 重复、:%s/old/new/g 替换
+- **可视化模式**：v 字符选择、V 行选择、基于选择的操作
+
+### 屏幕渲染
+- **双缓冲区渲染**：维护逻辑屏幕和物理屏幕，diff 驱动最小更新
+- **状态栏**：底行显示文件名、光标位置、模式指示、修改标记
+- **滚动**：半页/整页滚动（Ctrl-D/Ctrl-U/Ctrl-F/Ctrl-B），长行折行显示
+
+### 基础设施
+- **TUI 框架** `include/cfbox/tui.hpp`：全屏终端应用抽象，vi/top/less 共用
+  - 屏幕缓冲区管理、增量渲染
+  - 键盘事件映射（普通键 + 转义序列解析）
+  - 信号处理（SIGWINCH 终端大小变化）
+
+### 文件结构
+```
+src/applets/vi/
+├── vi.hpp           # 共享类型、ViState、模式枚举
+├── vi_buffer.cpp    # 文本缓冲区管理（行存储、插入/删除、撤销栈）
+├── vi_render.cpp    # 屏幕渲染、diff 驱动更新
+├── vi_normal.cpp    # 命令模式处理
+├── vi_insert.cpp    # 插入模式处理
+├── vi_ex.cpp        # ex 命令行解析和执行
+├── vi_search.cpp    # 搜索替换引擎
+└── vi_main.cpp      # 入口、事件循环
+```
+
+### 验证
+- vi 能打开文件、编辑文本、保存退出
+- 自动化测试：通过管道注入按键序列 + 验证输出文件
+- 多文件编辑、大文件（10MB+）性能可接受
+- 终端大小变化（SIGWINCH）正确响应
+
+---
+
+## Phase 5：进程管理 + Init 系统 + util-linux
 
 **目标**：构建让 CFBox 适合作为完整 init 环境的系统级工具。
 
@@ -178,7 +218,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ### 基础设施
 - **`/proc` 解析器** `include/cfbox/proc.hpp`：集中解析 /proc/meminfo, /proc/stat, /proc/[pid]/stat 等
-- **TUI 框架** `include/cfbox/tui.hpp`：全屏终端应用抽象（top, vi, less 共用）
+- TUI 框架已在 Phase 4 实现，top/less 可直接复用
 
 ### 验证
 - CFBox 作为 PID 1 在 QEMU 中启动，运行 inittab，生成 getty，处理关机
@@ -187,7 +227,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ---
 
-## Phase 5：网络 + 登录管理 + 系统日志
+## Phase 6：网络 + 登录管理 + 系统日志
 
 **目标**：添加网络工具和用户/会话管理，使 CFBox 适用于网络启动系统和多用户环境。
 
@@ -220,7 +260,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ---
 
-## Phase 6：剩余组件 + 全面集成验证
+## Phase 7：剩余组件 + 全面集成验证
 
 **目标**：完成所有剩余 BusyBox applet 类别，进行 POSIX 合规验证和集成测试。
 
@@ -257,7 +297,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 |------|------|---------|
 | **Shell 复杂度** | 最高——5000+ 行代码 | 增量构建：先非交互 → 行编辑 → 作业控制，从第一天开始测试 POSIX shell 测试套件 |
 | **AWK 复杂度** | 高——第二复杂组件 | 从 POSIX awk 子集开始，实现解释器而非编译器 |
-| **vi 复杂度** | 高——终端处理微妙 | 使用 Phase 0 的终端抽象，自动化按键注入测试 |
+| **vi 复杂度** | 高——终端处理微妙、独立 Phase 4 | 使用 Phase 3 的终端抽象 + 自建 TUI 框架，自动化按键注入测试，双缓冲 diff 驱动渲染 |
 | **二进制体积膨胀** | 中——200+ applet | Phase 0 的 CMake 配置允许裁剪，LTO 和死代码消除，每阶段监控体积 |
 | **跨平台边界情况** | 中——ioctl、/proc 格式差异 | 平台特性抽象到 `include/cfbox/` 头文件，每阶段三平台测试 |
 | **网络安全** | 中——wget/httpd 需要 TLS | 先做 HTTP-only，HTTPS 通过可选 mbedTLS 依赖，作为 CMake 选项 |

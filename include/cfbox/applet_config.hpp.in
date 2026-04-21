@@ -82,3 +82,14 @@
 #cmakedefine01 CFBOX_ENABLE_EXPR
 #cmakedefine01 CFBOX_ENABLE_TSORT
 #cmakedefine01 CFBOX_ENABLE_XARGS
+#cmakedefine01 CFBOX_ENABLE_GZIP
+#cmakedefine01 CFBOX_ENABLE_GUNZIP
+#cmakedefine01 CFBOX_ENABLE_DIFF
+#cmakedefine01 CFBOX_ENABLE_CMP
+#cmakedefine01 CFBOX_ENABLE_PATCH
+#cmakedefine01 CFBOX_ENABLE_ED
+#cmakedefine01 CFBOX_ENABLE_TAR
+#cmakedefine01 CFBOX_ENABLE_CPIO
+#cmakedefine01 CFBOX_ENABLE_AR
+#cmakedefine01 CFBOX_ENABLE_UNZIP
+#cmakedefine01 CFBOX_ENABLE_AWK

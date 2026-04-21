@@ -238,6 +238,39 @@ extern auto tsort_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_XARGS
 extern auto xargs_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_GZIP
+extern auto gzip_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_GUNZIP
+extern auto gunzip_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_DIFF
+extern auto diff_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_CMP
+extern auto cmp_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PATCH
+extern auto patch_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_ED
+extern auto ed_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_TAR
+extern auto tar_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_CPIO
+extern auto cpio_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_AR
+extern auto ar_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_UNZIP
+extern auto unzip_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_AWK
+extern auto awk_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -475,5 +508,38 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_XARGS
     {"xargs",    xargs_main,    "build and execute command lines from stdin"},
+#endif
+#if CFBOX_ENABLE_GZIP
+    {"gzip",     gzip_main,     "compress files"},
+#endif
+#if CFBOX_ENABLE_GUNZIP
+    {"gunzip",   gunzip_main,   "decompress files"},
+#endif
+#if CFBOX_ENABLE_DIFF
+    {"diff",     diff_main,     "compare files line by line"},
+#endif
+#if CFBOX_ENABLE_CMP
+    {"cmp",      cmp_main,      "compare two files byte by byte"},
+#endif
+#if CFBOX_ENABLE_PATCH
+    {"patch",    patch_main,    "apply a diff file to an original"},
+#endif
+#if CFBOX_ENABLE_ED
+    {"ed",       ed_main,       "line-oriented text editor"},
+#endif
+#if CFBOX_ENABLE_TAR
+    {"tar",      tar_main,      "create, extract, or list tar archives"},
+#endif
+#if CFBOX_ENABLE_CPIO
+    {"cpio",     cpio_main,     "copy files to and from archives"},
+#endif
+#if CFBOX_ENABLE_AR
+    {"ar",       ar_main,       "create, modify, and extract from archives"},
+#endif
+#if CFBOX_ENABLE_UNZIP
+    {"unzip",    unzip_main,    "list, test and extract compressed files in a ZIP archive"},
+#endif
+#if CFBOX_ENABLE_AWK
+    {"awk",      awk_main,      "pattern-directed scanning and processing language"},
 #endif
 });
