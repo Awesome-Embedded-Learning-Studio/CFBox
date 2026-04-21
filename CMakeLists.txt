@@ -15,6 +15,14 @@ include(cmake/third_party/CPM.cmake)
 # ── Compiler flags ────────────────────────────────────────────
 include(cmake/compile/CompilerFlag.cmake)
 
+# ── Dependencies ──────────────────────────────────────────────
+CPMAddPackage(
+    NAME zlib
+    GITHUB_REPOSITORY madler/zlib
+    GIT_TAG v1.3.1
+    OPTIONS "CMAKE_POSITION_INDEPENDENT_CODE ON"
+)
+
 # ── Applet configuration ─────────────────────────────────────
 include(cmake/Config.cmake)
 
@@ -43,7 +51,14 @@ endforeach()
 add_executable(cfbox src/main.cpp ${CFBOX_APPLET_SOURCES})
 target_include_directories(cfbox PUBLIC include)
 target_include_directories(cfbox PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
-target_link_libraries(cfbox PRIVATE cfbox_compiler_flags z)
+target_link_libraries(cfbox PRIVATE cfbox_compiler_flags)
+if(zlib_ADDED)
+    target_link_libraries(cfbox PRIVATE zlibstatic)
+    target_include_directories(cfbox SYSTEM PRIVATE ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
+else()
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(cfbox PRIVATE ZLIB::ZLIB)
+endif()
 
 # ── GTest via CPM (FetchContent) ──────────────────────────────
 if(NOT CMAKE_CROSSCOMPILING)
@@ -65,8 +80,13 @@ if(GTest_ADDED)
         target_link_libraries(cfbox_tests PRIVATE
             cfbox_compiler_flags
             GTest::gtest_main
-            z
         )
+        if(zlib_ADDED)
+            target_link_libraries(cfbox_tests PRIVATE zlibstatic)
+            target_include_directories(cfbox_tests SYSTEM PRIVATE ${zlib_SOURCE_DIR} ${zlib_BINARY_DIR})
+        else()
+            target_link_libraries(cfbox_tests PRIVATE ZLIB::ZLIB)
+        endif()
 
         include(GoogleTest)
         gtest_discover_tests(cfbox_tests)
