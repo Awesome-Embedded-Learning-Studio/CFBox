@@ -36,6 +36,10 @@ target_compile_options(cfbox_compiler_flags INTERFACE
     $<$<CONFIG:Debug>:-fno-sanitize-recover=all>
 )
 
+target_link_options(cfbox_compiler_flags INTERFACE
+    $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+)
+
 # ── Release-specific flags ────────────────────────────────────
 if(CFBOX_OPTIMIZE_FOR_SIZE)
     target_compile_options(cfbox_compiler_flags INTERFACE

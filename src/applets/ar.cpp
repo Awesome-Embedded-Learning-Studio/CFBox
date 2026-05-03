@@ -94,7 +94,10 @@ auto ar_main(int argc, char* argv[]) -> int {
                 std::puts(name.c_str());
             } else if (extract) {
                 auto content = data.substr(offset + 60, fsize);
-                cfbox::io::write_all(name, content);
+                if (!cfbox::io::write_all(name, content)) {
+                    std::fprintf(stderr, "cfbox ar: write failed: %s\n", name.c_str());
+                    return 1;
+                }
             }
             offset += 60 + fsize;
             if (fsize % 2) ++offset;

@@ -271,6 +271,66 @@ extern auto unzip_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_AWK
 extern auto awk_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_FREE
+extern auto free_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_UPTIME
+extern auto uptime_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_KILL
+extern auto kill_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PIDOF
+extern auto pidof_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PS
+extern auto ps_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PGREP
+extern auto pgrep_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_SYSCTL
+extern auto sysctl_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PWDX
+extern auto pwdx_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PSTREE
+extern auto pstree_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PMAP
+extern auto pmap_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_FUSER
+extern auto fuser_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_IOSTAT
+extern auto iostat_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_WATCH
+extern auto watch_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_TOP
+extern auto top_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_DMESG
+extern auto dmesg_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_HEXDUMP
+extern auto hexdump_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_MORE
+extern auto more_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_REV
+extern auto rev_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_CAL
+extern auto cal_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_RENICE
+extern auto renice_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -541,5 +601,66 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_AWK
     {"awk",      awk_main,      "pattern-directed scanning and processing language"},
+#endif
+#if CFBOX_ENABLE_FREE
+    {"free",     free_main,     "display amount of free and used memory"},
+#endif
+#if CFBOX_ENABLE_UPTIME
+    {"uptime",   uptime_main,   "tell how long the system has been running"},
+#endif
+#if CFBOX_ENABLE_KILL
+    {"kill",     kill_main,     "send a signal to a process"},
+#endif
+#if CFBOX_ENABLE_PIDOF
+    {"pidof",    pidof_main,    "find the process ID of a running program"},
+#endif
+#if CFBOX_ENABLE_PS
+    {"ps",       ps_main,       "report a snapshot of current processes"},
+#endif
+#if CFBOX_ENABLE_PGREP
+    {"pgrep",    pgrep_main,    "look up processes based on name"},
+    {"pkill",    pgrep_main,    "signal processes based on name"},
+#endif
+#if CFBOX_ENABLE_SYSCTL
+    {"sysctl",   sysctl_main,   "configure kernel parameters at runtime"},
+#endif
+#if CFBOX_ENABLE_PWDX
+    {"pwdx",     pwdx_main,     "print working directory of a process"},
+#endif
+#if CFBOX_ENABLE_PSTREE
+    {"pstree",   pstree_main,   "display a tree of processes"},
+#endif
+#if CFBOX_ENABLE_PMAP
+    {"pmap",     pmap_main,     "display memory map of a process"},
+#endif
+#if CFBOX_ENABLE_FUSER
+    {"fuser",    fuser_main,    "identify processes using files or sockets"},
+#endif
+#if CFBOX_ENABLE_IOSTAT
+    {"iostat",   iostat_main,   "report CPU and I/O statistics"},
+#endif
+#if CFBOX_ENABLE_WATCH
+    {"watch",    watch_main,    "execute a program periodically"},
+#endif
+#if CFBOX_ENABLE_TOP
+    {"top",      top_main,      "display Linux processes"},
+#endif
+#if CFBOX_ENABLE_DMESG
+    {"dmesg",    dmesg_main,    "print kernel ring buffer"},
+#endif
+#if CFBOX_ENABLE_HEXDUMP
+    {"hexdump",  hexdump_main,  "display file contents in hexadecimal"},
+#endif
+#if CFBOX_ENABLE_MORE
+    {"more",     more_main,     "file perusal filter for crt viewing"},
+#endif
+#if CFBOX_ENABLE_REV
+    {"rev",      rev_main,      "reverse lines characterwise"},
+#endif
+#if CFBOX_ENABLE_CAL
+    {"cal",      cal_main,      "display a calendar"},
+#endif
+#if CFBOX_ENABLE_RENICE
+    {"renice",   renice_main,   "alter priority of running processes"},
 #endif
 });

@@ -32,9 +32,10 @@ auto sleep_main(int argc, char* argv[]) -> int {
 
     double total = 0.0;
     for (auto arg : pos) {
+        auto s = std::string{arg};
         char* end = nullptr;
-        double val = std::strtod(std::string{arg}.c_str(), &end);
-        if (end == std::string{arg}.c_str() || val < 0) {
+        double val = std::strtod(s.c_str(), &end);
+        if (end == s.c_str() || val < 0) {
             std::fprintf(stderr, "cfbox sleep: invalid time interval '%.*s'\n",
                          static_cast<int>(arg.size()), arg.data());
             return 1;

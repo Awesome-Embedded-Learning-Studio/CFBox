@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 namespace cfbox::sh {
