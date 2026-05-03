@@ -23,6 +23,7 @@ set(CFBOX_APPLETS
     xargs
     gzip gunzip diff cmp patch ed tar cpio ar unzip
     awk
+    free uptime kill pidof ps pgrep sysctl
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)

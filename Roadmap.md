@@ -18,12 +18,12 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 78 个 applet。项目
 | 1 | POSIX Shell + Coreutils I ✅ | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
 | 2 | Coreutils II + findutils ✅ | ~44 | 流处理管线、校验和框架 | ~78 |
 | 3 | 归档 + 压缩 + 文本处理 ✅ | ~15 | 终端抽象、压缩框架 | ~93 |
-| 4 | vi 可视化编辑器 | 1 | TUI 框架、屏幕渲染、键盘映射 | ~94 |
-| 5 | 进程/Init + util-linux | ~38 | /proc 解析器 | ~132 |
-| 6 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~167 |
+| 4 | 进程/Init + util-linux 🔧 | ~8/38 | /proc 解析器、init 系统 | ~100 |
+| 5 | vi 可视化编辑器 | 1 | TUI 框架、屏幕渲染、键盘映射 | ~133 |
+| 6 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~168 |
 | 7 | 剩余组件 + 集成验证 | ~40+ | POSIX 验证、容器替换测试 | ~200+ |
 
-**当前状态**：Phase 0-3 已完成，93 个 applet，259 单元测试 + 54 集成测试全部通过。
+**当前状态**：Phase 0-3 已完成，Phase 4 进行中。100 个 applet，288 单元测试全部通过。CFBox 已可在 QEMU 中作为 PID 1 运行完整 init 系统。
 
 ---
 
@@ -154,7 +154,42 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ---
 
-## Phase 4：vi 可视化编辑器
+## Phase 4：进程管理 + Init 系统 + util-linux 🔧
+
+**目标**：构建让 CFBox 适合作为完整 init 环境的系统级工具，applet 数量翻倍。
+
+### 基础设施 ✅
+- **`/proc` 解析器** `include/cfbox/proc.hpp` ✅：集中解析 /proc/meminfo, /proc/stat, /proc/[pid]/stat, /proc/[pid]/cmdline, /proc/[pid]/status, /proc/loadavg, /proc/uptime, /proc/mounts, /proc/diskstats, /proc/partitions
+- **TUI 框架** `include/cfbox/tui.hpp`：全屏终端应用抽象（top、后续的 vi/less 共用）— 待实现
+
+### Init 系统 ✅
+- **inittab 解析器** ✅：解析 `/etc/inittab`，支持运行级别、respawn、once 条目
+- **运行级别管理** ✅：sysinit, boot, single-user, multi-user
+- **服务监控** ✅：进程监控 + respawn 能力（指数退避）
+- **关机/重启** ✅：SIGTERM → 等待 → SIGKILL → sync → 卸载 → reboot
+- **QEMU 兼容** ✅：无 inittab 时自动回退 smoke test 模式，保持 CI 兼容
+- **getty 集成**：在 TTY 上生成登录提示 — 待 Phase 6
+
+### procps ✅（已完成 8/16）
+`ps` ✅, `kill` ✅, `free` ✅, `uptime` ✅, `pgrep`/`pkill` ✅, `pidof` ✅, `sysctl` ✅
+
+`top`, `pmap`, `iostat`, `lsof`, `watch`, `pstree`, `fuser`, `pwdx` — 待实现
+
+### util-linux（待实现）
+**存储/块设备**：`mount`/`umount`, `blkid`, `blockdev`, `dmesg`, `fdisk`, `mkfs`, `fsck`, `losetup`, `pivot_root`, `switch_root`, `swapon`/`swapoff`
+
+**系统工具**：`hexdump`, `more`, `flock`, `getopt`, `cal`, `rev`, `setsid`, `nsenter`, `unshare`, `mdev`, `lspci`, `lsusb`, `hwclock`, `rtcwake`, `taskset`, `chrt`, `ionice`, `renice`, `last`, `mesg`, `wall`, `script`
+
+### 验证 ✅（已通过）
+- CFBox 作为 PID 1 在 QEMU aarch64 中启动，运行 inittab，执行 sysinit 命令，spawn shell（respawn），处理关机 ✅
+- `ps aux` 输出与 procps 格式匹配 ✅
+- `free -h`、`uptime`、`kill -l`、`pidof`、`sysctl` 在 QEMU 中正常工作 ✅
+- 288 单元测试全部通过 ✅
+- 容器测试：CFBox 替换 Alpine 容器中的 BusyBox — 待实现
+
+---
+
+## Phase 5：vi 可视化编辑器
 
 **目标**：实现完整的 vi 可视化编辑器——CFBox 中最复杂的单一组件，需要独立的终端交互框架。
 
@@ -171,7 +206,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 - **滚动**：半页/整页滚动（Ctrl-D/Ctrl-U/Ctrl-F/Ctrl-B），长行折行显示
 
 ### 基础设施
-- **TUI 框架** `include/cfbox/tui.hpp`：全屏终端应用抽象，vi/top/less 共用
+- TUI 框架已在 Phase 4 实现，vi 直接复用
   - 屏幕缓冲区管理、增量渲染
   - 键盘事件映射（普通键 + 转义序列解析）
   - 信号处理（SIGWINCH 终端大小变化）
@@ -194,36 +229,6 @@ src/applets/vi/
 - 自动化测试：通过管道注入按键序列 + 验证输出文件
 - 多文件编辑、大文件（10MB+）性能可接受
 - 终端大小变化（SIGWINCH）正确响应
-
----
-
-## Phase 5：进程管理 + Init 系统 + util-linux
-
-**目标**：构建让 CFBox 适合作为完整 init 环境的系统级工具。
-
-### Init 系统（完整）
-- **inittab 解析器**：解析 `/etc/inittab`，支持运行级别、respawn、once 条目
-- **运行级别管理**：sysinit, boot, single-user, multi-user
-- **服务监控**：进程监控 + respawn 能力
-- **关机/重启**：SIGTERM → 等待 → SIGKILL → sync → 卸载 → 重启
-- **getty 集成**：在 TTY 上生成登录提示
-
-### procps（解析 `/proc` 文件系统）
-`ps`, `top`, `kill`, `free`, `uptime`, `pgrep`/`pkill`, `pidof`, `pmap`, `iostat`, `lsof`, `watch`, `sysctl`, `pstree`, `fuser`, `pwdx`
-
-### util-linux
-**存储/块设备**：`mount`/`umount`, `blkid`, `blockdev`, `dmesg`, `fdisk`, `mkfs`, `fsck`, `losetup`, `pivot_root`, `switch_root`, `swapon`/`swapoff`
-
-**系统工具**：`hexdump`, `more`, `flock`, `getopt`, `cal`, `rev`, `setsid`, `nsenter`, `unshare`, `mdev`, `lspci`, `lsusb`, `hwclock`, `rtcwake`, `taskset`, `chrt`, `ionice`, `renice`, `last`, `mesg`, `wall`, `script`
-
-### 基础设施
-- **`/proc` 解析器** `include/cfbox/proc.hpp`：集中解析 /proc/meminfo, /proc/stat, /proc/[pid]/stat 等
-- TUI 框架已在 Phase 4 实现，top/less 可直接复用
-
-### 验证
-- CFBox 作为 PID 1 在 QEMU 中启动，运行 inittab，生成 getty，处理关机
-- `ps aux` 输出与 procps 格式匹配
-- 容器测试：CFBox 替换 Alpine 容器中的 BusyBox，`docker run` 成功
 
 ---
 
@@ -297,7 +302,7 @@ src/applets/vi/
 |------|------|---------|
 | **Shell 复杂度** | 最高——5000+ 行代码 | 增量构建：先非交互 → 行编辑 → 作业控制，从第一天开始测试 POSIX shell 测试套件 |
 | **AWK 复杂度** | 高——第二复杂组件 | 从 POSIX awk 子集开始，实现解释器而非编译器 |
-| **vi 复杂度** | 高——终端处理微妙、独立 Phase 4 | 使用 Phase 3 的终端抽象 + 自建 TUI 框架，自动化按键注入测试，双缓冲 diff 驱动渲染 |
+| **vi 复杂度** | 高——终端处理微妙、独立 Phase 5 | 使用 Phase 3 的终端抽象 + Phase 4 的 TUI 框架，自动化按键注入测试，双缓冲 diff 驱动渲染 |
 | **二进制体积膨胀** | 中——200+ applet | Phase 0 的 CMake 配置允许裁剪，LTO 和死代码消除，每阶段监控体积 |
 | **跨平台边界情况** | 中——ioctl、/proc 格式差异 | 平台特性抽象到 `include/cfbox/` 头文件，每阶段三平台测试 |
 | **网络安全** | 中——wget/httpd 需要 TLS | 先做 HTTP-only，HTTPS 通过可选 mbedTLS 依赖，作为 CMake 选项 |

@@ -271,6 +271,27 @@ extern auto unzip_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_AWK
 extern auto awk_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_FREE
+extern auto free_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_UPTIME
+extern auto uptime_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_KILL
+extern auto kill_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PIDOF
+extern auto pidof_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PS
+extern auto ps_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_PGREP
+extern auto pgrep_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_SYSCTL
+extern auto sysctl_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -541,5 +562,27 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_AWK
     {"awk",      awk_main,      "pattern-directed scanning and processing language"},
+#endif
+#if CFBOX_ENABLE_FREE
+    {"free",     free_main,     "display amount of free and used memory"},
+#endif
+#if CFBOX_ENABLE_UPTIME
+    {"uptime",   uptime_main,   "tell how long the system has been running"},
+#endif
+#if CFBOX_ENABLE_KILL
+    {"kill",     kill_main,     "send a signal to a process"},
+#endif
+#if CFBOX_ENABLE_PIDOF
+    {"pidof",    pidof_main,    "find the process ID of a running program"},
+#endif
+#if CFBOX_ENABLE_PS
+    {"ps",       ps_main,       "report a snapshot of current processes"},
+#endif
+#if CFBOX_ENABLE_PGREP
+    {"pgrep",    pgrep_main,    "look up processes based on name"},
+    {"pkill",    pgrep_main,    "signal processes based on name"},
+#endif
+#if CFBOX_ENABLE_SYSCTL
+    {"sysctl",   sysctl_main,   "configure kernel parameters at runtime"},
 #endif
 });

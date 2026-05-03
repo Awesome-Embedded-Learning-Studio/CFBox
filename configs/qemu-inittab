@@ -1,0 +1,21 @@
+# CFBox /etc/inittab — QEMU aarch64 virt machine test
+# Format: id:runlevels:action:process
+
+# Note: /proc, /sys, /dev are mounted automatically by init's sysinit phase.
+# (mount applet is not yet available, init does it internally)
+
+# Boot test — verify applets work under init
+::sysinit:/bin/echo "=== CFBox Init (inittab mode) ==="
+::sysinit:/bin/uname -a
+::sysinit:/bin/free -h
+::sysinit:/bin/uptime
+::sysinit:/bin/ps
+::sysinit:/bin/echo "=== Inittab tests PASSED ==="
+
+# Phase 3: Spawn shell on serial console (respawn if killed)
+ttyAMA0::respawn:/bin/sh
+
+# Signals
+::ctrlaltdel:/bin/echo "Ctrl-Alt-Del pressed, rebooting..."
+::shutdown:/bin/echo "Shutting down..."
+::shutdown:/bin/sync

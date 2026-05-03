@@ -93,3 +93,10 @@
 #cmakedefine01 CFBOX_ENABLE_AR
 #cmakedefine01 CFBOX_ENABLE_UNZIP
 #cmakedefine01 CFBOX_ENABLE_AWK
+#cmakedefine01 CFBOX_ENABLE_FREE
+#cmakedefine01 CFBOX_ENABLE_UPTIME
+#cmakedefine01 CFBOX_ENABLE_KILL
+#cmakedefine01 CFBOX_ENABLE_PIDOF
+#cmakedefine01 CFBOX_ENABLE_PS
+#cmakedefine01 CFBOX_ENABLE_PGREP
+#cmakedefine01 CFBOX_ENABLE_SYSCTL
