@@ -18,12 +18,12 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 78 个 applet。项目
 | 1 | POSIX Shell + Coreutils I ✅ | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
 | 2 | Coreutils II + findutils ✅ | ~44 | 流处理管线、校验和框架 | ~78 |
 | 3 | 归档 + 压缩 + 文本处理 ✅ | ~15 | 终端抽象、压缩框架 | ~93 |
-| 4 | 进程/Init + util-linux 🔧 | ~8/38 | /proc 解析器、init 系统 | ~100 |
+| 4 | 进程/Init + util-linux 🔧 | ~21/38 | /proc 解析器、init 系统、TUI 框架 | ~114 |
 | 5 | vi 可视化编辑器 | 1 | TUI 框架、屏幕渲染、键盘映射 | ~133 |
 | 6 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~168 |
 | 7 | 剩余组件 + 集成验证 | ~40+ | POSIX 验证、容器替换测试 | ~200+ |
 
-**当前状态**：Phase 0-3 已完成，Phase 4 进行中。100 个 applet，288 单元测试全部通过。CFBox 已可在 QEMU 中作为 PID 1 运行完整 init 系统。
+**当前状态**：Phase 0-3 已完成，Phase 4 进行中。114 个 applet，318 单元测试全部通过。CFBox 已可在 QEMU 中作为 PID 1 运行完整 init 系统。TUI 框架已就绪，为 Phase 5 vi 编辑器奠定基础。
 
 ---
 
@@ -160,7 +160,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ### 基础设施 ✅
 - **`/proc` 解析器** `include/cfbox/proc.hpp` ✅：集中解析 /proc/meminfo, /proc/stat, /proc/[pid]/stat, /proc/[pid]/cmdline, /proc/[pid]/status, /proc/loadavg, /proc/uptime, /proc/mounts, /proc/diskstats, /proc/partitions
-- **TUI 框架** `include/cfbox/tui.hpp`：全屏终端应用抽象（top、后续的 vi/less 共用）— 待实现
+- **TUI 框架** `include/cfbox/tui.hpp` ✅：全屏终端应用抽象（ScreenBuffer、Key 解析、TuiApp 虚基类、SIGWINCH 处理），top 和后续 vi/less 共用
 
 ### Init 系统 ✅
 - **inittab 解析器** ✅：解析 `/etc/inittab`，支持运行级别、respawn、once 条目
@@ -170,21 +170,27 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 - **QEMU 兼容** ✅：无 inittab 时自动回退 smoke test 模式，保持 CI 兼容
 - **getty 集成**：在 TTY 上生成登录提示 — 待 Phase 6
 
-### procps ✅（已完成 8/16）
-`ps` ✅, `kill` ✅, `free` ✅, `uptime` ✅, `pgrep`/`pkill` ✅, `pidof` ✅, `sysctl` ✅
+### procps（已完成 15/16）
+`ps` ✅, `kill` ✅, `free` ✅, `uptime` ✅, `pgrep`/`pkill` ✅, `pidof` ✅, `sysctl` ✅, `pwdx` ✅, `pstree` ✅, `pmap` ✅, `fuser` ✅, `iostat` ✅, `watch` ✅, `top` ✅
 
-`top`, `pmap`, `iostat`, `lsof`, `watch`, `pstree`, `fuser`, `pwdx` — 待实现
+`lsof` — 待实现
 
-### util-linux（待实现）
-**存储/块设备**：`mount`/`umount`, `blkid`, `blockdev`, `dmesg`, `fdisk`, `mkfs`, `fsck`, `losetup`, `pivot_root`, `switch_root`, `swapon`/`swapoff`
+### util-linux（已完成 6/30）
+`dmesg` ✅, `hexdump` ✅, `more` ✅, `rev` ✅, `cal` ✅, `renice` ✅
 
-**系统工具**：`hexdump`, `more`, `flock`, `getopt`, `cal`, `rev`, `setsid`, `nsenter`, `unshare`, `mdev`, `lspci`, `lsusb`, `hwclock`, `rtcwake`, `taskset`, `chrt`, `ionice`, `renice`, `last`, `mesg`, `wall`, `script`
+**存储/块设备**（待实现）：`mount`/`umount`, `blkid`, `blockdev`, `fdisk`, `mkfs`, `fsck`, `losetup`, `pivot_root`, `switch_root`, `swapon`/`swapoff`
+
+**系统工具**（待实现）：`flock`, `getopt`, `setsid`, `nsenter`, `unshare`, `mdev`, `lspci`, `lsusb`, `hwclock`, `rtcwake`, `taskset`, `chrt`, `ionice`, `last`, `mesg`, `wall`, `script`
 
 ### 验证 ✅（已通过）
 - CFBox 作为 PID 1 在 QEMU aarch64 中启动，运行 inittab，执行 sysinit 命令，spawn shell（respawn），处理关机 ✅
 - `ps aux` 输出与 procps 格式匹配 ✅
 - `free -h`、`uptime`、`kill -l`、`pidof`、`sysctl` 在 QEMU 中正常工作 ✅
 - 288 单元测试全部通过 ✅
+- `top -b -n 1` 在批处理模式下输出进程表 ✅
+- `pstree -p` 显示进程树和 PID ✅
+- `hexdump -C /dev/null`、`cal`、`rev` 功能正确 ✅
+- 318 单元测试全部通过 ✅
 - 容器测试：CFBox 替换 Alpine 容器中的 BusyBox — 待实现
 
 ---
@@ -206,7 +212,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 - **滚动**：半页/整页滚动（Ctrl-D/Ctrl-U/Ctrl-F/Ctrl-B），长行折行显示
 
 ### 基础设施
-- TUI 框架已在 Phase 4 实现，vi 直接复用
+- TUI 框架已在 Phase 4 实现 ✅，vi 直接复用
   - 屏幕缓冲区管理、增量渲染
   - 键盘事件映射（普通键 + 转义序列解析）
   - 信号处理（SIGWINCH 终端大小变化）

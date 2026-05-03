@@ -48,7 +48,7 @@ struct TempDir {
     // Write a file inside the temp dir
     auto write_file(const std::string& name, const std::string& content) const -> std::string {
         auto fp = path / name;
-        cfbox::io::write_all(fp.string(), content);
+        static_cast<void>(cfbox::io::write_all(fp.string(), content));
         return fp.string();
     }
 

@@ -24,6 +24,9 @@ set(CFBOX_APPLETS
     gzip gunzip diff cmp patch ed tar cpio ar unzip
     awk
     free uptime kill pidof ps pgrep sysctl
+    pwdx pstree pmap fuser iostat
+    watch top
+    dmesg hexdump more rev cal renice
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)

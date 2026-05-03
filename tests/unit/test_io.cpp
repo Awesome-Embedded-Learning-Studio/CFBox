@@ -53,7 +53,7 @@ TEST_F(IOTest, WriteNonexistentDir) {
 
 TEST_F(IOTest, SplitLines) {
     std::string path = test_file("lines.txt");
-    write_all(path, "line1\nline2\nline3");
+    static_cast<void>(write_all(path, "line1\nline2\nline3"));
 
     auto r = read_all(path);
     ASSERT_TRUE(r.has_value());
@@ -67,7 +67,7 @@ TEST_F(IOTest, SplitLines) {
 
 TEST_F(IOTest, SplitLinesTrailingNewline) {
     std::string path = test_file("trailing.txt");
-    write_all(path, "a\nb\n");
+    static_cast<void>(write_all(path, "a\nb\n"));
 
     auto r = read_all(path);
     ASSERT_TRUE(r.has_value());
@@ -80,7 +80,7 @@ TEST_F(IOTest, SplitLinesTrailingNewline) {
 
 TEST_F(IOTest, ReadLines) {
     std::string path = test_file("readlines.txt");
-    write_all(path, "foo\nbar");
+    static_cast<void>(write_all(path, "foo\nbar"));
 
     auto lines = read_lines(path);
     ASSERT_TRUE(lines.has_value());
@@ -91,7 +91,7 @@ TEST_F(IOTest, ReadLines) {
 
 TEST_F(IOTest, EmptyFile) {
     std::string path = test_file("empty.txt");
-    write_all(path, "");
+    static_cast<void>(write_all(path, ""));
 
     auto r = read_all(path);
     ASSERT_TRUE(r.has_value());
