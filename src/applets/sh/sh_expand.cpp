@@ -3,6 +3,18 @@
 #include <cstdlib>
 #include <cstring>
 #include <glob.h>
+#include <memory>
+
+namespace {
+
+struct PipeCloser {
+    void operator()(std::FILE* p) const noexcept {
+        if (p) ::pclose(p);
+    }
+};
+using unique_pipe = std::unique_ptr<std::FILE, PipeCloser>;
+
+} // namespace
 
 namespace cfbox::sh {
 
@@ -59,13 +71,12 @@ static auto process_dollar(Iter& it, Iter end, const ShellState& state) -> std::
         }
         // Execute via popen
         std::string result;
-        auto* pipe = ::popen(cmd.c_str(), "r");
+        unique_pipe pipe(::popen(cmd.c_str(), "r"));
         if (pipe) {
             char buf[256];
-            while (std::fgets(buf, sizeof(buf), pipe)) {
+            while (std::fgets(buf, sizeof(buf), pipe.get())) {
                 result += buf;
             }
-            ::pclose(pipe);
             // Strip trailing newline
             while (!result.empty() && result.back() == '\n') result.pop_back();
         }
