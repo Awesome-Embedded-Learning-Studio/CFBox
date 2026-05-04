@@ -33,11 +33,13 @@ static auto myers_diff(const std::vector<std::string>& a, const std::vector<std:
     // Simple cases: one side empty
     if (N == 0) {
         std::vector<Edit> e;
+        e.reserve(static_cast<std::size_t>(M));
         for (int j = 0; j < M; ++j) e.push_back({'+', static_cast<std::size_t>(j)});
         return e;
     }
     if (M == 0) {
         std::vector<Edit> e;
+        e.reserve(static_cast<std::size_t>(N));
         for (int i = 0; i < N; ++i) e.push_back({'-', static_cast<std::size_t>(i)});
         return e;
     }

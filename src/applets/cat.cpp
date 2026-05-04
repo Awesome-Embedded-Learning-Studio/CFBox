@@ -33,11 +33,12 @@ auto print_visible_char(unsigned char c) -> void {
     }
 }
 
-auto cat_content(const std::string& content, bool n_flag, bool b_flag, bool A_flag) -> void {
+auto cat_stream(std::FILE* f, bool n_flag, bool b_flag, bool A_flag) -> void {
     int line_num = 1;
     bool at_line_start = true;
+    int ch;
 
-    for (char ch : content) {
+    while ((ch = std::fgetc(f)) != EOF) {
         if (at_line_start && (n_flag || b_flag)) {
             bool non_empty = (ch != '\n');
             if (!b_flag || non_empty) {
@@ -60,15 +61,18 @@ auto cat_content(const std::string& content, bool n_flag, bool b_flag, bool A_fl
 }
 
 auto cat_file(std::string_view path, bool n_flag, bool b_flag, bool A_flag) -> int {
-    bool use_stdin = (path == "-");
+    if (path == "-") {
+        cat_stream(stdin, n_flag, b_flag, A_flag);
+        return 0;
+    }
 
-    auto result = use_stdin ? cfbox::io::read_all_stdin() : cfbox::io::read_all(path);
+    auto result = cfbox::io::open_file(path, "rb");
     if (!result) {
         std::fprintf(stderr, "cfbox cat: %s\n", result.error().msg.c_str());
         return 1;
     }
 
-    cat_content(result.value(), n_flag, b_flag, A_flag);
+    cat_stream(result->get(), n_flag, b_flag, A_flag);
     return 0;
 }
 

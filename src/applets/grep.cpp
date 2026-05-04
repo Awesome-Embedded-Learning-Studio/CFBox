@@ -45,14 +45,6 @@ struct GrepOptions {
 
 auto grep_file(const std::string& pattern, const GrepOptions& opts,
                std::string_view path, bool print_filename) -> int {
-    auto result = (path == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(path);
-    if (!result) {
-        std::fprintf(stderr, "cfbox grep: %s\n", result.error().msg.c_str());
-        return 2;
-    }
-
-    auto lines = cfbox::io::split_lines(result.value());
-
     int cflags = opts.extended ? REG_EXTENDED : 0;
     if (opts.ignore_case) cflags |= REG_ICASE;
 
@@ -64,9 +56,10 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
 
     int match_count = 0;
     int found_any = 0;
+    std::size_t line_num = 0;
 
-    for (std::size_t i = 0; i < lines.size(); ++i) {
-        const auto& line = lines[i];
+    auto process_line = [&](const std::string& line) -> bool {
+        ++line_num;
         bool matched = re.exec(line.c_str(), 0, nullptr, 0) == 0;
         if (opts.invert) matched = !matched;
 
@@ -74,21 +67,28 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
             ++match_count;
             found_any = 1;
 
-            if (opts.quiet) return 0;
+            if (opts.quiet) return false;
             if (opts.files_with_matches) {
                 std::printf("%s\n", std::string{path}.c_str());
-                return 0;
+                return false;
             }
             if (!opts.count_only) {
                 if (print_filename) {
                     std::printf("%s:", std::string{path}.c_str());
                 }
                 if (opts.line_numbers) {
-                    std::printf("%zu:", i + 1);
+                    std::printf("%zu:", line_num);
                 }
                 std::printf("%s\n", line.c_str());
             }
         }
+        return true;
+    };
+
+    auto result = cfbox::io::for_each_line(path, process_line);
+    if (!result) {
+        std::fprintf(stderr, "cfbox grep: %s\n", result.error().msg.c_str());
+        return 2;
     }
 
     if (opts.count_only) {

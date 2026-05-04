@@ -82,6 +82,7 @@ auto unzip_main(int argc, char* argv[]) -> int {
 
     // Parse central directory
     std::vector<ZipEntry> entries;
+    entries.reserve(cd_entries);
     std::size_t off = cd_offset;
     for (unsigned i = 0; i < cd_entries && off + 46 <= data.size(); ++i) {
         if (data[off] != 'P' || data[off+1] != 'K' || data[off+2] != 0x01 || data[off+3] != 0x02) break;

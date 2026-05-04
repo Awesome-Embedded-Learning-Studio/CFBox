@@ -38,11 +38,11 @@ struct Key {
     KeyType type = KeyType::Unknown;
     char32_t ch = 0;
 
-    auto is_char() const -> bool { return type == KeyType::Char; }
-    auto is_quit() const -> bool {
+    [[nodiscard]] auto is_char() const noexcept -> bool { return type == KeyType::Char; }
+    [[nodiscard]] auto is_quit() const noexcept -> bool {
         return type == KeyType::Escape || type == KeyType::Ctrl_C || type == KeyType::Ctrl_Q;
     }
-    auto ctrl_char() const -> char {
+    [[nodiscard]] auto ctrl_char() const noexcept -> char {
         if (type >= KeyType::Ctrl_A && type <= KeyType::Ctrl_Z) {
             auto idx = static_cast<int>(type) - static_cast<int>(KeyType::Ctrl_A);
             return static_cast<char>('a' + idx);
@@ -51,7 +51,7 @@ struct Key {
     }
 };
 
-inline auto read_key(int fd = 0, int timeout_ms = -1) -> std::optional<Key> {
+[[nodiscard]] inline auto read_key(int fd = 0, int timeout_ms = -1) -> std::optional<Key> {
     struct pollfd pfd{fd, POLLIN, 0};
     int pret = poll(&pfd, 1, timeout_ms);
     if (pret <= 0) return std::nullopt;
@@ -142,7 +142,7 @@ class ScreenBuffer {
     std::vector<Cell> prev_;
     bool first_frame_ = true;
 
-    auto idx(int r, int c) const -> int { return r * cols_ + c; }
+    auto idx(int r, int c) const noexcept -> int { return r * cols_ + c; }
 public:
     ScreenBuffer() = default;
     ScreenBuffer(int rows, int cols) : rows_(rows), cols_(cols),
@@ -157,8 +157,8 @@ public:
         first_frame_ = true;
     }
 
-    auto rows() const -> int { return rows_; }
-    auto cols() const -> int { return cols_; }
+    [[nodiscard]] auto rows() const noexcept -> int { return rows_; }
+    [[nodiscard]] auto cols() const noexcept -> int { return cols_; }
 
     auto set(int row, int col, char ch, bool bold = false, bool reverse = false) -> void {
         if (row < 0 || row >= rows_ || col < 0 || col >= cols_) return;
@@ -245,7 +245,7 @@ public:
     virtual auto on_tick() -> void = 0;
     virtual auto on_resize(int rows, int cols) -> void = 0;
 
-    auto screen() -> ScreenBuffer& { return screen_; }
+    auto screen() noexcept -> ScreenBuffer& { return screen_; }
 
     auto run() -> int {
         auto [rows, cols] = terminal::get_size();

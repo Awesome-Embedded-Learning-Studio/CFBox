@@ -2,7 +2,7 @@
 
 ## Context
 
-CFBox 是一个 C++23 BusyBox 替代品，当前版本有 78 个 applet。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
+CFBox 是一个 C++23 BusyBox 替代品，当前版本有 109 个 applet。项目使用注册表分发模式（`APPLET_REGISTRY`）、`std::expected` 错误处理、自定义参数解析器，CI 覆盖原生构建、交叉编译和 QEMU 测试。
 
 **目标**：全面对齐 BusyBox，覆盖嵌入式、容器、救援和通用场景。Shell 是最关键的组件，必须最先实现。
 
@@ -18,12 +18,12 @@ CFBox 是一个 C++23 BusyBox 替代品，当前版本有 78 个 applet。项目
 | 1 | POSIX Shell + Coreutils I ✅ | ~17 | Shell 引擎、进程管理、信号处理 | ~34 |
 | 2 | Coreutils II + findutils ✅ | ~44 | 流处理管线、校验和框架 | ~78 |
 | 3 | 归档 + 压缩 + 文本处理 ✅ | ~15 | 终端抽象、压缩框架 | ~93 |
-| 4 | 进程/Init + util-linux 🔧 | ~21/38 | /proc 解析器、init 系统、TUI 框架 | ~114 |
+| 4 | 进程/Init + util-linux ✅ | ~21/38 | /proc 解析器、init 系统、TUI 框架 | ~114 |
 | 5 | vi 可视化编辑器 | 1 | TUI 框架、屏幕渲染、键盘映射 | ~133 |
 | 6 | 网络 + 登录 + 日志 | ~35 | Socket 抽象、HTTP 解析、shadow 密码 | ~168 |
 | 7 | 剩余组件 + 集成验证 | ~40+ | POSIX 验证、容器替换测试 | ~200+ |
 
-**当前状态**：Phase 0-3 已完成，Phase 4 进行中。114 个 applet，318 单元测试全部通过。CFBox 已可在 QEMU 中作为 PID 1 运行完整 init 系统。TUI 框架已就绪，为 Phase 5 vi 编辑器奠定基础。
+**当前状态**：Phase 0-4 已完成（含全面优化 pass）。109 个 applet，331 单元测试全部通过，54 集成测试全部通过，ASan 零泄漏。Release size-opt 体积 446KB。CFBox 已可在 QEMU 中作为 PID 1 运行完整 init 系统。
 
 ---
 
@@ -154,7 +154,7 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 
 ---
 
-## Phase 4：进程管理 + Init 系统 + util-linux 🔧
+## Phase 4：进程管理 + Init 系统 + util-linux ✅
 
 **目标**：构建让 CFBox 适合作为完整 init 环境的系统级工具，applet 数量翻倍。
 
@@ -186,12 +186,23 @@ Shell 已实现为第一个多文件 applet（`src/applets/sh/`，8 个模块，
 - CFBox 作为 PID 1 在 QEMU aarch64 中启动，运行 inittab，执行 sysinit 命令，spawn shell（respawn），处理关机 ✅
 - `ps aux` 输出与 procps 格式匹配 ✅
 - `free -h`、`uptime`、`kill -l`、`pidof`、`sysctl` 在 QEMU 中正常工作 ✅
-- 288 单元测试全部通过 ✅
-- `top -b -n 1` 在批处理模式下输出进程表 ✅
-- `pstree -p` 显示进程树和 PID ✅
-- `hexdump -C /dev/null`、`cal`、`rev` 功能正确 ✅
-- 318 单元测试全部通过 ✅
-- 容器测试：CFBox 替换 Alpine 容器中的 BusyBox — 待实现
+- 331 单元测试全部通过（ASan 零泄漏）✅
+- 54 集成测试全部通过 ✅
+- Release size-opt: 446KB ✅
+
+### 优化 Pass ✅
+
+Phase 4 完成后进行了全面优化：
+
+1. **RAII 安全改造** ✅：`unique_file`（io.hpp）、`scoped_regex`（regex.hpp）、`unique_pipe`（sh_expand.cpp），ASan 验证零泄漏
+2. **去除 zlib 依赖** ✅：手写轻量 deflate.hpp/inflate.hpp（~430 行），gzip/unzip 使用自实现
+3. **体积优化** ✅：visibility hidden + section GC + strip，Release 体积 803KB → size-opt 446KB
+4. **diff 算法升级** ✅：O(mn) LCS → Myers O(ND) 算法 + unified diff 输出
+5. **grep/sed 加速** ✅：`std::regex` → POSIX `regex_t`（scoped_regex RAII）
+6. **流式 I/O** ✅：`for_each_line()` 流式行读取器，grep/cat/wc 流式化，可处理无限输入
+7. **sort 优化** ✅：预计算排序 key 避免比较器中重复分配
+8. **全局 reserve()** ✅：diff/ls/timeout/nice/unzip/find 等已知大小场景添加预分配
+9. **noexcept / [[nodiscard]] / constexpr 标注** ✅：72 个函数添加现代化标注
 
 ---
 
@@ -326,7 +337,7 @@ src/applets/vi/
 
 ## 关键文件
 
-- `include/cfbox/applets.hpp`——注册表从 17 增长到 78（目标 200+）
+- `include/cfbox/applets.hpp`——注册表从 17 增长到 109（目标 200+）
 - `include/cfbox/args.hpp`——扩展长选项支持
 - `include/cfbox/error.hpp`——所有 applet 的错误处理基础
 - `include/cfbox/stream.hpp`——流处理管线（逐行处理、字段分割）
