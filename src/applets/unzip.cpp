@@ -7,8 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
-
-#include <zlib.h>
+#include <cfbox/compress.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -126,15 +125,7 @@ auto unzip_main(int argc, char* argv[]) -> int {
         if (e.method == 0) {
             content = std::string{compressed};
         } else if (e.method == 8) {
-            content.resize(e.uncomp_size);
-            z_stream strm{};
-            inflateInit2(&strm, -15);
-            strm.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(compressed.data()));
-            strm.avail_in = static_cast<uInt>(compressed.size());
-            strm.next_out = reinterpret_cast<Bytef*>(content.data());
-            strm.avail_out = static_cast<uInt>(content.size());
-            inflate(&strm, Z_FINISH);
-            inflateEnd(&strm);
+            content = cfbox::compress::raw_inflate(compressed, e.uncomp_size);
         }
 
         auto outpath = outdir + "/" + e.name;
