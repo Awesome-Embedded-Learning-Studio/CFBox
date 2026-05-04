@@ -22,10 +22,10 @@ jobs:
         run: cmake -B build -DCMAKE_CXX_COMPILER=g++-13
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build -j $(nproc)
 
       - name: Unit tests
-        run: ctest --test-dir build --output-on-failure --verbose
+        run: ctest --test-dir build --output-on-failure --verbose -j $(nproc)
 
       - name: Integration tests
         run: bash tests/integration/run_all.sh
@@ -56,7 +56,7 @@ jobs:
           -DCFBOX_OPTIMIZE_FOR_SIZE=ON
 
       - name: Build
-        run: cmake --build build-release
+        run: cmake --build build-release -j $(nproc)
 
       - name: Measure binary size
         run: |
@@ -109,7 +109,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCFBOX_OPTIMIZE_FOR_SIZE=ON
-          cmake --build build-${{ matrix.target }}
+          cmake --build build-${{ matrix.target }} -j $(nproc)
 
       - name: Verify target binary
         run: |
@@ -125,7 +125,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCFBOX_OPTIMIZE_FOR_SIZE=ON \
             -DCFBOX_STATIC_LINK=ON
-          cmake --build build-${{ matrix.target }}-static
+          cmake --build build-${{ matrix.target }}-static -j $(nproc)
 
       - name: Verify static binary
         run: |
