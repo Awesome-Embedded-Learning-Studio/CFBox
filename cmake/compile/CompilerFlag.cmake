@@ -53,6 +53,20 @@ else()
     )
 endif()
 
+# Size-reduction flags for Release builds
+target_compile_options(cfbox_compiler_flags INTERFACE
+    $<$<CONFIG:Release>:-fvisibility=hidden>
+    $<$<CONFIG:Release>:-fvisibility-inlines-hidden>
+    $<$<CONFIG:Release>:-ffunction-sections>
+    $<$<CONFIG:Release>:-fdata-sections>
+)
+target_link_options(cfbox_compiler_flags INTERFACE
+    $<$<CONFIG:Release>:-Wl,--gc-sections>
+    $<$<CONFIG:Release>:-Wl,--strip-all>
+    $<$<CONFIG:Release>:-Wl,--hash-style=gnu>
+    $<$<CONFIG:Release>:-Wl,--build-id=none>
+)
+
 # ── Static linking ────────────────────────────────────────────
 if(CFBOX_STATIC_LINK)
     target_link_options(cfbox_compiler_flags INTERFACE -static)
