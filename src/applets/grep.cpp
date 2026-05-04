@@ -2,12 +2,9 @@
 // Supported flags: -E (extended regex), -i (ignore case), -v (invert match),
 //                  -n (line numbers), -r (recursive), -c (count only),
 //                  -l (files with matches), -q (quiet)
-// Known differences from GNU grep: uses std::regex (slower on large files),
-// no PCRE2, no color, no context lines.
 
 #include <cstdio>
 #include <filesystem>
-#include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,6 +12,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/regex.hpp>
 
 namespace {
 
@@ -55,15 +53,12 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
 
     auto lines = cfbox::io::split_lines(result.value());
 
-    auto flags = std::regex::ECMAScript;
-    if (opts.extended) flags = std::regex::egrep;
-    if (opts.ignore_case) flags |= std::regex::icase;
+    int cflags = opts.extended ? REG_EXTENDED : 0;
+    if (opts.ignore_case) cflags |= REG_ICASE;
 
-    std::regex re;
-    try {
-        re = std::regex(pattern, flags);
-    } catch (const std::regex_error& e) {
-        std::fprintf(stderr, "cfbox grep: invalid regex: %s\n", e.what());
+    cfbox::util::scoped_regex re;
+    if (re.compile(pattern.c_str(), cflags) != 0) {
+        std::fprintf(stderr, "cfbox grep: invalid regex: %s\n", pattern.c_str());
         return 2;
     }
 
@@ -72,7 +67,7 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
 
     for (std::size_t i = 0; i < lines.size(); ++i) {
         const auto& line = lines[i];
-        bool matched = std::regex_search(line, re);
+        bool matched = re.exec(line.c_str(), 0, nullptr, 0) == 0;
         if (opts.invert) matched = !matched;
 
         if (matched) {
