@@ -5,7 +5,7 @@
 // no a/i/c commands, no hold space, no multi-line pattern space.
 
 #include <cstdio>
-#include <regex>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -13,6 +13,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/regex.hpp>
 
 namespace {
 
@@ -225,20 +226,38 @@ auto address_matches(const Address& addr, std::size_t line, std::size_t total_li
 }
 
 auto apply_substitute(std::string& line, const SedCommand& cmd) -> bool {
-    try {
-        std::regex re(cmd.pattern);
-        if (!std::regex_search(line, re)) return false;
+    cfbox::util::scoped_regex re;
+    if (re.compile(cmd.pattern.c_str(), REG_EXTENDED) != 0) return false;
 
-        if (cmd.global) {
-            line = std::regex_replace(line, re, cmd.replacement);
-        } else {
-            line = std::regex_replace(line, re, cmd.replacement,
-                                      std::regex_constants::format_first_only);
+    regmatch_t m;
+    if (re.exec(line.c_str(), 1, &m, 0) != 0) return false;
+
+    if (!cmd.global) {
+        // Single replacement
+        std::string result;
+        auto* p = line.c_str();
+        result.append(p, static_cast<std::size_t>(m.rm_so));
+        result.append(cmd.replacement);
+        result.append(p + m.rm_eo);
+        line = result;
+    } else {
+        // Global replacement
+        std::string result;
+        auto* p = line.c_str();
+        auto offset = p;
+        while (re.exec(offset, 1, &m, 0) == 0 && m.rm_so >= 0) {
+            result.append(offset, static_cast<std::size_t>(m.rm_so));
+            result.append(cmd.replacement);
+            offset += m.rm_eo;
+            if (m.rm_so == m.rm_eo) {
+                if (*offset) result += *offset++;
+                else break;
+            }
         }
-        return true;
-    } catch (const std::regex_error&) {
-        return false;
+        result.append(offset);
+        line = result;
     }
+    return true;
 }
 
 auto process_lines(const std::vector<std::string>& lines,

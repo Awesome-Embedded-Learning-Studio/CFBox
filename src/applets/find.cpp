@@ -156,6 +156,7 @@ auto matches_predicates(const std::filesystem::directory_entry& entry,
 auto run_exec(const std::vector<std::string>& cmd_template,
               const std::string& filepath) -> void {
     std::vector<std::string> args;
+    args.reserve(cmd_template.size());
     for (const auto& part : cmd_template) {
         if (part == "{}") {
             args.push_back(filepath);
@@ -165,6 +166,7 @@ auto run_exec(const std::vector<std::string>& cmd_template,
     }
     // build argv
     std::vector<char*> argv_arr;
+    argv_arr.reserve(args.size() + 1);
     for (auto& a : args) argv_arr.push_back(a.data());
     argv_arr.push_back(nullptr);
 

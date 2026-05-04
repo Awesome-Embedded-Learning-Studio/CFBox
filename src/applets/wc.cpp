@@ -26,17 +26,20 @@ struct WcCounts {
     long bytes = 0;
 };
 
-auto count_content(const std::string& content) -> WcCounts {
+auto wc_count(std::FILE* f) -> WcCounts {
     WcCounts c;
-    c.bytes = static_cast<long>(content.size());
-
+    char buf[4096];
     bool in_word = false;
-    for (char ch : content) {
-        if (ch == '\n') ++c.lines;
-        if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == '\f' || ch == '\v') {
-            in_word = false;
-        } else {
-            if (!in_word) { ++c.words; in_word = true; }
+    while (auto n = std::fread(buf, 1, sizeof(buf), f)) {
+        c.bytes += static_cast<long>(n);
+        for (std::size_t i = 0; i < n; ++i) {
+            unsigned char ch = static_cast<unsigned char>(buf[i]);
+            if (ch == '\n') ++c.lines;
+            if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == '\f' || ch == '\v') {
+                in_word = false;
+            } else {
+                if (!in_word) { ++c.words; in_word = true; }
+            }
         }
     }
     return c;
@@ -49,8 +52,12 @@ auto print_counts(const WcCounts& c, bool show_lines, bool show_words,
     if (all || show_bytes)  std::printf("%8ld", c.bytes);
 }
 
-auto read_source(std::string_view path) -> cfbox::base::Result<std::string> {
-    return (path == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(path);
+auto wc_file(std::string_view path) -> cfbox::base::Result<WcCounts> {
+    if (path == "-") {
+        return wc_count(stdin);
+    }
+    CFBOX_TRY(f, cfbox::io::open_file(path, "rb"));
+    return wc_count(f->get());
 }
 
 } // namespace
@@ -78,25 +85,23 @@ auto wc_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.empty()) {
-        auto result = read_source("-");
+        auto result = wc_file("-");
         if (!result) {
             std::fprintf(stderr, "cfbox wc: %s\n", result.error().msg.c_str());
             return 1;
         }
-        auto c = count_content(result.value());
-        print_counts(c, show_lines, show_words, show_bytes, all);
+        print_counts(*result, show_lines, show_words, show_bytes, all);
         std::putchar('\n');
         return 0;
     }
 
     if (pos.size() == 1) {
-        auto result = read_source(pos[0]);
+        auto result = wc_file(pos[0]);
         if (!result) {
             std::fprintf(stderr, "cfbox wc: %s\n", result.error().msg.c_str());
             return 1;
         }
-        auto c = count_content(result.value());
-        print_counts(c, show_lines, show_words, show_bytes, all);
+        print_counts(*result, show_lines, show_words, show_bytes, all);
         std::printf(" %s\n", std::string{pos[0]}.c_str());
         return 0;
     }
@@ -105,17 +110,16 @@ auto wc_main(int argc, char* argv[]) -> int {
     WcCounts total;
     int rc = 0;
     for (const auto& p : pos) {
-        auto result = read_source(p);
+        auto result = wc_file(p);
         if (!result) {
             std::fprintf(stderr, "cfbox wc: %s\n", result.error().msg.c_str());
             rc = 1;
             continue;
         }
-        auto c = count_content(result.value());
-        total.lines += c.lines;
-        total.words += c.words;
-        total.bytes += c.bytes;
-        print_counts(c, show_lines, show_words, show_bytes, all);
+        total.lines += result->lines;
+        total.words += result->words;
+        total.bytes += result->bytes;
+        print_counts(*result, show_lines, show_words, show_bytes, all);
         std::printf(" %s\n", std::string{p}.c_str());
     }
 

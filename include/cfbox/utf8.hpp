@@ -5,7 +5,7 @@
 
 namespace cfbox::utf8 {
 
-constexpr auto is_continuation(unsigned char b) -> bool {
+constexpr auto is_continuation(unsigned char b) noexcept -> bool {
     return (b & 0xC0) == 0x80;
 }
 
@@ -14,7 +14,7 @@ struct DecodeResult {
     std::size_t bytes_consumed;
 };
 
-inline auto decode(std::string_view str, std::size_t pos) -> DecodeResult {
+[[nodiscard]] constexpr auto decode(std::string_view str, std::size_t pos) noexcept -> DecodeResult {
     if (pos >= str.size()) return {char32_t(0), 0};
 
     unsigned char b0 = static_cast<unsigned char>(str[pos]);
@@ -52,7 +52,7 @@ inline auto decode(std::string_view str, std::size_t pos) -> DecodeResult {
     return {cp, len};
 }
 
-inline auto count_code_points(std::string_view str) -> std::size_t {
+[[nodiscard]] constexpr auto count_code_points(std::string_view str) noexcept -> std::size_t {
     std::size_t count = 0;
     std::size_t pos = 0;
     while (pos < str.size()) {
@@ -65,7 +65,7 @@ inline auto count_code_points(std::string_view str) -> std::size_t {
     return count;
 }
 
-inline auto char_width(char32_t cp) -> int {
+[[nodiscard]] constexpr auto char_width(char32_t cp) noexcept -> int {
     // Control characters
     if (cp < 0x20) return 0;
     // DEL
@@ -111,7 +111,7 @@ inline auto char_width(char32_t cp) -> int {
     return 1;
 }
 
-inline auto display_width(std::string_view str) -> std::size_t {
+[[nodiscard]] constexpr auto display_width(std::string_view str) noexcept -> std::size_t {
     std::size_t width = 0;
     std::size_t pos = 0;
     while (pos < str.size()) {
@@ -128,7 +128,7 @@ inline auto display_width(std::string_view str) -> std::size_t {
     return width;
 }
 
-inline auto truncate_width(std::string_view str, std::size_t max_width) -> std::string_view {
+[[nodiscard]] constexpr auto truncate_width(std::string_view str, std::size_t max_width) noexcept -> std::string_view {
     std::size_t width = 0;
     std::size_t pos = 0;
     while (pos < str.size()) {
@@ -146,3 +146,10 @@ inline auto truncate_width(std::string_view str, std::size_t max_width) -> std::
 }
 
 } // namespace cfbox::utf8
+
+// Compile-time verification
+static_assert(cfbox::utf8::char_width(U'A') == 1);
+static_assert(cfbox::utf8::char_width(U'中') == 2);
+static_assert(cfbox::utf8::is_continuation(0x80));
+static_assert(!cfbox::utf8::is_continuation(0x41));
+static_assert(cfbox::utf8::count_code_points("abc") == 3);

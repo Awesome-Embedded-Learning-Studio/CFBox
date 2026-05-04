@@ -1,12 +1,12 @@
 #include <cstdio>
 #include <cstring>
 #include <optional>
-#include <regex.h>
 #include <string>
 #include <vector>
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/regex.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -99,22 +99,19 @@ static auto eval_compare(std::vector<std::string>::iterator& it,
             ++it;
             auto pattern = eval_primary(it, end).to_str();
             auto str = left.to_str();
-            regex_t regex;
-            if (regcomp(&regex, pattern.c_str(), REG_EXTENDED) != 0) {
+            cfbox::util::scoped_regex regex;
+            if (regex.compile(pattern.c_str(), REG_EXTENDED) != 0) {
                 return Value::integer(0);
             }
             regmatch_t match;
-            if (regexec(&regex, str.c_str(), 1, &match, 0) == 0) {
+            if (regex.exec(str.c_str(), 1, &match, 0) == 0) {
                 if (match.rm_so >= 0 && match.rm_eo > match.rm_so) {
-                    regfree(&regex);
                     return Value::str(str.substr(
                         static_cast<std::size_t>(match.rm_so),
                         static_cast<std::size_t>(match.rm_eo - match.rm_so)));
                 }
-                regfree(&regex);
                 return Value::integer(static_cast<long>(match.rm_eo - match.rm_so));
             }
-            regfree(&regex);
             return Value::integer(0);
         }
         if ((op == "<" || op == "<=" || op == "=" || op == "==" ||

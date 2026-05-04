@@ -11,11 +11,6 @@ struct AppEntry {
     std::string_view help;
 };
 
-// constexpr auto APPLET_REGISTRY = std::to_array<AppEntry>({
-//     // {"echo", echo_main, "display a line of text"},
-//     // {"cat", cat_main, "concatenate files"},
-// });
-
 template <std::size_t N>
 inline auto find_applet(std::string_view name, const std::array<AppEntry, N>& registry)
     -> const AppEntry* {

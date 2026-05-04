@@ -85,6 +85,7 @@ auto list_directory(const std::string& path, const LsOptions& opts) -> int {
 
     // Filter hidden files if -a not set
     std::vector<std::filesystem::directory_entry> visible;
+    visible.reserve(entries.size());
     for (const auto& e : entries) {
         std::string name = e.path().filename().string();
         if (!opts.all && !name.empty() && name[0] == '.') continue;

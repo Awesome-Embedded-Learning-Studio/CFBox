@@ -48,29 +48,42 @@ auto extract_field(const std::string& line, int field) -> std::string {
 }
 
 auto sort_lines(std::vector<std::string>& lines, const SortOptions& opts) -> void {
-    auto make_key = [&](const std::string& line) -> std::string {
-        return opts.key_field > 0 ? extract_field(line, opts.key_field) : line;
+    // Precompute sort keys to avoid repeated string allocation in comparator
+    struct Entry {
+        std::string key;
+        std::size_t index;
+        double num_val;
     };
 
-    std::stable_sort(lines.begin(), lines.end(), [&](const std::string& a, const std::string& b) {
-        std::string ka = make_key(a);
-        std::string kb = make_key(b);
+    std::vector<Entry> entries;
+    entries.reserve(lines.size());
+    for (std::size_t i = 0; i < lines.size(); ++i) {
+        Entry e;
+        e.key = opts.key_field > 0 ? extract_field(lines[i], opts.key_field) : lines[i];
+        e.index = i;
+        e.num_val = opts.numeric ? std::strtod(e.key.c_str(), nullptr) : 0.0;
+        entries.push_back(std::move(e));
+    }
 
+    std::stable_sort(entries.begin(), entries.end(), [&](const Entry& a, const Entry& b) {
         bool less;
         if (opts.numeric) {
-            double da = std::strtod(ka.c_str(), nullptr);
-            double db = std::strtod(kb.c_str(), nullptr);
-            less = da < db;
+            less = a.num_val < b.num_val;
         } else {
-            less = ka < kb;
+            less = a.key < b.key;
         }
-        return opts.reverse ? !less && ka != kb : less;
+        return opts.reverse ? !less && a.key != b.key : less;
     });
 
-    if (opts.unique) {
-        auto it = std::unique(lines.begin(), lines.end());
-        lines.erase(it, lines.end());
+    std::vector<std::string> sorted;
+    sorted.reserve(lines.size());
+    for (const auto& e : entries) {
+        if (opts.unique && !sorted.empty() && sorted.back() == lines[e.index]) {
+            continue;
+        }
+        sorted.push_back(std::move(lines[e.index]));
     }
+    lines = std::move(sorted);
 }
 
 } // namespace
@@ -107,6 +120,13 @@ auto sort_main(int argc, char* argv[]) -> int {
             return 1;
         }
         all_lines = cfbox::io::split_lines(result.value());
+    } else if (pos.size() == 1) {
+        auto result = (pos[0] == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(pos[0]);
+        if (!result) {
+            std::fprintf(stderr, "cfbox sort: %s\n", result.error().msg.c_str());
+            return 1;
+        }
+        all_lines = cfbox::io::split_lines(result.value());
     } else {
         int rc = 0;
         for (const auto& p : pos) {
@@ -114,11 +134,11 @@ auto sort_main(int argc, char* argv[]) -> int {
             if (!result) {
                 std::fprintf(stderr, "cfbox sort: %s\n", result.error().msg.c_str());
                 rc = 1;
-                continue;
-            }
-            auto file_lines = cfbox::io::split_lines(result.value());
-            for (auto& l : file_lines) {
-                all_lines.push_back(std::move(l));
+            } else {
+                auto file_lines = cfbox::io::split_lines(result.value());
+                for (auto& l : file_lines) {
+                    all_lines.push_back(std::move(l));
+                }
             }
         }
         if (rc != 0) return rc;

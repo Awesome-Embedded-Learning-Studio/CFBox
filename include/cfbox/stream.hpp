@@ -14,31 +14,10 @@ namespace cfbox::stream {
 inline auto for_each_line(std::string_view path,
                           std::function<bool(const std::string&, std::size_t)> fn)
     -> base::Result<void> {
-    base::Result<std::string> content_result;
-    if (path == "-") {
-        content_result = io::read_all_stdin();
-    } else {
-        content_result = io::read_all(path);
-    }
-    if (!content_result) {
-        return std::unexpected(std::move(content_result).error());
-    }
-
-    const auto& content = *content_result;
-    std::string line;
     std::size_t line_num = 0;
-    for (char c : content) {
-        if (c == '\n') {
-            if (!fn(line, line_num++)) return {};
-            line.clear();
-        } else {
-            line += c;
-        }
-    }
-    if (!line.empty()) {
-        fn(line, line_num);
-    }
-    return {};
+    return io::for_each_line(path, [&](const std::string& line) {
+        return fn(line, line_num++);
+    });
 }
 
 inline auto split_fields(const std::string& line, char delim) -> std::vector<std::string> {

@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -28,13 +29,13 @@ auto tee_main(int argc, char* argv[]) -> int {
     bool append = parsed.has('a');
     const auto& pos = parsed.positional();
 
-    std::vector<std::FILE*> files;
+    std::vector<cfbox::io::unique_file> files;
     for (auto p : pos) {
         auto* f = std::fopen(std::string{p}.c_str(), append ? "ab" : "wb");
         if (!f) {
             std::fprintf(stderr, "cfbox tee: %s: %s\n", std::string{p}.c_str(), std::strerror(errno));
         } else {
-            files.push_back(f);
+            files.emplace_back(f);
         }
     }
 
@@ -42,15 +43,12 @@ auto tee_main(int argc, char* argv[]) -> int {
     int rc = 0;
     while (auto n = std::fread(buf, 1, sizeof(buf), stdin)) {
         std::fwrite(buf, 1, n, stdout);
-        for (auto* f : files) {
-            if (std::fwrite(buf, 1, n, f) != n) {
+        for (auto& f : files) {
+            if (std::fwrite(buf, 1, n, f.get()) != n) {
                 rc = 1;
             }
         }
     }
 
-    for (auto* f : files) {
-        std::fclose(f);
-    }
     return rc;
 }

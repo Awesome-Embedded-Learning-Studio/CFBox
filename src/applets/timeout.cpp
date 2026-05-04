@@ -66,10 +66,12 @@ auto timeout_main(int argc, char* argv[]) -> int {
     if (pid == 0) {
         // Child
         std::vector<std::string> arg_storage;
+        arg_storage.reserve(pos.size() - 1);
         for (std::size_t i = 1; i < pos.size(); ++i) {
             arg_storage.emplace_back(pos[i]);
         }
         std::vector<char*> cmd_args;
+        cmd_args.reserve(arg_storage.size() + 1);
         for (auto& s : arg_storage) cmd_args.push_back(s.data());
         cmd_args.push_back(nullptr);
         execvp(cmd_args[0], cmd_args.data());

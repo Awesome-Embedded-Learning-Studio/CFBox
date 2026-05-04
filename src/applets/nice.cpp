@@ -41,8 +41,10 @@ auto nice_main(int argc, char* argv[]) -> int {
     setpriority(PRIO_PROCESS, 0, getpriority(PRIO_PROCESS, 0) + adjustment);
 
     std::vector<std::string> arg_storage;
+    arg_storage.reserve(pos.size());
     for (auto p : pos) arg_storage.emplace_back(p);
     std::vector<char*> cmd_args;
+    cmd_args.reserve(arg_storage.size() + 1);
     for (auto& s : arg_storage) cmd_args.push_back(s.data());
     cmd_args.push_back(nullptr);
 

@@ -16,17 +16,17 @@
 namespace cfbox::proc {
 
 // Cached system constants
-inline auto clock_ticks_per_second() -> long {
+inline auto clock_ticks_per_second() noexcept -> long {
     static long ticks = sysconf(_SC_CLK_TCK);
     return ticks;
 }
 
-inline auto page_size() -> long {
+inline auto page_size() noexcept -> long {
     static long ps = sysconf(_SC_PAGE_SIZE);
     return ps;
 }
 
-inline auto total_memory_kb() -> std::uint64_t {
+inline auto total_memory_kb() noexcept -> std::uint64_t {
     static std::uint64_t mem = static_cast<std::uint64_t>(sysconf(_SC_PHYS_PAGES))
                                * static_cast<std::uint64_t>(sysconf(_SC_PAGE_SIZE)) / 1024;
     return mem;
@@ -82,10 +82,10 @@ inline auto read_meminfo() -> base::Result<MemInfo> {
 struct CpuStats {
     std::uint64_t user = 0, nice = 0, system = 0, idle = 0;
     std::uint64_t iowait = 0, irq = 0, softirq = 0, steal = 0;
-    auto total() const -> std::uint64_t {
+    auto total() const noexcept -> std::uint64_t {
         return user + nice + system + idle + iowait + irq + softirq + steal;
     }
-    auto idle_time() const -> std::uint64_t {
+    auto idle_time() const noexcept -> std::uint64_t {
         return idle + iowait;
     }
 };

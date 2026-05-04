@@ -2,8 +2,9 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <regex.h>
 #include <sstream>
+
+#include <cfbox/regex.hpp>
 
 namespace cfbox::awk {
 
@@ -200,11 +201,9 @@ private:
     }
 
     auto regex_match(const std::string& str, const std::string& pat) -> bool {
-        regex_t regex;
-        if (regcomp(&regex, pat.c_str(), REG_EXTENDED | REG_NOSUB) != 0) return false;
-        auto ret = regexec(&regex, str.c_str(), 0, nullptr, 0);
-        regfree(&regex);
-        return ret == 0;
+        util::scoped_regex regex;
+        if (regex.compile(pat.c_str(), REG_EXTENDED | REG_NOSUB) != 0) return false;
+        return regex.exec(str.c_str(), 0, nullptr, 0) == 0;
     }
 
     auto eval_func_call(NodePtr node) -> std::string {
@@ -244,12 +243,12 @@ private:
                 if (!tok.empty()) parts.push_back(tok);
             } else {
                 // regex split
-                regex_t regex;
-                if (regcomp(&regex, sep.c_str(), REG_EXTENDED) == 0) {
+                util::scoped_regex regex;
+                if (regex.compile(sep.c_str(), REG_EXTENDED) == 0) {
                     auto* p = args[0].c_str();
                     while (*p) {
                         regmatch_t m;
-                        if (regexec(&regex, p, 1, &m, 0) == 0 && m.rm_so >= 0) {
+                        if (regex.exec(p, 1, &m, 0) == 0 && m.rm_so >= 0) {
                             parts.emplace_back(p, static_cast<std::size_t>(m.rm_so));
                             p += m.rm_eo;
                         } else {
@@ -257,7 +256,6 @@ private:
                             break;
                         }
                     }
-                    regfree(&regex);
                 }
             }
             for (std::size_t i = 0; i < parts.size(); ++i) {
@@ -272,13 +270,13 @@ private:
             auto pat = args[0], repl = args[1];
             auto& str = st_.fields.empty() ? st_.record : st_.fields[0];
             int count = 0;
-            regex_t regex;
-            if (regcomp(&regex, pat.c_str(), REG_EXTENDED) == 0) {
+            util::scoped_regex regex;
+            if (regex.compile(pat.c_str(), REG_EXTENDED) == 0) {
                 regmatch_t m;
                 auto* p = str.c_str();
                 std::string result;
                 while (*p) {
-                    if (regexec(&regex, p, 1, &m, 0) == 0 && m.rm_so >= 0) {
+                    if (regex.exec(p, 1, &m, 0) == 0 && m.rm_so >= 0) {
                         result.append(p, static_cast<std::size_t>(m.rm_so));
                         result.append(repl);
                         p += m.rm_eo;
@@ -289,20 +287,18 @@ private:
                         break;
                     }
                 }
-                regfree(&regex);
                 str = result;
             }
             return to_string(static_cast<double>(count));
         }
         if (name == "match") {
             if (args.size() < 2) return "0";
-            regex_t regex;
-            if (regcomp(&regex, args[1].c_str(), REG_EXTENDED) != 0) return "0";
+            util::scoped_regex regex;
+            if (regex.compile(args[1].c_str(), REG_EXTENDED) != 0) return "0";
             regmatch_t m;
-            if (regexec(&regex, args[0].c_str(), 1, &m, 0) != 0) { regfree(&regex); return "0"; }
+            if (regex.exec(args[0].c_str(), 1, &m, 0) != 0) return "0";
             st_.vars["RSTART"] = to_string(static_cast<double>(m.rm_so + 1));
             st_.vars["RLENGTH"] = to_string(static_cast<double>(m.rm_eo - m.rm_so));
-            regfree(&regex);
             return st_.vars["RSTART"];
         }
         if (name == "sprintf") {

@@ -2,12 +2,9 @@
 // Supported flags: -E (extended regex), -i (ignore case), -v (invert match),
 //                  -n (line numbers), -r (recursive), -c (count only),
 //                  -l (files with matches), -q (quiet)
-// Known differences from GNU grep: uses std::regex (slower on large files),
-// no PCRE2, no color, no context lines.
 
 #include <cstdio>
 #include <filesystem>
-#include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,6 +12,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/regex.hpp>
 
 namespace {
 
@@ -47,53 +45,50 @@ struct GrepOptions {
 
 auto grep_file(const std::string& pattern, const GrepOptions& opts,
                std::string_view path, bool print_filename) -> int {
-    auto result = (path == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(path);
-    if (!result) {
-        std::fprintf(stderr, "cfbox grep: %s\n", result.error().msg.c_str());
-        return 2;
-    }
+    int cflags = opts.extended ? REG_EXTENDED : 0;
+    if (opts.ignore_case) cflags |= REG_ICASE;
 
-    auto lines = cfbox::io::split_lines(result.value());
-
-    auto flags = std::regex::ECMAScript;
-    if (opts.extended) flags = std::regex::egrep;
-    if (opts.ignore_case) flags |= std::regex::icase;
-
-    std::regex re;
-    try {
-        re = std::regex(pattern, flags);
-    } catch (const std::regex_error& e) {
-        std::fprintf(stderr, "cfbox grep: invalid regex: %s\n", e.what());
+    cfbox::util::scoped_regex re;
+    if (re.compile(pattern.c_str(), cflags) != 0) {
+        std::fprintf(stderr, "cfbox grep: invalid regex: %s\n", pattern.c_str());
         return 2;
     }
 
     int match_count = 0;
     int found_any = 0;
+    std::size_t line_num = 0;
 
-    for (std::size_t i = 0; i < lines.size(); ++i) {
-        const auto& line = lines[i];
-        bool matched = std::regex_search(line, re);
+    auto process_line = [&](const std::string& line) -> bool {
+        ++line_num;
+        bool matched = re.exec(line.c_str(), 0, nullptr, 0) == 0;
         if (opts.invert) matched = !matched;
 
         if (matched) {
             ++match_count;
             found_any = 1;
 
-            if (opts.quiet) return 0;
+            if (opts.quiet) return false;
             if (opts.files_with_matches) {
                 std::printf("%s\n", std::string{path}.c_str());
-                return 0;
+                return false;
             }
             if (!opts.count_only) {
                 if (print_filename) {
                     std::printf("%s:", std::string{path}.c_str());
                 }
                 if (opts.line_numbers) {
-                    std::printf("%zu:", i + 1);
+                    std::printf("%zu:", line_num);
                 }
                 std::printf("%s\n", line.c_str());
             }
         }
+        return true;
+    };
+
+    auto result = cfbox::io::for_each_line(path, process_line);
+    if (!result) {
+        std::fprintf(stderr, "cfbox grep: %s\n", result.error().msg.c_str());
+        return 2;
     }
 
     if (opts.count_only) {
