@@ -63,13 +63,13 @@ echo "Hello, World!"   # 通过符号链接调用 cfbox
 
 ## 支持的命令（109 个）
 
-### 文本处理（28 个）
+### 文本处理（31 个）
 
-`echo`, `printf`, `cat`, `head`, `tail`, `wc`, `sort`, `uniq`, `grep`, `sed`, `fold`, `expand`, `cut`, `paste`, `nl`, `comm`, `tr`, `tac`, `rev`, `shuf`, `factor`, `od`, `split`, `seq`, `tsort`, `expr`, `awk`, `diff` + `patch` + `cmp` + `ed`
+`echo`, `printf`, `cat`, `head`, `tail`, `wc`, `sort`, `uniq`, `grep`, `sed`, `fold`, `expand`, `cut`, `paste`, `nl`, `comm`, `tr`, `tac`, `rev`, `shuf`, `factor`, `od`, `split`, `seq`, `tsort`, `expr`, `awk`, `diff`, `patch`, `cmp`, `ed`
 
-### 文件操作（20 个）
+### 文件操作（19 个）
 
-`mkdir`, `rm`, `cp`, `mv`, `ls`, `find`, `ln`, `touch`, `stat`, `install`, `mktemp`, `truncate`, `du`, `df`, `readlink`, `realpath`, `rmdir`, `link`, `unlink`, `chmod`
+`mkdir`, `rm`, `cp`, `mv`, `ls`, `find`, `ln`, `touch`, `stat`, `install`, `mktemp`, `truncate`, `du`, `df`, `readlink`, `realpath`, `rmdir`, `link`, `unlink`
 
 ### 归档与压缩（6 个）
 
@@ -87,9 +87,9 @@ echo "Hello, World!"   # 通过符号链接调用 cfbox
 
 `ps`, `top`, `kill`, `pgrep`/`pkill`, `pidof`, `pstree`, `pmap`, `fuser`, `pwdx`, `sysctl`, `iostat`, `watch`, `nice`, `renice`, `timeout`
 
-### 其他（18 个）
+### 其他（16 个）
 
-`true`, `false`, `yes`, `sleep`, `usleep`, `sync`, `nohup`, `cksum`, `md5sum`, `sum`, `hexdump`, `more`, `tee`, `init`（PID 1 initramfs init 系统）, `mkfifo`, `mknod`, `sleep`, `sh`
+`true`, `false`, `yes`, `sleep`, `usleep`, `sync`, `nohup`, `cksum`, `md5sum`, `sum`, `hexdump`, `more`, `tee`, `init`（PID 1 initramfs init 系统）, `mkfifo`, `mknod`
 
 > 所有 applet 均支持 `--help` / `--version`
 
