@@ -104,7 +104,7 @@ echo "Hello, World!"   # 通过符号链接调用 cfbox
 | 文档 | 说明 |
 |------|------|
 | [架构与设计](document/architecture.md) | 分发机制、核心基础设施、错误处理、测试体系 |
-| [路线图](Roadmap.md) | 7 阶段开发计划、当前进度、架构决策 |
+| [生产化升级路线图](document/todo/README.md) | Phase 4.5 到 v1.0 的生产化治理文档集、优先级、发布标准 |
 | [交叉编译与嵌入式](document/cross-compilation.md) | 工具链、CMake 选项、构建示例、二进制大小对比 |
 | [QEMU 测试](document/qemu-testing.md) | 用户模式 / 系统模式测试、init applet、内核配置 |
 | [持续集成](document/ci.md) | CI 流水线阶段说明 |
@@ -143,6 +143,29 @@ cfbox/
 │   └── integration/                 # Shell 集成测试（54 个脚本）
 └── scripts/                         # 构建、测试、安装脚本
 ```
+
+## 下一步计划
+
+当前版本 v0.1.0，下一阶段工作按优先级排列：
+
+### Phase 0：生产化前置门禁（进行中）
+
+在新增 applet 之前，必须完成以下质量地基：
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| **0A** 基线盘点 | 109 个 applet 清单、成熟度标注、profile 归属、文档漂移修复 | 待开始 |
+| **0B** 性能基线 | 核心命令 benchmark（cat/grep/sed/sort/find/tar/gzip/cp/tail）、RSS 回归阈值 | 待开始 |
+| **0C** 体积预算 | 按 profile 设定体积上限、新增 rescue/container profile、每 applet 增量追踪 | 待开始 |
+| **0D** IO 策略 | 流式处理审计（head/tail/sed/tr/md5sum 等整改为流式）、大文件/管道/broken pipe 测试 | 待开始 |
+| **0E** 安全加固 | 数值解析统一 helper、parser fuzz smoke、特权命令隔离测试 | 待开始 |
+| **0F** CI 与发布 | 分层 CI（sanitizer/benchmark/differential/cross/QEMU）、可复现构建、错误格式规范 | 待开始 |
+
+### Phase 1：核心系统（Phase 0 完成后）
+
+新增 `chmod`、`chown`、`chgrp`、`mount`、`umount`、`chroot`、`dd`、`stty` 等系统级 applet，深化核心命令功能。
+
+> 详细路线图见 [document/todo/README.md](document/todo/README.md)。
 
 ## 贡献
 

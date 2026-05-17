@@ -104,7 +104,7 @@ echo "Hello, World!"   # now calls cfbox via symlink
 | Document | Description |
 |----------|-------------|
 | [Architecture & Design](document/architecture.md) | Dispatch mechanism, core infrastructure, error handling, testing |
-| [Roadmap](Roadmap.md) | 7-phase development plan, current progress, architecture decisions |
+| [Production Roadmap](document/todo/README.md) | Production roadmap docs for Phase 4.5 to v1.0; currently maintained in Chinese |
 | [Cross-Compilation & Embedded](document/cross-compilation.md) | Toolchains, CMake options, build examples, binary sizes |
 | [QEMU Testing](document/qemu-testing.md) | User-mode / system-mode testing, init applet, kernel config |
 | [Continuous Integration](document/ci.md) | CI pipeline overview |
@@ -143,6 +143,29 @@ cfbox/
 │   └── integration/                 # Shell integration tests (54 scripts)
 └── scripts/                         # Build, test, install scripts
 ```
+
+## Next Steps
+
+Current release: v0.1.0. Upcoming work, in priority order:
+
+### Phase 0: Production Pre-gates (In Progress)
+
+Before adding new applets, the following quality foundations must be completed:
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **0A** Baseline Inventory | 109-applet catalog, maturity labels, profile assignments, doc drift fixes | Pending |
+| **0B** Perf Baseline | Core benchmarks (cat/grep/sed/sort/find/tar/gzip/cp/tail), RSS regression thresholds | Pending |
+| **0C** Size Budget | Per-profile size caps, new rescue/container profiles, per-applet delta tracking | Pending |
+| **0D** IO Policy | Streaming audit (head/tail/sed/tr/md5sum etc.), large file/pipe/broken pipe tests | Pending |
+| **0E** Safety Hardening | Unified numeric parsers, parser fuzz smoke, privileged command isolation tests | Pending |
+| **0F** CI & Release | Tiered CI (sanitizer/benchmark/differential/cross/QEMU), reproducible builds, error format spec | Pending |
+
+### Phase 1: Core System (After Phase 0)
+
+New system-level applets: `chmod`, `chown`, `chgrp`, `mount`, `umount`, `chroot`, `dd`, `stty`, plus deepening existing core commands.
+
+> See [document/todo/README.md](document/todo/README.md) for the full roadmap.
 
 ## Contributing
 

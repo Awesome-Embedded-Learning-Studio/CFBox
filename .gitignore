@@ -3,6 +3,9 @@
 build*/
 out/
 
+# Compare And Check
+competition/
+
 # CMake
 CMakeCache.txt
 CMakeFiles/
