@@ -1,19 +1,30 @@
 # Phase 0A: 基线盘点与承诺校准
 
+> **执行策略调整（v0.2.0 规划）**：Phase 0 已调整为"轻量基建"策略，不再作为硬门禁阻塞 Phase 1。本文档中的详细内容作为参考保留，但执行优先级已重新划分：
+>
+> - **必须完成**（Phase 1 期间）：修复文档漂移、建立 differential test 骨架
+> - **可选完成**（Phase 1 期间）：applet 清单校验、兼容性矩阵最小集
+> - **推迟到 Phase 4**：完整性能基线、体积预算系统、IO 审计、安全治理、CI 可复现构建
+>
+> 详见 [生产化路线图](../production-roadmap.md) 中的"执行策略调整"章节。
+
 ## 概述
 
 **目标**：在继续新增 applet 前，先把当前代码、profile、文档承诺和兼容性边界盘清楚。Phase 0A 是后续所有 Phase 0 门禁的输入：如果不知道当前真实能力，就无法判断性能、体积、IO、安全和发布工程是否退化。
 
 **进入条件**：v0.1.0 代码库，当前 `document/todo/` 路线图已建立。
 
-**退出条件**：
+**退出条件**（轻量版）：
+- 已知文档漂移修复完成。
+- differential test 骨架建立（先覆盖 5 个核心命令）。
+- 编译零 warning + CI 绿。
+
+**完整版退出条件**（推迟到 Phase 4）：
 - applet 清单、成熟度、profile 归属和文档承诺形成单一事实源。
-- `minimal`、`rescue`、`container`、`embedded`、`full` profile 的目标 applet 集合明确，并和 CMake profile 计划对齐。
-- 现有文档漂移完成审计：README、架构文档、交叉编译文档、todo 路线图不得互相矛盾。
 - P0/P1 applet 的 BusyBox/GNU/POSIX 差异进入兼容性矩阵。
 - Phase 1 的新增 applet 只能基于本清单分配优先级和体积预算。
 
-**硬门禁**：Phase 0A 未完成时，不得进入 Phase 1 新 applet 实现。
+**执行方式**：与 Phase 1 并行推进，不阻塞新功能开发。
 
 ### 当前基线快照
 

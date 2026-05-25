@@ -11,31 +11,36 @@
 | 体积 | 约 446 KB（size-opt, LTO + strip） |
 | 测试 | 331 个 GTest 单元测试 + 56 个集成脚本 |
 | 已完成阶段 | 历史 Phase 0-4：构建、POSIX-like shell、coreutils、归档压缩、文本处理、procps、init |
+| **当前阶段** | **Phase 1：P0 系统命令补齐**（从 `clear` 开始） |
 | 主要缺口 | 权限/挂载/`dd`、网络、登录管理、系统日志、核心命令功能深度、生产发布工程 |
+| 执行策略 | Phase 0-lite 并行推进，不阻塞新功能 |
 
 ## 文档索引
 
 | 文档 | 用途 |
 |------|------|
-| [生产化路线图](production-roadmap.md) | **全局总纲**：Phase 0-5 阶段顺序、核心 Applet 优先级、质量工程策略、发布与分发规范 |
+| [生产化路线图](production-roadmap.md) | **全局总纲**：阶段顺序、核心 Applet 优先级、质量工程策略、发布与分发规范 |
 | [v1.0 生产可用标准](v1-production-criteria.md) | v1.0 发布门槛：profile 标准、成熟度、测试、发布矩阵、体积预算 |
 | [兼容性策略](compatibility-policy.md) | POSIX/BusyBox/GNU 行为冲突的裁决原则、退出码策略 |
 | [VitePress 文档站](documentation-site.md) | 文档站信息架构、applet reference、cookbook |
-| [Phase 0A-0F 前置门禁](phases/phase-0a-baseline-inventory.md) | 进入 Phase 1 前必须完成的质量、体积、IO、安全和工程地基 |
-| [Phase 1 核心系统](phases/phase-1-core-system.md) | 权限、挂载、dd、stty、核心命令深化 |
-| [Phase 2 网络](phases/phase-2-network.md) | 基础网络配置、诊断、下载 |
-| [Phase 3 质量](phases/phase-3-quality.md) | fuzzing、benchmark、POSIX 子集、release 工程 |
-| [Phase 4 多用户](phases/phase-4-multiuser.md) | login/getty/syslog/mdev/storage |
-| [Phase 5 长尾](phases/phase-5-longtail.md) | vi、额外压缩格式、硬件工具 |
+| [Phase 0 轻量基建](phases/phase-0a-baseline-inventory.md) | 文档漂移修复、differential test 骨架；与 Phase 1 并行推进 |
+| [Phase 1 核心系统](phases/phase-1-core-system.md) | P0 系统命令：chmod/chown/dd/mount/stty 等 24 个新 applet |
+| [Phase 1.5 代码质量审查](phases/phase-1.5-code-quality-review.md) | 错误处理一致性、代码风格、测试覆盖、体积检查 |
+| [Phase 2 核心深化](phases/phase-1-core-system.md#part-3-现有-applet-深化) | tail -f、cp -a、grep -A/-B/-C、find 布尔表达式、sh 深化 |
+| [Phase 3 网络](phases/phase-2-network.md) | 基础网络配置、诊断、下载 |
+| [Phase 4 质量](phases/phase-3-quality.md) | fuzzing、benchmark、POSIX 子集、release 工程 |
+| [Phase 5 多用户](phases/phase-4-multiuser.md) | login/getty/syslog/mdev/storage |
+| [Phase 6 长尾](phases/phase-5-longtail.md) | vi、额外压缩格式、硬件工具 |
 
 ## 推荐阅读顺序
 
-1. 先读 [v1.0 生产可用标准](v1-production-criteria.md)，明确最终验收边界。
+1. 先读 [v1.0 生产可用标准](v1-production-criteria.md)，明确最终验收边界和中间里程碑。
 2. 再读 [生产化路线图](production-roadmap.md)，确认阶段顺序、优先级和全局策略。
-3. 进入任何新增 applet 工作前，完成 [Phase 0A-0F 前置门禁](phases/phase-0a-baseline-inventory.md)。
-4. 实现 applet 前读对应 Phase 文档。
-5. 改动兼容性相关行为前读 [兼容性策略](compatibility-policy.md)。
-6. 编写用户文档前读 [VitePress 文档站](documentation-site.md)。
+3. 开始 Phase 1 前了解 [Phase 0 轻量基建](phases/phase-0a-baseline-inventory.md) 的并行任务。
+4. 实现 applet 前读 [Phase 1 核心系统](phases/phase-1-core-system.md) 的 Wave 分波和验收标准。
+5. Phase 1 Wave 3 完成后读 [Phase 1.5 代码质量审查](phases/phase-1.5-code-quality-review.md)。
+6. 改动兼容性相关行为前读 [兼容性策略](compatibility-policy.md)。
+7. 编写用户文档前读 [VitePress 文档站](documentation-site.md)。
 
 ## 路线原则
 
@@ -44,4 +49,5 @@
 - 默认零运行时依赖，可选依赖必须通过构建开关隔离。
 - 兼容性要可说明、可测试、可接受；不支持项必须公开记录。
 - 每个阶段都必须同时交付实现、测试、文档和体积报告。
-- Phase 0A-0F 是硬门禁；未达成确定指标时，不继续扩展 applet 数量。
+- Phase 0 采用轻量基建策略，与 Phase 1 并行推进，不阻塞新功能开发。
+- Phase 1.5 质量审查在核心命令到位后执行，确保质量标准统一后再进入深化阶段。

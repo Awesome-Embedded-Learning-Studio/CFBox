@@ -5,12 +5,14 @@
 **目标**：补齐 rescue/embedded profile 的最低生产门槛。`chmod/chown/chgrp/chroot/dd/stty/mount/umount` 是 P0 阻断项；13 个核心命令需要从"基础可用"深化到"compatible"成熟度；`killall/halt/reboot/poweroff/flock/setsid/which/clear/mountpoint` 关闭系统控制缺口；`sha*/base64/base32/zcat` 补齐完整性校验和编码。
 
 **进入条件**：
-- Phase 0A-0F 全部完成，或每个未完成项都有明确豁免记录。
 - v0.1.0 代码库，109 个 applet，331 GTest + 56 集成测试全部通过。
-- 已建立 P0 benchmark/RSS/启动耗时基线，并能检测超过阈值的回归。
-- 已建立 profile 体积预算和 size diff 口径，Phase 1 新增 applet 均有体积预算。
-- 已完成全量读入、数值解析、执行边界和危险命令的初始审计。
+- 编译零 warning，CI 绿。
+- Phase 0-lite 文档漂移修复已完成。
 - 兼容性裁决原则已建立，见 [兼容性策略](../compatibility-policy.md)。
+
+> **执行策略调整**：Phase 0A-0F 不再作为硬门禁。性能基线、体积预算、IO 审计、安全治理推迟到 Phase 4。Phase 1 可立即开始，从 `clear` applet 起步。
+
+**执行起点**：从 `clear` 开始（最简单的 applet，用于验证注册流程），然后按 Wave 1 → Wave 2 → Wave 3 → Wave 4 顺序推进。
 
 **退出条件**：
 - 8 个 P0 新 applet 实现并通过测试

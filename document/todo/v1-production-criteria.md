@@ -2,6 +2,46 @@
 
 CFBox v1.0 的发布标准是"明确场景内生产可用"，不是"BusyBox 全量功能兼容"。v1.0 必须公开支持边界，并且每个支持边界都能被测试复现。
 
+## 中间里程碑
+
+### v0.2.0 — P0 系统命令到位
+
+**目标**：CFBox 具备基本系统管理能力，可在 initramfs 中使用。
+
+**必须包含**：
+- P0 新 applet：`chmod`、`chown`、`chgrp`、`chroot`、`dd`、`stty`、`mount`、`umount`
+- P1 新 applet：`killall`、`halt`、`reboot`、`poweroff`、`flock`、`setsid`、`which`、`clear`、`mountpoint`
+- P2 新 applet：`sha256sum`、`sha512sum`、`sha1sum`、`sha384sum`、`base64`、`base32`、`zcat`
+- 测试：500+ GTest + 80+ 集成
+- 体积：≤550 KB（full profile, size-opt, LTO + strip）
+
+**验收场景**：
+- `chmod +x script.sh && ./script.sh` 可用
+- `dd if=/dev/zero of=test.img bs=1M count=10 status=progress` 正确
+- `mount -t proc proc /proc && umount /proc` 在 QEMU 通过
+- `sha256sum file > file.sha256 && sha256sum -c file.sha256` 正确
+
+### v0.3.0 — 核心命令深化完成
+
+**目标**：核心命令功能深度达到 ~70%，满足日常运维需求。
+
+**必须包含**：
+- `tail -f` follow 模式
+- `cp -a` 归档模式
+- `grep -A/-B/-C` 上下文行
+- `tar -z` gzip 支持
+- `sed -i` 原地编辑
+- `find` 布尔表达式
+- `sh` case/heredoc/函数/算术
+- `ls` -R/-S/-t/--color
+- `sort` -k 字段排序
+- Phase 1.5 代码质量审查通过
+
+**验收场景**：
+- `tail -f /var/log/syslog` 实时跟踪
+- `find . -type f -mtime -7 -print0 | xargs -0 grep -H pattern` 完整工作流
+- `tar -czf rootfs.tar.gz rootfs && tar -xzf rootfs.tar.gz` 往返正确
+
 ## Profile 标准
 
 | Profile | 目标 | v1.0 要求 |
