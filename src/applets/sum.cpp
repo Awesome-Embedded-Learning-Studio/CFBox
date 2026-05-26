@@ -40,10 +40,10 @@ auto sum_main(int argc, char* argv[]) -> int {
 
         if (sysv) {
             auto result = cfbox::checksum::sysv_sum(*data_result);
-            std::printf("%d %d", result.checksum, result.blocks);
+            std::printf("%u %u", result.checksum, result.blocks);
         } else {
             auto result = cfbox::checksum::bsd_sum(*data_result);
-            std::printf("%05d %5d", result.checksum, result.blocks);
+            std::printf("%05u %5u", result.checksum, result.blocks);
         }
         if (p != "-") std::printf(" %.*s", static_cast<int>(p.size()), p.data());
         std::putchar('\n');

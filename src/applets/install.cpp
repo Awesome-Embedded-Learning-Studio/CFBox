@@ -36,22 +36,20 @@ auto install_main(int argc, char* argv[]) -> int {
     auto target_dir = parsed.get_any('t', "target-directory");
     const auto& pos = parsed.positional();
 
-    auto parse_mode = [](const std::string& s) -> std::filesystem::perms {
-        unsigned long m = std::stoul(s, nullptr, 8);
-        return static_cast<std::filesystem::perms>(m);
-    };
-
     std::filesystem::perms mode = std::filesystem::perms::owner_read |
                                    std::filesystem::perms::owner_write |
                                    std::filesystem::perms::group_read |
                                    std::filesystem::perms::others_read;
     if (mode_str) {
-        try { mode = parse_mode(std::string{*mode_str}); }
-        catch (...) {
+        char* end = nullptr;
+        errno = 0;
+        unsigned long m = std::strtoul(mode_str->data(), &end, 8);
+        if (errno != 0 || end == mode_str->data() || *end != '\0') {
             std::fprintf(stderr, "cfbox install: invalid mode '%.*s'\n",
                          static_cast<int>(mode_str->size()), mode_str->data());
             return 1;
         }
+        mode = static_cast<std::filesystem::perms>(m);
     }
 
     if (mkdir_mode) {

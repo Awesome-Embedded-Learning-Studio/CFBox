@@ -56,6 +56,9 @@ target_include_directories(cfbox PUBLIC include)
 target_include_directories(cfbox PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_link_libraries(cfbox PRIVATE cfbox_compiler_flags)
 
+# ── Install target ─────────────────────────────────────────────
+install(TARGETS cfbox DESTINATION bin)
+
 # ── GTest via CPM (FetchContent) ──────────────────────────────
 if(NOT CMAKE_CROSSCOMPILING)
 CPMAddPackage(

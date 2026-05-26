@@ -155,8 +155,8 @@ auto stat_main(int argc, char* argv[]) -> int {
                         file_type_string(st.st_mode));
             auto* pw = getpwuid(st.st_uid);
             auto* gr = getgrgid(st.st_gid);
-            std::printf("Access: (%04o/%s)  Uid: (%5d/%-8s)   Gid: (%5d/%-8s)\n",
-                        st.st_mode & 07777,
+            std::printf("Access: (%04o/%s)  Uid: (%5u/%-8s)   Gid: (%5u/%-8s)\n",
+                        st.st_mode & 07777u,
                         format_perms(st.st_mode).c_str(),
                         st.st_uid, pw ? pw->pw_name : "",
                         st.st_gid, gr ? gr->gr_name : "");

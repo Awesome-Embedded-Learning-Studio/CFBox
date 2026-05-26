@@ -22,6 +22,6 @@ auto hostid_main(int argc, char* argv[]) -> int {
     if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     long id = gethostid();
-    std::printf("%08lx\n", id);
+    std::printf("%08ld\n", id);
     return 0;
 }

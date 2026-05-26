@@ -54,9 +54,9 @@ auto ar_main(int argc, char* argv[]) -> int {
             std::memset(hdr, ' ', 60);
             std::memcpy(hdr, fname.c_str(), std::min(fname.size(), static_cast<std::size_t>(16)));
             std::snprintf(hdr + 16, 12, "%-10lu", static_cast<unsigned long>(::time(nullptr)));
-            std::snprintf(hdr + 28, 12, "%-6u", 0);  // uid
-            std::snprintf(hdr + 34, 12, "%-6u", 0);  // gid
-            std::snprintf(hdr + 40, 12, "%-8o", 0100644);
+            std::snprintf(hdr + 28, 12, "%-6u", 0u);  // uid
+            std::snprintf(hdr + 34, 12, "%-6u", 0u);  // gid
+            std::snprintf(hdr + 40, 12, "%-8o", 0100644u);
             std::snprintf(hdr + 48, 12, "%-10zu", data->size());
             hdr[58] = '`'; hdr[59] = '\n';
             output.append(hdr, 60);

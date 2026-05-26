@@ -27,6 +27,10 @@ target_compile_options(cfbox_compiler_flags INTERFACE
     -Wnull-dereference
     -Wdouble-promotion
     -Wformat=2
+    -Wformat-signedness
+    -Wstrict-aliasing
+    -fno-exceptions
+    -fno-rtti
 )
 
 # ── Debug-specific flags ──────────────────────────────────────
