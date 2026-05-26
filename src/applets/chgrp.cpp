@@ -1,13 +1,12 @@
-#include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <grp.h>
 #include <string>
-#include <unistd.h>
 
 #include <cfbox/args.hpp>
+#include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -37,7 +36,7 @@ auto chgrp_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox chgrp: missing operand\n");
+        CFBOX_ERR("chgrp", "missing operand");
         return 2;
     }
 
@@ -51,8 +50,9 @@ auto chgrp_main(int argc, char* argv[]) -> int {
     }
 
     auto chgrp_one = [&](const std::string& path) -> int {
-        if (::chown(path.c_str(), static_cast<uid_t>(-1), gid) != 0) {
-            std::fprintf(stderr, "cfbox chgrp: %s: %s\n", path.c_str(), std::strerror(errno));
+        auto result = cfbox::fs::chown(path, static_cast<uid_t>(-1), gid);
+        if (!result) {
+            CFBOX_ERR("chgrp", "%s: %s", path.c_str(), result.error().msg.c_str());
             return 1;
         }
         if (verbose) std::printf("group of '%s' changed\n", path.c_str());
@@ -61,15 +61,9 @@ auto chgrp_main(int argc, char* argv[]) -> int {
 
     int rc = 0;
     for (size_t i = 1; i < pos.size(); i++) {
-        std::string path(pos[i]);
-        if (recursive && std::filesystem::is_directory(path)) {
-            std::error_code ec;
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(path, ec)) {
-                if (ec) continue;
-                if (chgrp_one(entry.path().string()) != 0) rc = 1;
-            }
-        }
-        if (chgrp_one(path) != 0) rc = 1;
+        cfbox::fs::for_each_entry(pos[i], recursive, [&](const std::string& p) {
+            if (chgrp_one(p) != 0) rc = 1;
+        });
     }
     return rc;
 }

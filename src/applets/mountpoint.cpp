@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -36,14 +37,14 @@ auto mountpoint_main(int argc, char* argv[]) -> int {
     bool dev = parsed.has('d');
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox mountpoint: missing argument\n");
+        CFBOX_ERR("mountpoint", "missing argument");
         return 2;
     }
 
     std::string target(pos[0]);
     struct stat st;
     if (stat(target.c_str(), &st) != 0) {
-        if (!quiet) std::fprintf(stderr, "cfbox mountpoint: %s: %s\n", target.c_str(), std::strerror(errno));
+        if (!quiet) CFBOX_ERR("mountpoint", "%s: %s", target.c_str(), std::strerror(errno));
         return 1;
     }
 

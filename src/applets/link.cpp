@@ -3,6 +3,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -23,13 +24,13 @@ auto link_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox link: missing operand\n");
+        CFBOX_ERR("link", "missing operand");
         return 1;
     }
 
     auto result = cfbox::fs::create_hard_link(pos[0], pos[1]);
     if (!result) {
-        std::fprintf(stderr, "cfbox link: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("link", "%s", result.error().msg.c_str());
         return 1;
     }
     return 0;

@@ -2,13 +2,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <fstream>
 #include <string>
 #include <string_view>
 
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -116,7 +116,7 @@ auto hexdump_main(int argc, char* argv[]) -> int {
 
     std::FILE* f = std::fopen(filename.c_str(), "rb");
     if (!f) {
-        std::fprintf(stderr, "cfbox hexdump: cannot open %s\n", filename.c_str());
+        CFBOX_ERR("hexdump", "cannot open %s", filename.c_str());
         return 1;
     }
     auto rc = do_dump(f);

@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -51,7 +52,7 @@ auto tr_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox tr: missing operand\n");
+        CFBOX_ERR("tr", "missing operand");
         return 1;
     }
 
@@ -93,7 +94,7 @@ auto tr_main(int argc, char* argv[]) -> int {
 
     auto input = cfbox::io::read_all_stdin();
     if (!input) {
-        std::fprintf(stderr, "cfbox tr: %s\n", input.error().msg.c_str());
+        CFBOX_ERR("tr", "%s", input.error().msg.c_str());
         return 1;
     }
 

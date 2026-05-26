@@ -8,12 +8,12 @@ A minimalist BusyBox alternative written in modern C++23.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C++23](https://img.shields.io/badge/C++23-00599C?logo=cplusplus)](https://en.cppreference.com/w/cpp/23)
 [![CMake](https://img.shields.io/badge/CMake-3.26+-064F8C?logo=cmake)](https://cmake.org/)
-[![Tests](https://img.shields.io/badge/Tests-331_passing-brightgreen)](tests/)
-[![Applets](https://img.shields.io/badge/Applets-109-brightgreen)](src/applets/)
+[![Tests](https://img.shields.io/badge/Tests-379_passing-brightgreen)](tests/)
+[![Applets](https://img.shields.io/badge/Applets-115-brightgreen)](src/applets/)
 
 ## Overview
 
-CFBox is a single-executable Unix utility collection distributed via symbolic links. 109 applets implemented and tested, with a CI pipeline covering native builds, cross-compilation, and QEMU user/system-mode testing. Features configurable CMake builds (per-applet toggles), GNU-style long options, and colored help output.
+CFBox is a single-executable Unix utility collection distributed via symbolic links. 115 applets implemented and tested, with a CI pipeline covering native builds, cross-compilation, and QEMU user/system-mode testing. Features configurable CMake builds (per-applet toggles), GNU-style long options, and colored help output.
 
 **Design philosophy:** Simplicity first — Modern C++ (`std::expected`) — Embedded-friendly (cross-compilation, static linking)
 
@@ -21,7 +21,7 @@ CFBox is a single-executable Unix utility collection distributed via symbolic li
 
 | Project | Language | Size | Applets | Size/Applet |
 |---------|----------|------|---------|-------------|
-| **CFBox (size-opt)** | **C++23** | **446 KB** | **109** | **~4.1 KB** |
+| **CFBox (size-opt)** | **C++23** | **406 KB** | **115** | **~3.5 KB** |
 | Toybox | C | ~500 KB | 238 | ~2.1 KB |
 | BusyBox (full) | C | ~1.7 MB | 274 | ~9 KB |
 | uutils/coreutils | Rust | ~11 MB | ~100 | ~110 KB |
@@ -50,7 +50,7 @@ cmake -B build
 cmake --build build
 
 # Test
-ctest --test-dir build --output-on-failure   # 331 GTest unit tests
+ctest --test-dir build --output-on-failure   # 379 GTest unit tests
 bash tests/integration/run_all.sh            # 54 integration test scripts
 
 # Run via subcommand
@@ -61,15 +61,15 @@ bash tests/integration/run_all.sh            # 54 integration test scripts
 echo "Hello, World!"   # now calls cfbox via symlink
 ```
 
-## Supported Commands (109)
+## Supported Commands (115)
 
 ### Text Processing (31)
 
 `echo`, `printf`, `cat`, `head`, `tail`, `wc`, `sort`, `uniq`, `grep`, `sed`, `fold`, `expand`, `cut`, `paste`, `nl`, `comm`, `tr`, `tac`, `rev`, `shuf`, `factor`, `od`, `split`, `seq`, `tsort`, `expr`, `awk`, `diff`, `patch`, `cmp`, `ed`
 
-### File Operations (19)
+### File Operations (22)
 
-`mkdir`, `rm`, `cp`, `mv`, `ls`, `find`, `ln`, `touch`, `stat`, `install`, `mktemp`, `truncate`, `du`, `df`, `readlink`, `realpath`, `rmdir`, `link`, `unlink`
+`mkdir`, `rm`, `cp`, `mv`, `ls`, `find`, `ln`, `touch`, `stat`, `install`, `mktemp`, `truncate`, `du`, `df`, `readlink`, `realpath`, `rmdir`, `link`, `unlink`, `chmod`, `chown`, `chgrp`
 
 ### Archive & Compression (6)
 
@@ -87,9 +87,9 @@ echo "Hello, World!"   # now calls cfbox via symlink
 
 `ps`, `top`, `kill`, `pgrep`/`pkill`, `pidof`, `pstree`, `pmap`, `fuser`, `pwdx`, `sysctl`, `iostat`, `watch`, `nice`, `renice`, `timeout`
 
-### Other (16)
+### Other (19)
 
-`true`, `false`, `yes`, `sleep`, `usleep`, `sync`, `nohup`, `cksum`, `md5sum`, `sum`, `hexdump`, `more`, `tee`, `init` (PID 1 initramfs init system), `mkfifo`, `mknod`
+`true`, `false`, `yes`, `sleep`, `usleep`, `sync`, `nohup`, `cksum`, `md5sum`, `sum`, `hexdump`, `more`, `tee`, `init` (PID 1 initramfs init system), `mkfifo`, `mknod`, `clear`, `which`, `mountpoint`
 
 > All applets support `--help` / `--version`
 
@@ -137,33 +137,26 @@ cfbox/
 │   └── ...                          # help.hpp, fs_util.hpp, escape.hpp, checksum.hpp
 ├── src/
 │   ├── main.cpp                     # Dispatch entry
-│   └── applets/                     # 109 command implementations
+│   └── applets/                     # 115 command implementations
 ├── tests/
-│   ├── unit/                        # GTest unit tests (331 cases)
+│   ├── unit/                        # GTest unit tests (379 cases)
 │   └── integration/                 # Shell integration tests (54 scripts)
 └── scripts/                         # Build, test, install scripts
 ```
 
 ## Next Steps
 
-Current release: v0.1.0. Upcoming work, in priority order:
+Current release: v0.2.0 (Phase 1 Wave 1 + Phase 1.5 code quality review complete). Now entering Phase 2: core command deepening.
 
-### Phase 0: Production Pre-gates (In Progress)
+### Phase 2: Core Command Deepening (In Progress)
 
-Before adding new applets, the following quality foundations must be completed:
+Deepening existing commands from ~30% to ~70% feature completeness, in batches by operational frequency:
 
-| Phase | Scope | Status |
-|-------|-------|--------|
-| **0A** Baseline Inventory | 109-applet catalog, maturity labels, profile assignments, doc drift fixes | Pending |
-| **0B** Perf Baseline | Core benchmarks (cat/grep/sed/sort/find/tar/gzip/cp/tail), RSS regression thresholds | Pending |
-| **0C** Size Budget | Per-profile size caps, new rescue/container profiles, per-applet delta tracking | Pending |
-| **0D** IO Policy | Streaming audit (head/tail/sed/tr/md5sum etc.), large file/pipe/broken pipe tests | Pending |
-| **0E** Safety Hardening | Unified numeric parsers, parser fuzz smoke, privileged command isolation tests | Pending |
-| **0F** CI & Release | Tiered CI (sanitizer/benchmark/differential/cross/QEMU), reproducible builds, error format spec | Pending |
-
-### Phase 1: Core System (After Phase 0)
-
-New system-level applets: `chmod`, `chown`, `chgrp`, `mount`, `umount`, `chroot`, `dd`, `stty`, plus deepening existing core commands.
+| Batch | Commands | Key Additions |
+|-------|----------|---------------|
+| Batch 1 | `tail`, `cp`, `test`, `ls` | tail -f, cp -a, full POSIX test, ls -R/--color |
+| Batch 2 | `grep`, `tar`, `sed`, `sort` | grep -A/-B/-C, tar -z/-v, sed -i, sort -k |
+| Batch 3 | `find`, `sh`, `ps`, `df`, `du` | find boolean expressions, sh case/heredoc/functions |
 
 > See [document/todo/README.md](document/todo/README.md) for the full roadmap.
 

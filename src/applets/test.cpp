@@ -9,6 +9,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -29,20 +30,20 @@ using Args = std::vector<std::string_view>;
 auto eval_expr(const Args& args) -> int;
 
 auto to_int(std::string_view s) -> long {
-    return std::strtol(std::string{s}.c_str(), nullptr, 10);
+    return std::strtol(s.data(), nullptr, 10);
 }
 
 auto file_test(char op, std::string_view path) -> bool {
     struct stat st {};
     switch (op) {
-    case 'e': return stat(std::string{path}.c_str(), &st) == 0;
-    case 'f': return stat(std::string{path}.c_str(), &st) == 0 && S_ISREG(st.st_mode);
-    case 'd': return stat(std::string{path}.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
-    case 'r': return access(std::string{path}.c_str(), R_OK) == 0;
-    case 'w': return access(std::string{path}.c_str(), W_OK) == 0;
-    case 'x': return access(std::string{path}.c_str(), X_OK) == 0;
-    case 's': return stat(std::string{path}.c_str(), &st) == 0 && st.st_size > 0;
-    case 'L': return lstat(std::string{path}.c_str(), &st) == 0 && S_ISLNK(st.st_mode);
+    case 'e': return stat(path.data(), &st) == 0;
+    case 'f': return stat(path.data(), &st) == 0 && S_ISREG(st.st_mode);
+    case 'd': return stat(path.data(), &st) == 0 && S_ISDIR(st.st_mode);
+    case 'r': return access(path.data(), R_OK) == 0;
+    case 'w': return access(path.data(), W_OK) == 0;
+    case 'x': return access(path.data(), X_OK) == 0;
+    case 's': return stat(path.data(), &st) == 0 && st.st_size > 0;
+    case 'L': return lstat(path.data(), &st) == 0 && S_ISLNK(st.st_mode);
     default: return false;
     }
 }
@@ -111,8 +112,7 @@ auto eval_expr(const Args& args) -> int {
                 return file_test(op, args[1]) ? 0 : 1;
             }
         }
-        std::fprintf(stderr, "cfbox test: unknown operator '%.*s'\n",
-                     static_cast<int>(args[0].size()), args[0].data());
+        CFBOX_ERR("test", "unknown operator '%.*s'", static_cast<int>(args[0].size()), args[0].data());
         return 2;
     }
 
@@ -130,8 +130,7 @@ auto eval_expr(const Args& args) -> int {
         if (args[1] == "-gt") return to_int(args[0]) >  to_int(args[2]) ? 0 : 1;
         if (args[1] == "-ge") return to_int(args[0]) >= to_int(args[2]) ? 0 : 1;
 
-        std::fprintf(stderr, "cfbox test: unknown operator '%.*s'\n",
-                     static_cast<int>(args[1].size()), args[1].data());
+        CFBOX_ERR("test", "unknown operator '%.*s'", static_cast<int>(args[1].size()), args[1].data());
         return 2;
     }
 
@@ -169,7 +168,7 @@ auto test_main(int argc, char* argv[]) -> int {
         auto base = (slash != std::string_view::npos) ? prog.substr(slash + 1) : prog;
         if (base == "[" || base == "[") {
             if (expr_args.empty() || expr_args.back() != "]") {
-                std::fprintf(stderr, "cfbox [: missing ']'\n");
+                CFBOX_ERR("[", "missing ']'");
                 return 2;
             }
             expr_args.pop_back();

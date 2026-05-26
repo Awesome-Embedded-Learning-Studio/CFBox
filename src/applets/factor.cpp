@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -39,7 +40,7 @@ auto factor_main(int argc, char* argv[]) -> int {
     if (pos.empty()) {
         auto input = cfbox::io::read_all_stdin();
         if (!input) {
-            std::fprintf(stderr, "cfbox factor: %s\n", input.error().msg.c_str());
+            CFBOX_ERR("factor", "%s", input.error().msg.c_str());
             return 1;
         }
         char* str = input->data();

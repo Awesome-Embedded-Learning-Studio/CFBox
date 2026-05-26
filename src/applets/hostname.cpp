@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -27,7 +28,7 @@ auto hostname_main(int argc, char* argv[]) -> int {
 
     char buf[256];
     if (gethostname(buf, sizeof(buf)) != 0) {
-        std::fprintf(stderr, "cfbox hostname: cannot get hostname\n");
+        CFBOX_ERR("hostname", "cannot get hostname");
         return 1;
     }
 

@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -78,14 +79,14 @@ auto uniq_main(int argc, char* argv[]) -> int {
     if (pos.empty()) {
         auto result = cfbox::io::read_all_stdin();
         if (!result) {
-            std::fprintf(stderr, "cfbox uniq: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("uniq", "%s", result.error().msg.c_str());
             return 1;
         }
         lines = cfbox::io::split_lines(result.value());
     } else {
         auto result = (pos[0] == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(pos[0]);
         if (!result) {
-            std::fprintf(stderr, "cfbox uniq: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("uniq", "%s", result.error().msg.c_str());
             return 1;
         }
         lines = cfbox::io::split_lines(result.value());

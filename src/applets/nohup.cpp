@@ -7,6 +7,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -27,7 +28,7 @@ auto nohup_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox nohup: missing command\n");
+        CFBOX_ERR("nohup", "missing command");
         return 1;
     }
 
@@ -44,8 +45,7 @@ auto nohup_main(int argc, char* argv[]) -> int {
 
     auto* f = freopen(outfile.c_str(), "a", stdout);
     if (!f) {
-        std::fprintf(stderr, "cfbox nohup: cannot open %s: %s\n",
-                     outfile.c_str(), std::strerror(errno));
+        CFBOX_ERR("nohup", "cannot open %s: %s", outfile.c_str(), std::strerror(errno));
         return 1;
     }
     dup2(fileno(stdout), STDERR_FILENO);
@@ -57,6 +57,6 @@ auto nohup_main(int argc, char* argv[]) -> int {
     cmd_args.push_back(nullptr);
 
     execvp(cmd_args[0], cmd_args.data());
-    std::fprintf(stderr, "cfbox nohup: %s: %s\n", cmd_args[0], std::strerror(errno));
+    CFBOX_ERR("nohup", "%s: %s", cmd_args[0], std::strerror(errno));
     return 127;
 }

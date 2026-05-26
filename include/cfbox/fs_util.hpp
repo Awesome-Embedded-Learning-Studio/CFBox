@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cerrno>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <unistd.h>
 
 #include <cfbox/error.hpp>
 
@@ -237,6 +240,32 @@ inline auto space(std::string_view path) -> base::Result<std::filesystem::space_
         return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
     }
     return info;
+}
+
+inline auto chown(std::string_view path, uid_t uid, gid_t gid) -> base::Result<void> {
+    if (::chown(std::string{path}.c_str(), uid, gid) != 0) {
+        return std::unexpected(base::Error{errno, std::strerror(errno)});
+    }
+    return {};
+}
+
+inline auto lchown(std::string_view path, uid_t uid, gid_t gid) -> base::Result<void> {
+    if (::lchown(std::string{path}.c_str(), uid, gid) != 0) {
+        return std::unexpected(base::Error{errno, std::strerror(errno)});
+    }
+    return {};
+}
+
+template <typename Func>
+void for_each_entry(std::string_view path, bool recursive, Func&& fn) {
+    if (recursive && is_directory(path)) {
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(std::filesystem::path{path}, ec)) {
+            if (ec) continue;
+            fn(entry.path().string());
+        }
+    }
+    fn(std::string{path});
 }
 
 } // namespace cfbox::fs

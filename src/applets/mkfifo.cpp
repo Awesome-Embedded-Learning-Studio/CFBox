@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -33,7 +34,7 @@ auto mkfifo_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox mkfifo: missing operand\n");
+        CFBOX_ERR("mkfifo", "missing operand");
         return 1;
     }
 
@@ -41,8 +42,7 @@ auto mkfifo_main(int argc, char* argv[]) -> int {
     for (auto p : pos) {
         std::string path{p};
         if (mkfifo(path.c_str(), mode) != 0) {
-            std::fprintf(stderr, "cfbox mkfifo: cannot create fifo '%s': %s\n",
-                         path.c_str(), std::strerror(errno));
+            CFBOX_ERR("mkfifo", "cannot create fifo '%s': %s", path.c_str(), std::strerror(errno));
             rc = 1;
         }
     }

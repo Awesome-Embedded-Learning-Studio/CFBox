@@ -8,6 +8,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -32,15 +33,14 @@ auto timeout_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox timeout: missing operand\n");
+        CFBOX_ERR("timeout", "missing operand");
         return 1;
     }
 
     char* end = nullptr;
     double duration = std::strtod(std::string{pos[0]}.c_str(), &end);
     if (end == std::string{pos[0]}.c_str() || duration <= 0) {
-        std::fprintf(stderr, "cfbox timeout: invalid duration '%.*s'\n",
-                     static_cast<int>(pos[0].size()), pos[0].data());
+        CFBOX_ERR("timeout", "invalid duration '%.*s'", static_cast<int>(pos[0].size()), pos[0].data());
         return 1;
     }
 
@@ -52,14 +52,14 @@ auto timeout_main(int argc, char* argv[]) -> int {
         else if (name == "INT" || name == "2") sig = SIGINT;
         else if (name == "HUP" || name == "1") sig = SIGHUP;
         else {
-            std::fprintf(stderr, "cfbox timeout: unknown signal '%s'\n", name.c_str());
+            CFBOX_ERR("timeout", "unknown signal '%s'", name.c_str());
             return 1;
         }
     }
 
     pid_t pid = fork();
     if (pid < 0) {
-        std::fprintf(stderr, "cfbox timeout: fork failed: %s\n", std::strerror(errno));
+        CFBOX_ERR("timeout", "fork failed: %s", std::strerror(errno));
         return 1;
     }
 
@@ -75,8 +75,7 @@ auto timeout_main(int argc, char* argv[]) -> int {
         for (auto& s : arg_storage) cmd_args.push_back(s.data());
         cmd_args.push_back(nullptr);
         execvp(cmd_args[0], cmd_args.data());
-        std::fprintf(stderr, "cfbox timeout: failed to execute '%s': %s\n",
-                     cmd_args[0], std::strerror(errno));
+        CFBOX_ERR("timeout", "failed to execute '%s': %s", cmd_args[0], std::strerror(errno));
         _exit(125);
     }
 

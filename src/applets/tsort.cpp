@@ -9,6 +9,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -46,7 +47,7 @@ auto tsort_main(int argc, char* argv[]) -> int {
         return true;
     });
     if (!result) {
-        std::fprintf(stderr, "cfbox tsort: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("tsort", "%s", result.error().msg.c_str());
         return 1;
     }
 

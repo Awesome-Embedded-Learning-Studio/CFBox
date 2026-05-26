@@ -5,6 +5,7 @@
 #include "awk.hpp"
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -43,7 +44,7 @@ auto awk_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox awk: missing program\n");
+        CFBOX_ERR("awk", "missing program");
         return 1;
     }
 

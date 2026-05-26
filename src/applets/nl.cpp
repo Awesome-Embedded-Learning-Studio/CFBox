@@ -4,6 +4,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -75,7 +76,7 @@ auto nl_main(int argc, char* argv[]) -> int {
             return true;
         });
         if (!result) {
-            std::fprintf(stderr, "cfbox nl: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("nl", "%s", result.error().msg.c_str());
             rc = 1;
         }
     }

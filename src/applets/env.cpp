@@ -6,6 +6,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 extern char** environ;
 
@@ -81,7 +82,6 @@ auto env_main(int argc, char* argv[]) -> int {
     cmd_args.push_back(nullptr);
 
     execvp(cmd.c_str(), cmd_args.data());
-    std::fprintf(stderr, "cfbox env: failed to execute '%s': %s\n",
-                 cmd.c_str(), std::strerror(errno));
+    CFBOX_ERR("env", "failed to execute '%s': %s", cmd.c_str(), std::strerror(errno));
     return 127;
 }

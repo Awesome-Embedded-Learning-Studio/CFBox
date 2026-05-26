@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -58,7 +59,7 @@ auto od_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
     auto data_result = pos.empty() ? cfbox::io::read_all_stdin() : cfbox::io::read_all(pos[0]);
     if (!data_result) {
-        std::fprintf(stderr, "cfbox od: %s\n", data_result.error().msg.c_str());
+        CFBOX_ERR("od", "%s", data_result.error().msg.c_str());
         return 1;
     }
 

@@ -6,6 +6,7 @@
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -23,7 +24,7 @@ auto copy_preserve(const std::string& src, const std::string& dst) -> int {
     // Copy the file first
     auto copy_result = cfbox::fs::copy_file(src, dst);
     if (!copy_result) {
-        std::fprintf(stderr, "cfbox cp: %s\n", copy_result.error().msg.c_str());
+        CFBOX_ERR("cp", "%s", copy_result.error().msg.c_str());
         return 1;
     }
 
@@ -55,7 +56,7 @@ auto cp_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox cp: missing file operand\n");
+        CFBOX_ERR("cp", "missing file operand");
         return 1;
     }
 
@@ -69,8 +70,7 @@ auto cp_main(int argc, char* argv[]) -> int {
 
         if (cfbox::fs::is_directory(src)) {
             if (!recursive) {
-                std::fprintf(stderr, "cfbox cp: -r not specified; omitting directory '%s'\n",
-                             src.c_str());
+                CFBOX_ERR("cp", "-r not specified; omitting directory '%s'", src.c_str());
                 return 1;
             }
             // Determine destination path
@@ -82,8 +82,7 @@ auto cp_main(int argc, char* argv[]) -> int {
             }
             auto result = cfbox::fs::copy_recursive(src, dest);
             if (!result) {
-                std::fprintf(stderr, "cfbox cp: cannot copy '%s' to '%s': %s\n",
-                             src.c_str(), dest.c_str(), result.error().msg.c_str());
+                CFBOX_ERR("cp", "cannot copy '%s' to '%s': %s", src.c_str(), dest.c_str(), result.error().msg.c_str());
                 rc = 1;
             }
         } else {
@@ -97,8 +96,7 @@ auto cp_main(int argc, char* argv[]) -> int {
             } else {
                 auto result = cfbox::fs::copy_file(src, dest);
                 if (!result) {
-                    std::fprintf(stderr, "cfbox cp: cannot copy '%s' to '%s': %s\n",
-                                 src.c_str(), dest.c_str(), result.error().msg.c_str());
+                    CFBOX_ERR("cp", "cannot copy '%s' to '%s': %s", src.c_str(), dest.c_str(), result.error().msg.c_str());
                     rc = 1;
                 }
             }
@@ -106,7 +104,7 @@ auto cp_main(int argc, char* argv[]) -> int {
     } else {
         // Multiple sources — destination must be a directory
         if (!cfbox::fs::is_directory(dst)) {
-            std::fprintf(stderr, "cfbox cp: target '%s' is not a directory\n", dst.c_str());
+            CFBOX_ERR("cp", "target '%s' is not a directory", dst.c_str());
             return 1;
         }
 
@@ -117,15 +115,13 @@ auto cp_main(int argc, char* argv[]) -> int {
 
             if (cfbox::fs::is_directory(src)) {
                 if (!recursive) {
-                    std::fprintf(stderr, "cfbox cp: -r not specified; omitting directory '%s'\n",
-                                 src.c_str());
+                    CFBOX_ERR("cp", "-r not specified; omitting directory '%s'", src.c_str());
                     rc = 1;
                     continue;
                 }
                 auto result = cfbox::fs::copy_recursive(src, dest);
                 if (!result) {
-                    std::fprintf(stderr, "cfbox cp: cannot copy '%s' to '%s': %s\n",
-                                 src.c_str(), dest.c_str(), result.error().msg.c_str());
+                    CFBOX_ERR("cp", "cannot copy '%s' to '%s': %s", src.c_str(), dest.c_str(), result.error().msg.c_str());
                     rc = 1;
                 }
             } else {
@@ -134,8 +130,7 @@ auto cp_main(int argc, char* argv[]) -> int {
                 } else {
                     auto result = cfbox::fs::copy_file(src, dest);
                     if (!result) {
-                        std::fprintf(stderr, "cfbox cp: cannot copy '%s' to '%s': %s\n",
-                                     src.c_str(), dest.c_str(), result.error().msg.c_str());
+                        CFBOX_ERR("cp", "cannot copy '%s' to '%s': %s", src.c_str(), dest.c_str(), result.error().msg.c_str());
                         rc = 1;
                     }
                 }

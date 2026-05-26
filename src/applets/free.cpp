@@ -7,6 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -75,7 +76,7 @@ auto free_main(int argc, char* argv[]) -> int {
 
     auto result = cfbox::proc::read_meminfo();
     if (!result) {
-        std::fprintf(stderr, "cfbox free: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("free", "%s", result.error().msg.c_str());
         return 1;
     }
     const auto& mi = *result;

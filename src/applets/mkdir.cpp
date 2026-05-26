@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -44,7 +45,7 @@ auto mkdir_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox mkdir: missing operand\n");
+        CFBOX_ERR("mkdir", "missing operand");
         return 1;
     }
 
@@ -53,21 +54,18 @@ auto mkdir_main(int argc, char* argv[]) -> int {
         if (recursive) {
             auto result = cfbox::fs::mkdir_recursive(dir, mode_val);
             if (!result) {
-                std::fprintf(stderr, "cfbox mkdir: cannot create directory '%s': %s\n",
-                             std::string{dir}.c_str(), result.error().msg.c_str());
+                CFBOX_ERR("mkdir", "cannot create directory '%s': %s", dir.data(), result.error().msg.c_str());
                 rc = 1;
             }
         } else {
             if (cfbox::fs::exists(dir)) {
-                std::fprintf(stderr, "cfbox mkdir: cannot create directory '%s': File exists\n",
-                             std::string{dir}.c_str());
+                CFBOX_ERR("mkdir", "cannot create directory '%s': File exists", dir.data());
                 rc = 1;
                 continue;
             }
             auto result = cfbox::fs::mkdir_single(dir, mode_val);
             if (!result) {
-                std::fprintf(stderr, "cfbox mkdir: cannot create directory '%s': %s\n",
-                             std::string{dir}.c_str(), result.error().msg.c_str());
+                CFBOX_ERR("mkdir", "cannot create directory '%s': %s", dir.data(), result.error().msg.c_str());
                 rc = 1;
             }
         }

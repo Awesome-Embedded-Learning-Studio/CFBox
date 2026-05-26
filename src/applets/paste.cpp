@@ -6,6 +6,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -53,7 +54,7 @@ auto paste_main(int argc, char* argv[]) -> int {
                 return true;
             });
             if (!result) {
-                std::fprintf(stderr, "cfbox paste: %s\n", result.error().msg.c_str());
+                CFBOX_ERR("paste", "%s", result.error().msg.c_str());
                 return 1;
             }
             std::putchar('\n');
@@ -71,7 +72,7 @@ auto paste_main(int argc, char* argv[]) -> int {
             return true;
         });
         if (!result) {
-            std::fprintf(stderr, "cfbox paste: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("paste", "%s", result.error().msg.c_str());
             return 1;
         }
         if (lines.size() > max_lines) max_lines = lines.size();

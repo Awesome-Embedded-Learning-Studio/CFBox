@@ -4,6 +4,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -48,7 +49,7 @@ auto dirname_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox dirname: missing operand\n");
+        CFBOX_ERR("dirname", "missing operand");
         return 1;
     }
 

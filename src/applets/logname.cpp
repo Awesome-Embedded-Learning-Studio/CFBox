@@ -3,6 +3,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -26,7 +27,7 @@ auto logname_main(int argc, char* argv[]) -> int {
     if (!name) name = std::getenv("USER");
 
     if (!name || name[0] == '\0') {
-        std::fprintf(stderr, "cfbox logname: no login name\n");
+        CFBOX_ERR("logname", "no login name");
         return 1;
     }
 

@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -60,8 +61,7 @@ auto date_main(int argc, char* argv[]) -> int {
         if (result) {
             now = mktime(&tm_val);
         } else {
-            std::fprintf(stderr, "cfbox date: invalid date '%.*s'\n",
-                         static_cast<int>(d->size()), d->data());
+            CFBOX_ERR("date", "invalid date '%.*s'", static_cast<int>(d->size()), d->data());
             return 1;
         }
     }

@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <set>
@@ -8,6 +9,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -23,6 +25,10 @@ constexpr cfbox::help::HelpEntry HELP = {
 };
 } // namespace
 
+static auto str_to_int(const std::string& s) -> int {
+    return static_cast<int>(std::strtol(s.c_str(), nullptr, 10));
+}
+
 static auto parse_range_list(const std::string& list) -> std::set<int> {
     std::set<int> fields;
     std::string token;
@@ -30,16 +36,16 @@ static auto parse_range_list(const std::string& list) -> std::set<int> {
         if (i == list.size() || list[i] == ',') {
             auto dash = token.find('-');
             if (dash == std::string::npos) {
-                fields.insert(std::stoi(token));
+                fields.insert(str_to_int(token));
             } else if (dash == 0) {
-                int end = std::stoi(token.substr(1));
+                int end = str_to_int(token.substr(1));
                 for (int j = 1; j <= end; ++j) fields.insert(j);
             } else if (dash == token.size() - 1) {
-                int start = std::stoi(token.substr(0, dash));
+                int start = str_to_int(token.substr(0, dash));
                 for (int j = start; j <= 1024; ++j) fields.insert(j);
             } else {
-                int start = std::stoi(token.substr(0, dash));
-                int end = std::stoi(token.substr(dash + 1));
+                int start = str_to_int(token.substr(0, dash));
+                int end = str_to_int(token.substr(dash + 1));
                 for (int j = start; j <= end; ++j) fields.insert(j);
             }
             token.clear();
@@ -64,7 +70,7 @@ auto cut_main(int argc, char* argv[]) -> int {
     char delim = '\t';
     if (auto d = parsed.get_any('d', "delimiter")) {
         if (d->size() != 1) {
-            std::fprintf(stderr, "cfbox cut: delimiter must be a single character\n");
+            CFBOX_ERR("cut", "delimiter must be a single character");
             return 1;
         }
         delim = (*d)[0];
@@ -75,7 +81,7 @@ auto cut_main(int argc, char* argv[]) -> int {
     bool char_mode = parsed.has_any('c', "characters");
 
     if (!field_mode && !char_mode) {
-        std::fprintf(stderr, "cfbox cut: you must specify a list of fields or characters\n");
+        CFBOX_ERR("cut", "you must specify a list of fields or characters");
         return 1;
     }
 
@@ -83,14 +89,14 @@ auto cut_main(int argc, char* argv[]) -> int {
     if (field_mode) {
         auto list = parsed.get_any('f', "fields");
         if (!list) {
-            std::fprintf(stderr, "cfbox cut: missing list for -f\n");
+            CFBOX_ERR("cut", "missing list for -f");
             return 1;
         }
         indices = parse_range_list(std::string{*list});
     } else {
         auto list = parsed.get_any('c', "characters");
         if (!list) {
-            std::fprintf(stderr, "cfbox cut: missing list for -c\n");
+            CFBOX_ERR("cut", "missing list for -c");
             return 1;
         }
         indices = parse_range_list(std::string{*list});
@@ -130,7 +136,7 @@ auto cut_main(int argc, char* argv[]) -> int {
             return true;
         });
         if (!result) {
-            std::fprintf(stderr, "cfbox cut: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("cut", "%s", result.error().msg.c_str());
             rc = 1;
         }
     }

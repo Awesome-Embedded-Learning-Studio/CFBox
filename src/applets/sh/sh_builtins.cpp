@@ -8,6 +8,7 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <cfbox/error.hpp>
 
 namespace cfbox::sh {
 
@@ -43,7 +44,7 @@ static int builtin_cd(std::vector<std::string>& args, ShellState& state) {
 
     std::string old = std::filesystem::current_path().string();
     if (::chdir(dir.c_str()) != 0) {
-        std::fprintf(stderr, "cfbox sh: cd: %s: %s\n", dir.c_str(), std::strerror(errno));
+        CFBOX_ERR("sh", "cd: %s: %s", dir.c_str(), std::strerror(errno));
         return 1;
     }
     state.set_var("OLDPWD", old);
@@ -189,13 +190,13 @@ static int builtin_eval(std::vector<std::string>& args, ShellState& state) {
 
 static int builtin_source(std::vector<std::string>& args, ShellState& state) {
     if (args.size() <= 1) {
-        std::fprintf(stderr, "cfbox sh: source: missing argument\n");
+        CFBOX_ERR("sh", "source: missing argument");
         return 2;
     }
 
     auto* fp = std::fopen(args[1].c_str(), "r");
     if (!fp) {
-        std::fprintf(stderr, "cfbox sh: %s: %s\n", args[1].c_str(), std::strerror(errno));
+        CFBOX_ERR("sh", "%s: %s", args[1].c_str(), std::strerror(errno));
         return 1;
     }
 

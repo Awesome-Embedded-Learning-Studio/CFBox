@@ -8,6 +8,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -116,14 +117,14 @@ auto sort_main(int argc, char* argv[]) -> int {
     if (pos.empty()) {
         auto result = cfbox::io::read_all_stdin();
         if (!result) {
-            std::fprintf(stderr, "cfbox sort: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("sort", "%s", result.error().msg.c_str());
             return 1;
         }
         all_lines = cfbox::io::split_lines(result.value());
     } else if (pos.size() == 1) {
         auto result = (pos[0] == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(pos[0]);
         if (!result) {
-            std::fprintf(stderr, "cfbox sort: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("sort", "%s", result.error().msg.c_str());
             return 1;
         }
         all_lines = cfbox::io::split_lines(result.value());
@@ -132,7 +133,7 @@ auto sort_main(int argc, char* argv[]) -> int {
         for (const auto& p : pos) {
             auto result = (p == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(p);
             if (!result) {
-                std::fprintf(stderr, "cfbox sort: %s\n", result.error().msg.c_str());
+                CFBOX_ERR("sort", "%s", result.error().msg.c_str());
                 rc = 1;
             } else {
                 auto file_lines = cfbox::io::split_lines(result.value());

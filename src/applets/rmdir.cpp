@@ -4,6 +4,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -24,7 +25,7 @@ auto rmdir_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox rmdir: missing operand\n");
+        CFBOX_ERR("rmdir", "missing operand");
         return 1;
     }
 
@@ -33,8 +34,7 @@ auto rmdir_main(int argc, char* argv[]) -> int {
         std::error_code ec;
         std::filesystem::remove(std::filesystem::path{p}, ec);
         if (ec) {
-            std::fprintf(stderr, "cfbox rmdir: failed to remove '%.*s': %s\n",
-                         static_cast<int>(p.size()), p.data(), ec.message().c_str());
+            CFBOX_ERR("rmdir", "failed to remove '%.*s': %s", static_cast<int>(p.size()), p.data(), ec.message().c_str());
             rc = 1;
         }
     }

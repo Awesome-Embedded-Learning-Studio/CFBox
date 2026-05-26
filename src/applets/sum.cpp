@@ -5,6 +5,7 @@
 #include <cfbox/checksum.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -33,17 +34,17 @@ auto sum_main(int argc, char* argv[]) -> int {
     for (auto p : paths) {
         auto data_result = (p == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(p);
         if (!data_result) {
-            std::fprintf(stderr, "cfbox sum: %s\n", data_result.error().msg.c_str());
+            CFBOX_ERR("sum", "%s", data_result.error().msg.c_str());
             rc = 1;
             continue;
         }
 
         if (sysv) {
             auto result = cfbox::checksum::sysv_sum(*data_result);
-            std::printf("%d %d", result.checksum, result.blocks);
+            std::printf("%u %u", result.checksum, result.blocks);
         } else {
             auto result = cfbox::checksum::bsd_sum(*data_result);
-            std::printf("%05d %5d", result.checksum, result.blocks);
+            std::printf("%05u %5u", result.checksum, result.blocks);
         }
         if (p != "-") std::printf(" %.*s", static_cast<int>(p.size()), p.data());
         std::putchar('\n');

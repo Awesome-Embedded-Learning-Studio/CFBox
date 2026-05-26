@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <cfbox/error.hpp>
 
 namespace cfbox::sh {
 
@@ -27,7 +28,7 @@ static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<
         case Redir::Read: {
             int fd = ::open(r.target.c_str(), O_RDONLY);
             if (fd < 0) {
-                std::fprintf(stderr, "cfbox sh: %s: %s\n", r.target.c_str(), std::strerror(errno));
+                CFBOX_ERR("sh", "%s: %s", r.target.c_str(), std::strerror(errno));
             } else {
                 ::dup2(fd, target_fd);
                 ::close(fd);
@@ -37,7 +38,7 @@ static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<
         case Redir::Write: {
             int fd = ::open(r.target.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
             if (fd < 0) {
-                std::fprintf(stderr, "cfbox sh: %s: %s\n", r.target.c_str(), std::strerror(errno));
+                CFBOX_ERR("sh", "%s: %s", r.target.c_str(), std::strerror(errno));
             } else {
                 ::dup2(fd, target_fd);
                 ::close(fd);
@@ -47,7 +48,7 @@ static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<
         case Redir::Append: {
             int fd = ::open(r.target.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
             if (fd < 0) {
-                std::fprintf(stderr, "cfbox sh: %s: %s\n", r.target.c_str(), std::strerror(errno));
+                CFBOX_ERR("sh", "%s: %s", r.target.c_str(), std::strerror(errno));
             } else {
                 ::dup2(fd, target_fd);
                 ::close(fd);
@@ -103,7 +104,7 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
     // External command: fork and exec
     pid_t pid = ::fork();
     if (pid < 0) {
-        std::fprintf(stderr, "cfbox sh: fork failed: %s\n", std::strerror(errno));
+        CFBOX_ERR("sh", "fork failed: %s", std::strerror(errno));
         return 126;
     }
 
@@ -119,7 +120,7 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
         argv.push_back(nullptr);
 
         ::execvp(argv[0], argv.data());
-        std::fprintf(stderr, "cfbox sh: %s: command not found\n", argv[0]);
+        CFBOX_ERR("sh", "%s: command not found", argv[0]);
         ::_Exit(127);
     }
 
@@ -143,7 +144,7 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
     std::vector<int[2]> pipes(static_cast<std::size_t>(n - 1));
     for (int i = 0; i < n - 1; ++i) {
         if (::pipe(pipes[static_cast<std::size_t>(i)]) < 0) {
-            std::fprintf(stderr, "cfbox sh: pipe failed\n");
+            CFBOX_ERR("sh", "pipe failed");
             return 1;
         }
     }
@@ -153,7 +154,7 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
     for (int i = 0; i < n; ++i) {
         pids[static_cast<std::size_t>(i)] = ::fork();
         if (pids[static_cast<std::size_t>(i)] < 0) {
-            std::fprintf(stderr, "cfbox sh: fork failed\n");
+            CFBOX_ERR("sh", "fork failed");
             return 1;
         }
 
@@ -192,7 +193,7 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
                 for (auto& arg : expanded) argv.push_back(arg.data());
                 argv.push_back(nullptr);
                 ::execvp(argv[0], argv.data());
-                std::fprintf(stderr, "cfbox sh: %s: command not found\n", argv[0]);
+                CFBOX_ERR("sh", "%s: command not found", argv[0]);
                 ::_Exit(127);
             } else {
                 int rc = execute_command(cmd, state);

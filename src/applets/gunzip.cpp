@@ -5,6 +5,7 @@
 #include <cfbox/compress.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -27,7 +28,7 @@ auto gunzip_main(int argc, char* argv[]) -> int {
 
     if (pos.empty()) {
         auto input = cfbox::io::read_all_stdin();
-        if (!input) { std::fprintf(stderr, "cfbox gunzip: read error\n"); return 1; }
+        if (!input) { CFBOX_ERR("gunzip", "read error"); return 1; };
         auto result = cfbox::compress::gzip_decompress(*input);
         std::fwrite(result.data(), 1, result.size(), stdout);
         return 0;
@@ -38,7 +39,7 @@ auto gunzip_main(int argc, char* argv[]) -> int {
         std::string path{p};
         auto input = cfbox::io::read_all(path);
         if (!input) {
-            std::fprintf(stderr, "cfbox gunzip: %s\n", input.error().msg.c_str());
+            CFBOX_ERR("gunzip", "%s", input.error().msg.c_str());
             rc = 1;
             continue;
         }
@@ -47,7 +48,7 @@ auto gunzip_main(int argc, char* argv[]) -> int {
             ? path.substr(0, path.size() - 3) : path + ".out";
         auto wresult = cfbox::io::write_all(outpath, result);
         if (!wresult) {
-            std::fprintf(stderr, "cfbox gunzip: %s\n", wresult.error().msg.c_str());
+            CFBOX_ERR("gunzip", "%s", wresult.error().msg.c_str());
             rc = 1;
         }
     }

@@ -68,7 +68,13 @@ namespace detail {
 // Utility: wrap text with a color and reset
 inline auto colored(std::string_view text, std::string_view color_code) -> std::string {
     if (!color_enabled()) return std::string{text};
-    return std::string{color_code} + std::string{text} + std::string{reset()};
+    auto r = reset();
+    std::string result;
+    result.reserve(color_code.size() + text.size() + r.size());
+    result.append(color_code);
+    result.append(text);
+    result.append(r);
+    return result;
 }
 
 } // namespace cfbox::term

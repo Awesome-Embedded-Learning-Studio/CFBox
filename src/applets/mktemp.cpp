@@ -6,6 +6,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -54,7 +55,7 @@ auto mktemp_main(int argc, char* argv[]) -> int {
         // Replace trailing X's with random chars
         auto xpos = tmpl.rfind('X');
         if (xpos == std::string::npos || xpos < tmpl.size() - 6) {
-            std::fprintf(stderr, "cfbox mktemp: too few X's in template '%s'\n", tmpl.c_str());
+            CFBOX_ERR("mktemp", "too few X's in template '%s'", tmpl.c_str());
             return 1;
         }
         std::puts(tmpl.c_str());
@@ -64,16 +65,14 @@ auto mktemp_main(int argc, char* argv[]) -> int {
     if (make_dir) {
         char* result = mkdtemp(tmpl.data());
         if (!result) {
-            std::fprintf(stderr, "cfbox mktemp: failed to create directory: %s\n",
-                         std::strerror(errno));
+            CFBOX_ERR("mktemp", "failed to create directory: %s", std::strerror(errno));
             return 1;
         }
         std::puts(result);
     } else {
         int fd = mkstemp(tmpl.data());
         if (fd < 0) {
-            std::fprintf(stderr, "cfbox mktemp: failed to create file: %s\n",
-                         std::strerror(errno));
+            CFBOX_ERR("mktemp", "failed to create file: %s", std::strerror(errno));
             return 1;
         }
         ::close(fd);

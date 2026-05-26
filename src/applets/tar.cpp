@@ -8,6 +8,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -131,7 +132,7 @@ auto tar_main(int argc, char* argv[]) -> int {
             }
             auto data = cfbox::io::read_all(fullpath.string());
             if (!data) {
-                std::fprintf(stderr, "cfbox tar: %s: %s\n", relpath.c_str(), data.error().msg.c_str());
+                CFBOX_ERR("tar", "%s: %s", relpath.c_str(), data.error().msg.c_str());
                 continue;
             }
             auto hdr = create_header(relpath, data->size(), '0');
@@ -147,7 +148,7 @@ auto tar_main(int argc, char* argv[]) -> int {
         } else {
             auto wresult = cfbox::io::write_all(archive, archive_data);
             if (!wresult) {
-                std::fprintf(stderr, "cfbox tar: %s\n", wresult.error().msg.c_str());
+                CFBOX_ERR("tar", "%s", wresult.error().msg.c_str());
                 return 1;
             }
         }
@@ -159,7 +160,7 @@ auto tar_main(int argc, char* argv[]) -> int {
 
         auto input = (archive == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(archive);
         if (!input) {
-            std::fprintf(stderr, "cfbox tar: %s\n", input.error().msg.c_str());
+            CFBOX_ERR("tar", "%s", input.error().msg.c_str());
             return 1;
         }
         const auto& data = *input;
@@ -182,7 +183,7 @@ auto tar_main(int argc, char* argv[]) -> int {
                     auto content = data.substr(offset + 512, fsize);
                     auto wresult = cfbox::io::write_all(name, content);
                     if (!wresult) {
-                        std::fprintf(stderr, "cfbox tar: %s\n", wresult.error().msg.c_str());
+                        CFBOX_ERR("tar", "%s", wresult.error().msg.c_str());
                     }
                 }
             }
@@ -193,6 +194,6 @@ auto tar_main(int argc, char* argv[]) -> int {
         return 0;
     }
 
-    std::fprintf(stderr, "cfbox tar: must specify -c, -x, or -t\n");
+    CFBOX_ERR("tar", "must specify -c, -x, or -t");
     return 1;
 }

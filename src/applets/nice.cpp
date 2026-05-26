@@ -7,6 +7,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -34,7 +35,7 @@ auto nice_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox nice: missing command\n");
+        CFBOX_ERR("nice", "missing command");
         return 1;
     }
 
@@ -49,6 +50,6 @@ auto nice_main(int argc, char* argv[]) -> int {
     cmd_args.push_back(nullptr);
 
     execvp(cmd_args[0], cmd_args.data());
-    std::fprintf(stderr, "cfbox nice: %s: %s\n", cmd_args[0], std::strerror(errno));
+    CFBOX_ERR("nice", "%s: %s", cmd_args[0], std::strerror(errno));
     return 127;
 }

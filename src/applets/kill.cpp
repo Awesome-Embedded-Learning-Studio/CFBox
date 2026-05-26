@@ -7,6 +7,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -85,7 +86,7 @@ auto kill_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox kill: no PID specified\n");
+        CFBOX_ERR("kill", "no PID specified");
         return 1;
     }
 
@@ -105,7 +106,7 @@ auto kill_main(int argc, char* argv[]) -> int {
     }
 
     if (sig <= 0) {
-        std::fprintf(stderr, "cfbox kill: invalid signal\n");
+        CFBOX_ERR("kill", "invalid signal");
         return 1;
     }
 
@@ -115,7 +116,7 @@ auto kill_main(int argc, char* argv[]) -> int {
         // Handle special case: 0 means all processes in process group
         pid_t pid = static_cast<pid_t>(std::strtol(arg.data(), nullptr, 10));
         if (kill(pid, sig) != 0) {
-            std::fprintf(stderr, "cfbox kill: (%d) - %s\n", pid, std::strerror(errno));
+            CFBOX_ERR("kill", "(%d) - %s", pid, std::strerror(errno));
             ++errors;
         }
     }

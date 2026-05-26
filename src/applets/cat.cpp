@@ -4,6 +4,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -68,7 +69,7 @@ auto cat_file(std::string_view path, bool n_flag, bool b_flag, bool A_flag) -> i
 
     auto result = cfbox::io::open_file(path, "rb");
     if (!result) {
-        std::fprintf(stderr, "cfbox cat: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("cat", "%s", result.error().msg.c_str());
         return 1;
     }
 

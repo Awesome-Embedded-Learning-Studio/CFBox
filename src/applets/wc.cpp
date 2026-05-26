@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -87,7 +88,7 @@ auto wc_main(int argc, char* argv[]) -> int {
     if (pos.empty()) {
         auto result = wc_file("-");
         if (!result) {
-            std::fprintf(stderr, "cfbox wc: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("wc", "%s", result.error().msg.c_str());
             return 1;
         }
         print_counts(*result, show_lines, show_words, show_bytes, all);
@@ -98,7 +99,7 @@ auto wc_main(int argc, char* argv[]) -> int {
     if (pos.size() == 1) {
         auto result = wc_file(pos[0]);
         if (!result) {
-            std::fprintf(stderr, "cfbox wc: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("wc", "%s", result.error().msg.c_str());
             return 1;
         }
         print_counts(*result, show_lines, show_words, show_bytes, all);
@@ -112,7 +113,7 @@ auto wc_main(int argc, char* argv[]) -> int {
     for (const auto& p : pos) {
         auto result = wc_file(p);
         if (!result) {
-            std::fprintf(stderr, "cfbox wc: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("wc", "%s", result.error().msg.c_str());
             rc = 1;
             continue;
         }

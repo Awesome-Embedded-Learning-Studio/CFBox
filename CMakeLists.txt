@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
 project(CFBox
-    VERSION 0.0.1
+    VERSION 0.2.0
     DESCRIPTION "A Modern C++ Toy Busybox"
     HOMEPAGE_URL "https://github.com/Awesome-Embedded-Learning-Studio/CFBox"
     LANGUAGES CXX
@@ -55,6 +55,9 @@ add_executable(cfbox src/main.cpp ${CFBOX_APPLET_SOURCES})
 target_include_directories(cfbox PUBLIC include)
 target_include_directories(cfbox PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
 target_link_libraries(cfbox PRIVATE cfbox_compiler_flags)
+
+# ── Install target ─────────────────────────────────────────────
+install(TARGETS cfbox DESTINATION bin)
 
 # ── GTest via CPM (FetchContent) ──────────────────────────────
 if(NOT CMAKE_CROSSCOMPILING)

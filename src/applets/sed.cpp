@@ -14,6 +14,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/regex.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -327,7 +328,7 @@ auto sed_main(int argc, char* argv[]) -> int {
         // First positional arg is the script
         const auto& pos = parsed.positional();
         if (pos.empty()) {
-            std::fprintf(stderr, "cfbox sed: missing script\n");
+            CFBOX_ERR("sed", "missing script");
             return 1;
         }
         script = std::string{pos[0]};
@@ -338,7 +339,7 @@ auto sed_main(int argc, char* argv[]) -> int {
 
     auto commands = parse_script(script);
     if (commands.empty()) {
-        std::fprintf(stderr, "cfbox sed: empty command\n");
+        CFBOX_ERR("sed", "empty command");
         return 1;
     }
 
@@ -346,7 +347,7 @@ auto sed_main(int argc, char* argv[]) -> int {
         // Read from stdin
         auto result = cfbox::io::read_all_stdin();
         if (!result) {
-            std::fprintf(stderr, "cfbox sed: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("sed", "%s", result.error().msg.c_str());
             return 1;
         }
         auto lines = cfbox::io::split_lines(result.value());
@@ -355,7 +356,7 @@ auto sed_main(int argc, char* argv[]) -> int {
         for (const auto& f : files) {
             auto result = (f == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(f);
             if (!result) {
-                std::fprintf(stderr, "cfbox sed: %s\n", result.error().msg.c_str());
+                CFBOX_ERR("sed", "%s", result.error().msg.c_str());
                 return 1;
             }
             auto lines = cfbox::io::split_lines(result.value());

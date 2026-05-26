@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -19,8 +20,7 @@ constexpr cfbox::help::HelpEntry HELP = {
 
 auto do_move(const std::string& src, const std::string& dst, bool force) -> int {
     if (!cfbox::fs::exists(src)) {
-        std::fprintf(stderr, "cfbox mv: cannot stat '%s': No such file or directory\n",
-                     src.c_str());
+        CFBOX_ERR("mv", "cannot stat '%s': No such file or directory", src.c_str());
         return 1;
     }
 
@@ -31,8 +31,7 @@ auto do_move(const std::string& src, const std::string& dst, bool force) -> int 
     }
 
     if (cfbox::fs::exists(dest) && !force) {
-        std::fprintf(stderr, "cfbox mv: overwrite '%s'? (skipped, use -f to force)\n",
-                     dest.c_str());
+        CFBOX_ERR("mv", "overwrite '%s'? (skipped, use -f to force)", dest.c_str());
         return 1;
     }
 
@@ -46,27 +45,23 @@ auto do_move(const std::string& src, const std::string& dst, bool force) -> int 
     if (cfbox::fs::is_directory(src)) {
         auto copy_result = cfbox::fs::copy_recursive(src, dest);
         if (!copy_result) {
-            std::fprintf(stderr, "cfbox mv: cannot move '%s' to '%s': %s\n",
-                         src.c_str(), dest.c_str(), copy_result.error().msg.c_str());
+            CFBOX_ERR("mv", "cannot move '%s' to '%s': %s", src.c_str(), dest.c_str(), copy_result.error().msg.c_str());
             return 1;
         }
         auto rm_result = cfbox::fs::remove_all(src);
         if (!rm_result) {
-            std::fprintf(stderr, "cfbox mv: cannot remove '%s': %s\n",
-                         src.c_str(), rm_result.error().msg.c_str());
+            CFBOX_ERR("mv", "cannot remove '%s': %s", src.c_str(), rm_result.error().msg.c_str());
             return 1;
         }
     } else {
         auto copy_result = cfbox::fs::copy_file(src, dest);
         if (!copy_result) {
-            std::fprintf(stderr, "cfbox mv: cannot move '%s' to '%s': %s\n",
-                         src.c_str(), dest.c_str(), copy_result.error().msg.c_str());
+            CFBOX_ERR("mv", "cannot move '%s' to '%s': %s", src.c_str(), dest.c_str(), copy_result.error().msg.c_str());
             return 1;
         }
         auto rm_result = cfbox::fs::remove_single(src);
         if (!rm_result) {
-            std::fprintf(stderr, "cfbox mv: cannot remove '%s': %s\n",
-                         src.c_str(), rm_result.error().msg.c_str());
+            CFBOX_ERR("mv", "cannot remove '%s': %s", src.c_str(), rm_result.error().msg.c_str());
             return 1;
         }
     }
@@ -88,7 +83,7 @@ auto mv_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox mv: missing file operand\n");
+        CFBOX_ERR("mv", "missing file operand");
         return 1;
     }
 
@@ -101,7 +96,7 @@ auto mv_main(int argc, char* argv[]) -> int {
 
     // Multiple sources — destination must be a directory
     if (!cfbox::fs::is_directory(dst)) {
-        std::fprintf(stderr, "cfbox mv: target '%s' is not a directory\n", dst.c_str());
+        CFBOX_ERR("mv", "target '%s' is not a directory", dst.c_str());
         return 1;
     }
 

@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -25,18 +26,16 @@ auto unlink_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox unlink: missing operand\n");
+        CFBOX_ERR("unlink", "missing operand");
         return 1;
     }
     if (pos.size() > 1) {
-        std::fprintf(stderr, "cfbox unlink: extra operand '%.*s'\n",
-                     static_cast<int>(pos[1].size()), pos[1].data());
+        CFBOX_ERR("unlink", "extra operand '%.*s'", static_cast<int>(pos[1].size()), pos[1].data());
         return 1;
     }
 
     if (::unlink(std::string{pos[0]}.c_str()) != 0) {
-        std::fprintf(stderr, "cfbox unlink: cannot unlink '%.*s': %s\n",
-                     static_cast<int>(pos[0].size()), pos[0].data(), std::strerror(errno));
+        CFBOX_ERR("unlink", "cannot unlink '%.*s': %s", static_cast<int>(pos[0].size()), pos[0].data(), std::strerror(errno));
         return 1;
     }
     return 0;

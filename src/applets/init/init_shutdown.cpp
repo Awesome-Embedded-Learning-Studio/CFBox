@@ -3,7 +3,6 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
-#include <csignal>
 #include <unistd.h>
 #include <sys/reboot.h>
 #include <sys/mount.h>

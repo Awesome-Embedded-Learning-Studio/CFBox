@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -50,7 +51,7 @@ auto uptime_main(int argc, char* argv[]) -> int {
     // Uptime
     auto up_result = cfbox::proc::read_uptime();
     if (!up_result) {
-        std::fprintf(stderr, "cfbox uptime: %s\n", up_result.error().msg.c_str());
+        CFBOX_ERR("uptime", "%s", up_result.error().msg.c_str());
         return 1;
     }
     double uptime_secs = up_result->first;

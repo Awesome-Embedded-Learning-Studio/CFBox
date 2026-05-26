@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -42,20 +43,19 @@ auto truncate_main(int argc, char* argv[]) -> int {
 
     auto size_str = parsed.get_any('s', "size");
     if (!size_str) {
-        std::fprintf(stderr, "cfbox truncate: missing operand: -s SIZE\n");
+        CFBOX_ERR("truncate", "missing operand: -s SIZE");
         return 1;
     }
 
     long size = parse_size(std::string{*size_str});
     if (size < 0) {
-        std::fprintf(stderr, "cfbox truncate: invalid size: '%.*s'\n",
-                     static_cast<int>(size_str->size()), size_str->data());
+        CFBOX_ERR("truncate", "invalid size: '%.*s'", static_cast<int>(size_str->size()), size_str->data());
         return 1;
     }
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox truncate: missing operand\n");
+        CFBOX_ERR("truncate", "missing operand");
         return 1;
     }
 
@@ -63,7 +63,7 @@ auto truncate_main(int argc, char* argv[]) -> int {
     for (auto p : pos) {
         auto result = cfbox::fs::resize_file(std::string{p}, static_cast<std::uintmax_t>(size));
         if (!result) {
-            std::fprintf(stderr, "cfbox truncate: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("truncate", "%s", result.error().msg.c_str());
             rc = 1;
         }
     }
