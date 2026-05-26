@@ -27,6 +27,7 @@ set(CFBOX_APPLETS
     pwdx pstree pmap fuser iostat
     watch top
     dmesg hexdump more rev cal renice
+    clear which mountpoint chmod chown chgrp
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)

@@ -331,6 +331,24 @@ extern auto cal_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_RENICE
 extern auto renice_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_CLEAR
+extern auto clear_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_WHICH
+extern auto which_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_MOUNTPOINT
+extern auto mountpoint_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_CHMOD
+extern auto chmod_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_CHOWN
+extern auto chown_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_CHGRP
+extern auto chgrp_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -662,5 +680,23 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_RENICE
     {"renice",   renice_main,   "alter priority of running processes"},
+#endif
+#if CFBOX_ENABLE_CLEAR
+    {"clear",    clear_main,    "clear the terminal screen"},
+#endif
+#if CFBOX_ENABLE_WHICH
+    {"which",    which_main,    "locate a command"},
+#endif
+#if CFBOX_ENABLE_MOUNTPOINT
+    {"mountpoint", mountpoint_main, "check if a path is a mountpoint"},
+#endif
+#if CFBOX_ENABLE_CHMOD
+    {"chmod",    chmod_main,    "change file mode bits"},
+#endif
+#if CFBOX_ENABLE_CHOWN
+    {"chown",    chown_main,    "change file owner and group"},
+#endif
+#if CFBOX_ENABLE_CHGRP
+    {"chgrp",    chgrp_main,    "change group ownership"},
 #endif
 });
