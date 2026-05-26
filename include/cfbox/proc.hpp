@@ -507,7 +507,10 @@ inline auto read_partitions() -> base::Result<std::vector<std::string>> {
     std::vector<std::string> parts;
     char line[256];
     // Skip header line
-    std::fgets(line, sizeof(line), f);
+    if (!std::fgets(line, sizeof(line), f)) {
+        std::fclose(f);
+        return parts;
+    }
     while (std::fgets(line, sizeof(line), f)) {
         if (line[0] == '\n')
             continue;
