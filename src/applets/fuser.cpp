@@ -61,7 +61,7 @@ auto fuser_main(int argc, char* argv[]) -> int {
             auto name = proc_entry.path().filename().string();
             if (name.empty() || name[0] < '0' || name[0] > '9') continue;
 
-            pid_t pid = static_cast<pid_t>(std::stoi(name));
+            pid_t pid = static_cast<pid_t>(std::strtol(name.c_str(), nullptr, 10));
             auto fd_dir = proc_entry.path() / "fd";
 
             for (const auto& fd_entry : std::filesystem::directory_iterator(fd_dir, ec)) {

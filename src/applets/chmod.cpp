@@ -157,15 +157,9 @@ auto chmod_main(int argc, char* argv[]) -> int {
 
     int rc = 0;
     for (size_t i = files_start; i < pos.size(); i++) {
-        std::string path(pos[i]);
-        if (recursive && cfbox::fs::is_directory(path)) {
-            std::error_code ec;
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(path, ec)) {
-                if (ec) continue;
-                if (chmod_one(entry.path().string(), target_mode, verbose) != 0) rc = 1;
-            }
-        }
-        if (chmod_one(path, target_mode, verbose) != 0) rc = 1;
+        cfbox::fs::for_each_entry(pos[i], recursive, [&](const std::string& p) {
+            if (chmod_one(p, target_mode, verbose) != 0) rc = 1;
+        });
     }
     return rc;
 }

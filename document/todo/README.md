@@ -6,14 +6,14 @@
 
 | 项目 | 状态 |
 |------|------|
-| 版本 | v0.1.0 |
-| Applet | 109 个 |
-| 体积 | 约 446 KB（size-opt, LTO + strip） |
-| 测试 | 331 个 GTest 单元测试 + 56 个集成脚本 |
-| 已完成阶段 | 历史 Phase 0-4：构建、POSIX-like shell、coreutils、归档压缩、文本处理、procps、init |
-| **当前阶段** | **Phase 1：P0 系统命令补齐**（从 `clear` 开始） |
-| 主要缺口 | 权限/挂载/`dd`、网络、登录管理、系统日志、核心命令功能深度、生产发布工程 |
-| 执行策略 | Phase 0-lite 并行推进，不阻塞新功能 |
+| 版本 | v0.2.0 |
+| Applet | 115 个 |
+| 体积 | 406 KB（size-opt, LTO + strip, `-fno-exceptions -fno-rtti`） |
+| 测试 | 379 个 GTest 单元测试 + 56 个集成脚本 |
+| 已完成阶段 | Phase 1 Wave 1（6 新 applet）+ Phase 1.5 代码质量审查（全部通过） |
+| **当前阶段** | **Phase 2：核心命令深化**（tail -f、cp -a、test POSIX、ls -R/--color） |
+| 主要缺口 | 核心命令功能深度、网络、登录管理、系统日志、生产发布工程 |
+| 执行策略 | 按运维频率分批深化，每批发版 |
 
 ## 文档索引
 

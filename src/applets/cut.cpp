@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <set>
@@ -24,6 +25,10 @@ constexpr cfbox::help::HelpEntry HELP = {
 };
 } // namespace
 
+static auto str_to_int(const std::string& s) -> int {
+    return static_cast<int>(std::strtol(s.c_str(), nullptr, 10));
+}
+
 static auto parse_range_list(const std::string& list) -> std::set<int> {
     std::set<int> fields;
     std::string token;
@@ -31,16 +36,16 @@ static auto parse_range_list(const std::string& list) -> std::set<int> {
         if (i == list.size() || list[i] == ',') {
             auto dash = token.find('-');
             if (dash == std::string::npos) {
-                fields.insert(std::stoi(token));
+                fields.insert(str_to_int(token));
             } else if (dash == 0) {
-                int end = std::stoi(token.substr(1));
+                int end = str_to_int(token.substr(1));
                 for (int j = 1; j <= end; ++j) fields.insert(j);
             } else if (dash == token.size() - 1) {
-                int start = std::stoi(token.substr(0, dash));
+                int start = str_to_int(token.substr(0, dash));
                 for (int j = start; j <= 1024; ++j) fields.insert(j);
             } else {
-                int start = std::stoi(token.substr(0, dash));
-                int end = std::stoi(token.substr(dash + 1));
+                int start = str_to_int(token.substr(0, dash));
+                int end = str_to_int(token.substr(dash + 1));
                 for (int j = start; j <= end; ++j) fields.insert(j);
             }
             token.clear();

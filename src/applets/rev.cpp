@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cstdio>
-#include <fstream>
-#include <iostream>
+#include <cstring>
 #include <string>
 
 #include <cfbox/applet.hpp>
@@ -20,11 +19,15 @@ constexpr cfbox::help::HelpEntry HELP = {
     .extra   = "",
 };
 
-auto process_stream(std::istream& in) -> void {
-    std::string line;
-    while (std::getline(in, line)) {
-        std::reverse(line.begin(), line.end());
-        std::printf("%s\n", line.c_str());
+auto process_stream(std::FILE* f) -> void {
+    char buf[4096];
+    while (std::fgets(buf, sizeof(buf), f)) {
+        auto len = std::strlen(buf);
+        while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
+            buf[--len] = '\0';
+        }
+        std::reverse(buf, buf + len);
+        std::printf("%s\n", buf);
     }
 }
 
@@ -37,7 +40,7 @@ auto rev_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        process_stream(std::cin);
+        process_stream(stdin);
         return 0;
     }
 
@@ -45,15 +48,16 @@ auto rev_main(int argc, char* argv[]) -> int {
     for (const auto& filename : pos) {
         auto fn = std::string(filename);
         if (fn == "-") {
-            process_stream(std::cin);
+            process_stream(stdin);
         } else {
-            std::ifstream f(fn);
+            auto* f = std::fopen(fn.c_str(), "r");
             if (!f) {
                 CFBOX_ERR("rev", "cannot open %s", fn.c_str());
                 rc = 1;
                 continue;
             }
             process_stream(f);
+            std::fclose(f);
         }
     }
     return rc;

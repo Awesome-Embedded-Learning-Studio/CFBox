@@ -1,15 +1,14 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <grp.h>
 #include <pwd.h>
 #include <string>
 #include <string_view>
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include <cfbox/args.hpp>
+#include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/error.hpp>
 
@@ -66,8 +65,9 @@ auto parse_owner_spec(std::string_view spec) -> OwnerSpec {
 }
 
 auto chown_one(const std::string& path, uid_t uid, gid_t gid, bool verbose) -> int {
-    if (::chown(path.c_str(), uid, gid) != 0) {
-        CFBOX_ERR("chown", "%s: %s", path.c_str(), std::strerror(errno));
+    auto result = cfbox::fs::chown(path, uid, gid);
+    if (!result) {
+        CFBOX_ERR("chown", "%s: %s", path.c_str(), result.error().msg.c_str());
         return 1;
     }
     if (verbose) std::printf("ownership of '%s' changed\n", path.c_str());
@@ -125,21 +125,11 @@ auto chown_main(int argc, char* argv[]) -> int {
 
     int rc = 0;
     for (size_t i = files_start; i < pos.size(); i++) {
-        std::string path(pos[i]);
-        auto apply = [&](const std::string& p) {
-            uid_t uid = owner.set_uid ? owner.uid : static_cast<uid_t>(-1);
-            gid_t gid = owner.set_gid ? owner.gid : static_cast<gid_t>(-1);
-            return chown_one(p, uid, gid, verbose);
-        };
-
-        if (recursive && std::filesystem::is_directory(path)) {
-            std::error_code ec;
-            for (const auto& entry : std::filesystem::recursive_directory_iterator(path, ec)) {
-                if (ec) continue;
-                if (apply(entry.path().string()) != 0) rc = 1;
-            }
-        }
-        if (apply(path) != 0) rc = 1;
+        uid_t uid = owner.set_uid ? owner.uid : static_cast<uid_t>(-1);
+        gid_t gid = owner.set_gid ? owner.gid : static_cast<gid_t>(-1);
+        cfbox::fs::for_each_entry(pos[i], recursive, [&](const std::string& p) {
+            if (chown_one(p, uid, gid, verbose) != 0) rc = 1;
+        });
     }
     return rc;
 }

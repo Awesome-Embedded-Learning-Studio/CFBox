@@ -13,12 +13,14 @@ namespace cfbox::io {
 
 struct FileCloser {
     void operator()(std::FILE* f) const noexcept {
-        if (f) std::fclose(f);
+        if (f)
+            std::fclose(f);
     }
 };
 using unique_file = std::unique_ptr<std::FILE, FileCloser>;
 
-[[nodiscard]] inline auto open_file(std::string_view path, const char* mode) -> base::Result<unique_file> {
+[[nodiscard]] inline auto open_file(std::string_view path, const char* mode)
+    -> base::Result<unique_file> {
     auto* f = std::fopen(path.data(), mode);
     if (!f) {
         return std::unexpected(base::Error{errno, "cannot open file: " + std::string{path}});
@@ -31,11 +33,21 @@ using unique_file = std::unique_ptr<std::FILE, FileCloser>;
 
     std::fseek(f->get(), 0, SEEK_END);
     long size = std::ftell(f->get());
-    std::fseek(f->get(), 0, SEEK_SET);
+    if (size > 0) {
+        std::fseek(f->get(), 0, SEEK_SET);
+        std::string content(static_cast<std::size_t>(size), '\0');
+        auto nread = std::fread(content.data(), 1, content.size(), f->get());
+        content.resize(nread);
+        return content;
+    }
 
-    std::string content(static_cast<std::size_t>(size), '\0');
-    auto nread = std::fread(content.data(), 1, content.size(), f->get());
-    content.resize(nread);
+    // Virtual files (e.g. /proc) may report 0 size; fall back to incremental read
+    std::fseek(f->get(), 0, SEEK_SET);
+    std::string content;
+    char buf[4096];
+    while (auto n = std::fread(buf, 1, sizeof(buf), f->get())) {
+        content.append(buf, n);
+    }
     return content;
 }
 
@@ -50,10 +62,10 @@ using unique_file = std::unique_ptr<std::FILE, FileCloser>;
 
 [[nodiscard]] inline auto split_lines(std::string_view content) -> std::vector<std::string> {
     std::vector<std::string> lines;
-    if (content.empty()) return lines;
+    if (content.empty())
+        return lines;
 
-    auto nl = static_cast<std::size_t>(
-        std::count(content.begin(), content.end(), '\n'));
+    auto nl = static_cast<std::size_t>(std::count(content.begin(), content.end(), '\n'));
     lines.reserve(nl + 1);
 
     std::size_t start = 0;
@@ -69,10 +81,12 @@ using unique_file = std::unique_ptr<std::FILE, FileCloser>;
     return lines;
 }
 
-[[nodiscard]] inline auto read_lines(std::string_view path) -> base::Result<std::vector<std::string>> {
+[[nodiscard]] inline auto read_lines(std::string_view path)
+    -> base::Result<std::vector<std::string>> {
     CFBOX_TRY(content, read_all(path));
     auto lines = split_lines(*content);
-    if (content->empty()) lines.emplace_back();
+    if (content->empty())
+        lines.emplace_back();
     return lines;
 }
 
@@ -85,15 +99,15 @@ inline auto write_all(std::string_view path, std::string_view data) -> base::Res
     return {};
 }
 
-template <typename Fn>
-auto for_each_line(std::FILE* f, Fn&& fn) -> base::Result<void> {
+template <typename Fn> auto for_each_line(std::FILE* f, Fn&& fn) -> base::Result<void> {
     std::string line;
     line.reserve(256);
     int ch;
     while ((ch = std::fgetc(f)) != EOF) {
         if (ch == '\n') {
             if constexpr (std::is_invocable_r_v<bool, Fn, const std::string&>) {
-                if (!fn(line)) return {};
+                if (!fn(line))
+                    return {};
             } else {
                 fn(line);
             }
@@ -115,8 +129,7 @@ auto for_each_line(std::FILE* f, Fn&& fn) -> base::Result<void> {
     return {};
 }
 
-template <typename Fn>
-auto for_each_line(std::string_view path, Fn&& fn) -> base::Result<void> {
+template <typename Fn> auto for_each_line(std::string_view path, Fn&& fn) -> base::Result<void> {
     if (path == "-") {
         return for_each_line(stdin, std::forward<Fn>(fn));
     }

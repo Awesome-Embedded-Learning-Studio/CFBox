@@ -16,10 +16,19 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake g++-13
+          sudo apt-get install -y cmake g++-13 ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-native-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-native-${{ runner.os }}-
 
       - name: Configure (Debug)
-        run: cmake -B build -DCMAKE_CXX_COMPILER=g++-13
+        run: cmake -B build -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        env:
+          CCACHE_MAXSIZE: 256M
 
       - name: Build
         run: cmake --build build -j $(nproc)
@@ -46,14 +55,24 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake g++-13
+          sudo apt-get install -y cmake g++-13 ccache
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-release-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-release-${{ runner.os }}-
 
       - name: Configure (Release, -Os)
         run: >
           cmake -B build-release
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=g++-13
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCFBOX_OPTIMIZE_FOR_SIZE=ON
+        env:
+          CCACHE_MAXSIZE: 256M
 
       - name: Build
         run: cmake --build build-release -j $(nproc)
@@ -92,22 +111,32 @@ jobs:
         if: matrix.target == 'aarch64'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ${{ matrix.compiler_pkg }}
+          sudo apt-get install -y cmake ${{ matrix.compiler_pkg }} ccache
 
       - name: Install cross-compiler (armhf)
         if: matrix.target == 'armhf'
         run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache
           curl -L -o /tmp/arm-toolchain.tar.xz \
             https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
           sudo tar -xJf /tmp/arm-toolchain.tar.xz -C /opt
           sudo ln -s /opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf /opt/arm-gnu-toolchain
           echo "/opt/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
 
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-cross-${{ matrix.target }}-${{ github.sha }}
+          restore-keys: ccache-cross-${{ matrix.target }}-
+
       - name: Cross-compile (dynamic, -Os)
         run: |
           cmake -B build-${{ matrix.target }} \
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }} \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCFBOX_OPTIMIZE_FOR_SIZE=ON
           cmake --build build-${{ matrix.target }} -j $(nproc)
 
@@ -123,6 +152,7 @@ jobs:
           cmake -B build-${{ matrix.target }}-static \
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain/${{ matrix.toolchain }} \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCFBOX_OPTIMIZE_FOR_SIZE=ON \
             -DCFBOX_STATIC_LINK=ON
           cmake --build build-${{ matrix.target }}-static -j $(nproc)

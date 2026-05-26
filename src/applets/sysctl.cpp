@@ -1,5 +1,5 @@
 #include <cstdio>
-#include <fstream>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <filesystem>
@@ -46,18 +46,26 @@ auto path_to_key(std::string_view path) -> std::string {
 }
 
 auto read_sysctl_value(const std::string& path) -> std::string {
-    std::ifstream f(path);
+    auto* f = std::fopen(path.c_str(), "r");
     if (!f) return {};
-    std::string val;
-    std::getline(f, val);
-    return val;
+    char buf[4096];
+    if (!std::fgets(buf, sizeof(buf), f)) {
+        std::fclose(f);
+        return {};
+    }
+    std::fclose(f);
+    auto len = std::strlen(buf);
+    while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
+        buf[--len] = '\0';
+    }
+    return buf;
 }
 
 auto write_sysctl_value(const std::string& path, std::string_view value) -> bool {
-    std::ofstream f(path, std::ios::trunc);
+    auto* f = std::fopen(path.c_str(), "w");
     if (!f) return false;
-    f << value << "\n";
-    return static_cast<bool>(f);
+    std::fprintf(f, "%.*s\n", static_cast<int>(value.size()), value.data());
+    return std::fclose(f) == 0;
 }
 
 auto show_key(std::string_view key, bool no_name) -> bool {
@@ -82,21 +90,26 @@ auto show_all(bool no_name) -> void {
 }
 
 auto load_file(const std::string& filepath, bool no_name) -> int {
-    std::ifstream f(filepath);
+    auto* f = std::fopen(filepath.c_str(), "r");
     if (!f) {
         CFBOX_ERR("sysctl", "cannot open %s", filepath.c_str());
         return 1;
     }
 
     int errors = 0;
-    std::string line;
-    while (std::getline(f, line)) {
+    char line[4096];
+    while (std::fgets(line, sizeof(line), f)) {
+        auto len = std::strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+            line[--len] = '\0';
+        }
         // Skip comments and empty lines
-        if (line.empty() || line[0] == '#' || line[0] == ';') continue;
-        auto eq = line.find('=');
-        if (eq == std::string::npos) continue;
-        auto key = line.substr(0, eq);
-        auto val = line.substr(eq + 1);
+        if (len == 0 || line[0] == '#' || line[0] == ';') continue;
+        auto* eq = std::strchr(line, '=');
+        if (!eq) continue;
+        *eq = '\0';
+        std::string key(line);
+        std::string val(eq + 1);
         // Trim whitespace
         while (!key.empty() && (key.back() == ' ' || key.back() == '\t')) key.pop_back();
         while (!val.empty() && (val.front() == ' ' || val.front() == '\t')) val.erase(val.begin());
@@ -109,6 +122,7 @@ auto load_file(const std::string& filepath, bool no_name) -> int {
             std::printf("%s = %s\n", key.c_str(), val.c_str());
         }
     }
+    std::fclose(f);
     return errors > 0 ? 1 : 0;
 }
 

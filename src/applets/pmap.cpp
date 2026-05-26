@@ -1,9 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <sstream>
+#include <cstring>
 #include <string>
 #include <unistd.h>
+#include <vector>
 
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
@@ -34,45 +34,62 @@ struct MapEntry {
 
 auto parse_maps(pid_t pid) -> std::vector<MapEntry> {
     auto path = "/proc/" + std::to_string(pid) + "/maps";
-    std::ifstream f(path);
+    auto* f = std::fopen(path.c_str(), "r");
     if (!f) return {};
 
     std::vector<MapEntry> entries;
-    std::string line;
-    while (std::getline(f, line)) {
-        if (line.empty()) continue;
-        MapEntry e;
-
-        auto dash = line.find('-');
-        if (dash == std::string::npos) continue;
-        e.address = std::strtoull(line.substr(0, dash).c_str(), nullptr, 16);
-
-        // Find the space after perms to get end_address
-        auto rest = line.substr(dash + 1);
-        std::istringstream iss(rest);
-        std::string perms_str;
-        iss >> perms_str;
-        e.end_address = e.address + 1; // Will be properly calculated from next line
-        e.perms = perms_str;
-        iss >> std::hex >> e.offset;
-
-        std::string dev_str;
-        iss >> dev_str;
-        e.dev = dev_str;
-
-        iss >> std::dec >> e.inode;
-
-        // Remaining is pathname (may be empty)
-        std::string pn;
-        while (iss.peek() == ' ') iss.get();
-        if (std::getline(iss, pn)) {
-            // Trim leading space
-            auto start = pn.find_first_not_of(' ');
-            if (start != std::string::npos) e.pathname = pn.substr(start);
+    char line[1024];
+    while (std::fgets(line, sizeof(line), f)) {
+        auto len = std::strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+            line[--len] = '\0';
         }
+        if (len == 0) continue;
+
+        MapEntry e;
+        char perms[8] = {};
+        char dev[16] = {};
+        unsigned long long addr = 0;
+        unsigned long long off = 0;
+        unsigned long long ino = 0;
+
+        auto n = std::sscanf(line, "%llx-%*x %7s %llx %15s %llu",
+                             &addr, perms, &off, dev, &ino);
+        if (n < 1) continue;
+
+        e.address = addr;
+        e.perms = perms;
+        e.offset = off;
+        e.dev = dev;
+        e.inode = ino;
+
+        // Extract pathname: find the field after inode
+        const char* p = line;
+        // Skip address field
+        while (*p && *p != ' ') ++p;
+        // Skip to perms
+        while (*p == ' ') ++p;
+        // Skip perms
+        while (*p && *p != ' ') ++p;
+        // Skip to offset
+        while (*p == ' ') ++p;
+        // Skip offset
+        while (*p && *p != ' ') ++p;
+        // Skip to dev
+        while (*p == ' ') ++p;
+        // Skip dev
+        while (*p && *p != ' ') ++p;
+        // Skip to inode
+        while (*p == ' ') ++p;
+        // Skip inode
+        while (*p && *p != ' ') ++p;
+        // Skip spaces to pathname
+        while (*p == ' ') ++p;
+        if (*p) e.pathname = p;
 
         entries.push_back(std::move(e));
     }
+    std::fclose(f);
 
     // Calculate end_address from next entry
     for (size_t i = 0; i + 1 < entries.size(); ++i) {
@@ -99,7 +116,7 @@ auto pmap_main(int argc, char* argv[]) -> int {
         return 1;
     }
 
-    pid_t pid = static_cast<pid_t>(std::stoi(std::string(args[0])));
+    pid_t pid = static_cast<pid_t>(std::strtol(args[0].data(), nullptr, 10));
     auto entries = parse_maps(pid);
     if (entries.empty()) {
         CFBOX_ERR("pmap", "cannot read maps for PID %d", pid);
