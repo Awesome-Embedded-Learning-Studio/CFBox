@@ -3,11 +3,8 @@
 #include <cstdio>
 #include <string_view>
 
+#include <cfbox/applet_config.hpp>
 #include <cfbox/term.hpp>
-
-#ifndef CFBOX_VERSION_STRING
-#define CFBOX_VERSION_STRING "0.0.1"
-#endif
 
 namespace cfbox::help {
 

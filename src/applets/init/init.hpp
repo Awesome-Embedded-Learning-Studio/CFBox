@@ -11,7 +11,6 @@
 #include <sys/wait.h>
 
 #include <cfbox/help.hpp>
-#include <cfbox/applet_config.hpp>
 
 namespace cfbox::init {
 
