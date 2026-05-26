@@ -9,6 +9,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -72,7 +73,7 @@ auto stat_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox stat: missing operand\n");
+        CFBOX_ERR("stat", "missing operand");
         return 1;
     }
 
@@ -83,8 +84,7 @@ auto stat_main(int argc, char* argv[]) -> int {
         if (fs_stat) {
             struct statvfs vfs;
             if (statvfs(path.c_str(), &vfs) != 0) {
-                std::fprintf(stderr, "cfbox stat: cannot stat '%s': %s\n",
-                             path.c_str(), std::strerror(errno));
+                CFBOX_ERR("stat", "cannot stat '%s': %s", path.c_str(), std::strerror(errno));
                 rc = 1;
                 continue;
             }
@@ -102,8 +102,7 @@ auto stat_main(int argc, char* argv[]) -> int {
 
         struct stat st;
         if (lstat(path.c_str(), &st) != 0) {
-            std::fprintf(stderr, "cfbox stat: cannot stat '%s': %s\n",
-                         path.c_str(), std::strerror(errno));
+            CFBOX_ERR("stat", "cannot stat '%s': %s", path.c_str(), std::strerror(errno));
             rc = 1;
             continue;
         }

@@ -4,6 +4,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -31,7 +32,7 @@ auto readlink_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox readlink: missing operand\n");
+        CFBOX_ERR("readlink", "missing operand");
         return 1;
     }
 
@@ -45,7 +46,7 @@ auto readlink_main(int argc, char* argv[]) -> int {
             result = cfbox::fs::read_symlink(path);
         }
         if (!result) {
-            std::fprintf(stderr, "cfbox readlink: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("readlink", "%s", result.error().msg.c_str());
             rc = 1;
             continue;
         }

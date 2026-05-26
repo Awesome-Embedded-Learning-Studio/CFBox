@@ -7,6 +7,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/args.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -83,7 +84,7 @@ auto show_all(bool no_name) -> void {
 auto load_file(const std::string& filepath, bool no_name) -> int {
     std::ifstream f(filepath);
     if (!f) {
-        std::fprintf(stderr, "cfbox sysctl: cannot open %s\n", filepath.c_str());
+        CFBOX_ERR("sysctl", "cannot open %s", filepath.c_str());
         return 1;
     }
 
@@ -102,7 +103,7 @@ auto load_file(const std::string& filepath, bool no_name) -> int {
 
         auto path = key_to_path(key);
         if (!write_sysctl_value(path, val)) {
-            std::fprintf(stderr, "cfbox sysctl: cannot set %s\n", key.c_str());
+            CFBOX_ERR("sysctl", "cannot set %s", key.c_str());
             ++errors;
         } else if (!no_name) {
             std::printf("%s = %s\n", key.c_str(), val.c_str());
@@ -149,7 +150,7 @@ auto sysctl_main(int argc, char* argv[]) -> int {
         if (do_write) {
             auto eq = s.find('=');
             if (eq == std::string::npos) {
-                std::fprintf(stderr, "cfbox sysctl: invalid setting: %s\n", s.c_str());
+                CFBOX_ERR("sysctl", "invalid setting: %s", s.c_str());
                 ++errors;
                 continue;
             }
@@ -157,14 +158,14 @@ auto sysctl_main(int argc, char* argv[]) -> int {
             auto val = s.substr(eq + 1);
             auto path = key_to_path(key);
             if (!write_sysctl_value(path, val)) {
-                std::fprintf(stderr, "cfbox sysctl: cannot set %s\n", key.c_str());
+                CFBOX_ERR("sysctl", "cannot set %s", key.c_str());
                 ++errors;
             } else if (!no_name) {
                 std::printf("%s = %s\n", key.c_str(), val.c_str());
             }
         } else {
             if (!show_key(s, no_name)) {
-                std::fprintf(stderr, "cfbox sysctl: cannot stat %s\n", s.c_str());
+                CFBOX_ERR("sysctl", "cannot stat %s", s.c_str());
                 ++errors;
             }
         }

@@ -5,6 +5,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -26,7 +27,7 @@ auto pwdx_main(int argc, char* argv[]) -> int {
 
     const auto& args = parsed.positional();
     if (args.empty()) {
-        std::fprintf(stderr, "cfbox pwdx: no PID specified\n");
+        CFBOX_ERR("pwdx", "no PID specified");
         return 1;
     }
 
@@ -36,8 +37,7 @@ auto pwdx_main(int argc, char* argv[]) -> int {
         std::error_code ec;
         auto target = std::filesystem::read_symlink(link, ec);
         if (ec) {
-            std::fprintf(stderr, "cfbox pwdx: %.*s: %s\n",
-                         static_cast<int>(arg.size()), arg.data(), ec.message().c_str());
+            CFBOX_ERR("pwdx", "%.*s: %s", static_cast<int>(arg.size()), arg.data(), ec.message().c_str());
             rc = 1;
         } else {
             std::printf("%.*s: %s\n",

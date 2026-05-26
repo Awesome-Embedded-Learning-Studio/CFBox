@@ -6,6 +6,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -56,15 +57,14 @@ auto which_main(int argc, char* argv[]) -> int {
     bool all = parsed.has('a');
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox which: missing argument\n");
+        CFBOX_ERR("which", "missing argument");
         return 2;
     }
 
     int rc = 0;
     for (const auto& cmd : pos) {
         if (find_in_path(cmd, all) != 0) {
-            std::fprintf(stderr, "cfbox which: no %.*s in PATH\n",
-                         static_cast<int>(cmd.size()), cmd.data());
+            CFBOX_ERR("which", "no %.*s in PATH", static_cast<int>(cmd.size()), cmd.data());
             rc = 1;
         }
     }

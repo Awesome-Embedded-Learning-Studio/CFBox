@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -51,20 +52,20 @@ auto patch_main(int argc, char* argv[]) -> int {
 
     auto patch_result = cfbox::io::read_all_stdin();
     if (!patch_result) {
-        std::fprintf(stderr, "cfbox patch: %s\n", patch_result.error().msg.c_str());
+        CFBOX_ERR("patch", "%s", patch_result.error().msg.c_str());
         return 1;
     }
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox patch: missing file operand\n");
+        CFBOX_ERR("patch", "missing file operand");
         return 1;
     }
 
     std::string filepath{pos[0]};
     auto file_result = cfbox::io::read_lines(filepath);
     if (!file_result) {
-        std::fprintf(stderr, "cfbox patch: %s\n", file_result.error().msg.c_str());
+        CFBOX_ERR("patch", "%s", file_result.error().msg.c_str());
         return 1;
     }
 
@@ -132,7 +133,7 @@ auto patch_main(int argc, char* argv[]) -> int {
         int remove_count = 0;
         for (auto& l : h.lines) if (!l.empty() && l[0] != '+') ++remove_count;
         if (start + remove_count > static_cast<int>(lines.size())) {
-            std::fprintf(stderr, "cfbox patch: hunk at line %d doesn't match\n", h.old_start);
+            CFBOX_ERR("patch", "hunk at line %d doesn't match", h.old_start);
             return 1;
         }
 
@@ -152,7 +153,7 @@ auto patch_main(int argc, char* argv[]) -> int {
     for (const auto& l : lines) output += l + "\n";
     auto wresult = cfbox::io::write_all(filepath, output);
     if (!wresult) {
-        std::fprintf(stderr, "cfbox patch: %s\n", wresult.error().msg.c_str());
+        CFBOX_ERR("patch", "%s", wresult.error().msg.c_str());
         return 1;
     }
     return 0;

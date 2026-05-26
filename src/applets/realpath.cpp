@@ -4,6 +4,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -24,7 +25,7 @@ auto realpath_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox realpath: missing operand\n");
+        CFBOX_ERR("realpath", "missing operand");
         return 1;
     }
 
@@ -32,7 +33,7 @@ auto realpath_main(int argc, char* argv[]) -> int {
     for (auto p : pos) {
         auto result = cfbox::fs::canonical(std::string{p});
         if (!result) {
-            std::fprintf(stderr, "cfbox realpath: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("realpath", "%s", result.error().msg.c_str());
             rc = 1;
             continue;
         }

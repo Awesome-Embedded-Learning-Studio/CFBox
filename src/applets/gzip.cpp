@@ -5,6 +5,7 @@
 #include <cfbox/compress.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -30,7 +31,7 @@ auto gzip_main(int argc, char* argv[]) -> int {
 
     if (pos.empty()) {
         auto input = cfbox::io::read_all_stdin();
-        if (!input) { std::fprintf(stderr, "cfbox gzip: read error\n"); return 1; }
+        if (!input) { CFBOX_ERR("gzip", "read error"); return 1; };
         auto result = decompress ? cfbox::compress::gzip_decompress(*input)
                                  : cfbox::compress::gzip_compress(*input);
         std::fwrite(result.data(), 1, result.size(), stdout);
@@ -42,7 +43,7 @@ auto gzip_main(int argc, char* argv[]) -> int {
         std::string path{p};
         auto input = cfbox::io::read_all(path);
         if (!input) {
-            std::fprintf(stderr, "cfbox gzip: %s\n", input.error().msg.c_str());
+            CFBOX_ERR("gzip", "%s", input.error().msg.c_str());
             rc = 1;
             continue;
         }
@@ -53,7 +54,7 @@ auto gzip_main(int argc, char* argv[]) -> int {
             : (path + ".gz");
         auto wresult = cfbox::io::write_all(outpath, result);
         if (!wresult) {
-            std::fprintf(stderr, "cfbox gzip: %s\n", wresult.error().msg.c_str());
+            CFBOX_ERR("gzip", "%s", wresult.error().msg.c_str());
             rc = 1;
         }
     }

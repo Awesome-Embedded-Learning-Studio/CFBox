@@ -8,6 +8,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -37,7 +38,7 @@ auto chgrp_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox chgrp: missing operand\n");
+        CFBOX_ERR("chgrp", "missing operand");
         return 2;
     }
 
@@ -52,7 +53,7 @@ auto chgrp_main(int argc, char* argv[]) -> int {
 
     auto chgrp_one = [&](const std::string& path) -> int {
         if (::chown(path.c_str(), static_cast<uid_t>(-1), gid) != 0) {
-            std::fprintf(stderr, "cfbox chgrp: %s: %s\n", path.c_str(), std::strerror(errno));
+            CFBOX_ERR("chgrp", "%s: %s", path.c_str(), std::strerror(errno));
             return 1;
         }
         if (verbose) std::printf("group of '%s' changed\n", path.c_str());

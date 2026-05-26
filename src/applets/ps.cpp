@@ -10,6 +10,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
 #include <cfbox/args.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -96,7 +97,7 @@ auto ps_main(int argc, char* argv[]) -> int {
 
     auto result = cfbox::proc::read_all_processes();
     if (!result) {
-        std::fprintf(stderr, "cfbox ps: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("ps", "%s", result.error().msg.c_str());
         return 1;
     }
 

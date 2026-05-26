@@ -6,6 +6,7 @@
 #include <string>
 
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -30,7 +31,7 @@ auto run_string(const std::string& script, cfbox::sh::ShellState& state) -> int 
 auto run_file(const char* path, cfbox::sh::ShellState& state) -> int {
     auto* fp = std::fopen(path, "r");
     if (!fp) {
-        std::fprintf(stderr, "cfbox sh: %s: %s\n", path, std::strerror(errno));
+        CFBOX_ERR("sh", "%s: %s", path, std::strerror(errno));
         return 127;
     }
     std::string script;

@@ -1,5 +1,6 @@
 #include "awk.hpp"
 #include <cstdlib>
+#include <cfbox/error.hpp>
 
 namespace cfbox::awk {
 
@@ -30,8 +31,7 @@ private:
     auto expect(TokType t) -> Token {
         auto tok = advance();
         if (tok.type != t) {
-            std::fprintf(stderr, "cfbox awk: expected token type %d, got '%s'\n",
-                         static_cast<int>(t), tok.text.c_str());
+            CFBOX_ERR("awk", "expected token type %d, got '%s'", static_cast<int>(t), tok.text.c_str());
         }
         return tok;
     }

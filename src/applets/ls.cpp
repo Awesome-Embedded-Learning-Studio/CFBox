@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -76,8 +77,7 @@ struct LsOptions {
 auto list_directory(const std::string& path, const LsOptions& opts) -> int {
     auto entries_result = cfbox::fs::directory_entries(path);
     if (!entries_result) {
-        std::fprintf(stderr, "cfbox ls: cannot access '%s': %s\n",
-                     path.c_str(), entries_result.error().msg.c_str());
+        CFBOX_ERR("ls", "cannot access '%s': %s", path.c_str(), entries_result.error().msg.c_str());
         return 1;
     }
 
@@ -158,8 +158,7 @@ auto list_directory(const std::string& path, const LsOptions& opts) -> int {
 
 auto list_path(const std::string& path, const LsOptions& opts, bool show_header) -> int {
     if (!cfbox::fs::exists(path)) {
-        std::fprintf(stderr, "cfbox ls: cannot access '%s': No such file or directory\n",
-                     path.c_str());
+        CFBOX_ERR("ls", "cannot access '%s': No such file or directory", path.c_str());
         return 1;
     }
 
@@ -168,7 +167,7 @@ auto list_path(const std::string& path, const LsOptions& opts, bool show_header)
         if (opts.long_format) {
             auto status_result = cfbox::fs::symlink_status(path);
             if (!status_result) {
-                std::fprintf(stderr, "cfbox ls: %s\n", status_result.error().msg.c_str());
+                CFBOX_ERR("ls", "%s", status_result.error().msg.c_str());
                 return 1;
             }
             auto& st = status_result.value();
@@ -200,7 +199,8 @@ auto list_path(const std::string& path, const LsOptions& opts, bool show_header)
                         time_str.c_str(),
                         name.c_str());
         } else {
-            std::printf("%s\n", std::filesystem::path{path}.filename().string().c_str());
+            auto fname = std::filesystem::path{path}.filename().string();
+            std::printf("%s\n", fname.c_str());
         }
         return 0;
     }

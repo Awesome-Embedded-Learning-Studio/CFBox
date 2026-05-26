@@ -19,7 +19,7 @@ struct FileCloser {
 using unique_file = std::unique_ptr<std::FILE, FileCloser>;
 
 [[nodiscard]] inline auto open_file(std::string_view path, const char* mode) -> base::Result<unique_file> {
-    auto* f = std::fopen(std::string{path}.c_str(), mode);
+    auto* f = std::fopen(path.data(), mode);
     if (!f) {
         return std::unexpected(base::Error{errno, "cannot open file: " + std::string{path}});
     }

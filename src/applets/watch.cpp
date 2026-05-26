@@ -13,6 +13,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/terminal.hpp>
 #include <cfbox/tui.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -87,7 +88,7 @@ auto watch_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox watch: no command specified\n");
+        CFBOX_ERR("watch", "no command specified");
         return 1;
     }
 

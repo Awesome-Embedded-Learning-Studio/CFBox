@@ -7,6 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -80,7 +81,7 @@ auto apply_symbolic(std::filesystem::perms current, std::string_view spec) -> st
 auto chmod_one(const std::string& path, std::filesystem::perms mode, bool verbose) -> int {
     auto result = cfbox::fs::permissions(path, mode);
     if (!result) {
-        std::fprintf(stderr, "cfbox chmod: %s: %s\n", path.c_str(), result.error().msg.c_str());
+        CFBOX_ERR("chmod", "%s: %s", path.c_str(), result.error().msg.c_str());
         return 1;
     }
     if (verbose) std::printf("mode of '%s' changed\n", path.c_str());
@@ -109,24 +110,24 @@ auto chmod_main(int argc, char* argv[]) -> int {
     if (parsed.has_long("reference")) {
         auto rfile = parsed.get_long("reference");
         if (!rfile) {
-            std::fprintf(stderr, "cfbox chmod: --reference requires an argument\n");
+            CFBOX_ERR("chmod", "--reference requires an argument");
             return 2;
         }
         std::string rfile_str(*rfile);
         auto st = cfbox::fs::status(rfile_str);
         if (!st) {
-            std::fprintf(stderr, "cfbox chmod: %s: %s\n", rfile_str.c_str(), st.error().msg.c_str());
+            CFBOX_ERR("chmod", "%s: %s", rfile_str.c_str(), st.error().msg.c_str());
             return 1;
         }
         target_mode = st->permissions();
         files_start = 0;
         if (pos.empty()) {
-            std::fprintf(stderr, "cfbox chmod: missing operand\n");
+            CFBOX_ERR("chmod", "missing operand");
             return 2;
         }
     } else {
         if (pos.size() < 2) {
-            std::fprintf(stderr, "cfbox chmod: missing operand\n");
+            CFBOX_ERR("chmod", "missing operand");
             return 2;
         }
         auto octal = parse_octal(pos[0]);
@@ -138,13 +139,13 @@ auto chmod_main(int argc, char* argv[]) -> int {
                 std::string path(pos[i]);
                 auto st = cfbox::fs::status(path);
                 if (!st) {
-                    std::fprintf(stderr, "cfbox chmod: %s: %s\n", path.c_str(), st.error().msg.c_str());
+                    CFBOX_ERR("chmod", "%s: %s", path.c_str(), st.error().msg.c_str());
                     rc = 1;
                     continue;
                 }
                 auto new_mode = apply_symbolic(st->permissions(), pos[0]);
                 if (!new_mode) {
-                    std::fprintf(stderr, "cfbox chmod: invalid mode: %s\n", std::string(pos[0]).c_str());
+                    CFBOX_ERR("chmod", "invalid mode: %s", std::string(pos[0]).c_str());
                     return 2;
                 }
                 if (chmod_one(path, *new_mode, verbose) != 0) rc = 1;

@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -83,7 +84,7 @@ auto iostat_main(int argc, char* argv[]) -> int {
 
     auto first = cfbox::proc::read_diskstats();
     if (!first) {
-        std::fprintf(stderr, "cfbox iostat: %s\n", first.error().msg.c_str());
+        CFBOX_ERR("iostat", "%s", first.error().msg.c_str());
         return 1;
     }
 

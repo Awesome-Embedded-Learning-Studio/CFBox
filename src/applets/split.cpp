@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -58,7 +59,7 @@ auto split_main(int argc, char* argv[]) -> int {
 
     auto data_result = (input_path == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(input_path);
     if (!data_result) {
-        std::fprintf(stderr, "cfbox split: %s\n", data_result.error().msg.c_str());
+        CFBOX_ERR("split", "%s", data_result.error().msg.c_str());
         return 1;
     }
 
@@ -73,7 +74,7 @@ auto split_main(int argc, char* argv[]) -> int {
             if (offset + len > data.size()) len = data.size() - offset;
             auto wresult = cfbox::io::write_all(fname, std::string_view{data.data() + offset, len});
             if (!wresult) {
-                std::fprintf(stderr, "cfbox split: %s\n", wresult.error().msg.c_str());
+                CFBOX_ERR("split", "%s", wresult.error().msg.c_str());
                 return 1;
             }
             ++file_num;
@@ -94,7 +95,7 @@ auto split_main(int argc, char* argv[]) -> int {
                             auto wresult = cfbox::io::write_all(fname,
                                 std::string_view{data.data() + line_start, len});
                             if (!wresult) {
-                                std::fprintf(stderr, "cfbox split: %s\n", wresult.error().msg.c_str());
+                                CFBOX_ERR("split", "%s", wresult.error().msg.c_str());
                                 return 1;
                             }
                         }

@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include <cfbox/regex.hpp>
+#include <cfbox/error.hpp>
 
 namespace cfbox::awk {
 
@@ -450,7 +451,7 @@ private:
 
     auto process_file(const std::string& path, NodePtr prog) -> void {
         FILE* f = std::fopen(path.c_str(), "r");
-        if (!f) { std::fprintf(stderr, "cfbox awk: cannot open '%s'\n", path.c_str()); return; }
+        if (!f) { CFBOX_ERR("awk", "cannot open '%s'", path.c_str()); return; };
         st_.filename = path;
         char line[65536];
         while (std::fgets(line, sizeof(line), f)) {

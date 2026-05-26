@@ -7,6 +7,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -39,7 +40,7 @@ auto renice_main(int argc, char* argv[]) -> int {
 
     const auto& args = parsed.positional();
     if (args.empty()) {
-        std::fprintf(stderr, "cfbox renice: no ID specified\n");
+        CFBOX_ERR("renice", "no ID specified");
         return 1;
     }
 
@@ -54,14 +55,14 @@ auto renice_main(int argc, char* argv[]) -> int {
         errno = 0;
         auto current = getpriority(which, id);
         if (errno != 0) {
-            std::fprintf(stderr, "cfbox renice: %d: %s\n", static_cast<int>(id), std::strerror(errno));
+            CFBOX_ERR("renice", "%d: %s", static_cast<int>(id), std::strerror(errno));
             rc = 1;
             continue;
         }
 
         auto new_pri = current + increment;
         if (setpriority(which, id, new_pri) != 0) {
-            std::fprintf(stderr, "cfbox renice: %d: %s\n", static_cast<int>(id), std::strerror(errno));
+            CFBOX_ERR("renice", "%d: %s", static_cast<int>(id), std::strerror(errno));
             rc = 1;
         } else {
             std::printf("%d: old priority %d, new priority %d\n", static_cast<int>(id), current, new_pri);

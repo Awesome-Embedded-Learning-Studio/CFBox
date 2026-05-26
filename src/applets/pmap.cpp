@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -94,14 +95,14 @@ auto pmap_main(int argc, char* argv[]) -> int {
 
     const auto& args = parsed.positional();
     if (args.empty()) {
-        std::fprintf(stderr, "cfbox pmap: no PID specified\n");
+        CFBOX_ERR("pmap", "no PID specified");
         return 1;
     }
 
     pid_t pid = static_cast<pid_t>(std::stoi(std::string(args[0])));
     auto entries = parse_maps(pid);
     if (entries.empty()) {
-        std::fprintf(stderr, "cfbox pmap: cannot read maps for PID %d\n", pid);
+        CFBOX_ERR("pmap", "cannot read maps for PID %d", pid);
         return 1;
     }
 

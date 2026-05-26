@@ -9,6 +9,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -66,7 +67,7 @@ auto xargs_main(int argc, char* argv[]) -> int {
     // Read items from stdin
     auto input = cfbox::io::read_all_stdin();
     if (!input) {
-        std::fprintf(stderr, "cfbox xargs: %s\n", input.error().msg.c_str());
+        CFBOX_ERR("xargs", "%s", input.error().msg.c_str());
         return 1;
     }
 
@@ -136,12 +137,12 @@ auto xargs_main(int argc, char* argv[]) -> int {
 
         pid_t pid = fork();
         if (pid < 0) {
-            std::fprintf(stderr, "cfbox xargs: fork: %s\n", std::strerror(errno));
+            CFBOX_ERR("xargs", "fork: %s", std::strerror(errno));
             return 1;
         }
         if (pid == 0) {
             execvp(command.c_str(), exec_args.data());
-            std::fprintf(stderr, "cfbox xargs: %s: %s\n", command.c_str(), std::strerror(errno));
+            CFBOX_ERR("xargs", "%s: %s", command.c_str(), std::strerror(errno));
             _exit(127);
         }
         int status;

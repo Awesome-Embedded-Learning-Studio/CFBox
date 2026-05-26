@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -36,7 +37,7 @@ auto fuser_main(int argc, char* argv[]) -> int {
     bool verbose = parsed.has('v') || parsed.has_long("verbose");
     const auto& targets = parsed.positional();
     if (targets.empty()) {
-        std::fprintf(stderr, "cfbox fuser: no file specified\n");
+        CFBOX_ERR("fuser", "no file specified");
         return 1;
     }
 
@@ -46,7 +47,7 @@ auto fuser_main(int argc, char* argv[]) -> int {
         auto target_str = std::string(target);
         struct stat target_stat {};
         if (stat(target_str.c_str(), &target_stat) != 0) {
-            std::fprintf(stderr, "cfbox fuser: cannot stat %s\n", target_str.c_str());
+            CFBOX_ERR("fuser", "cannot stat %s", target_str.c_str());
             continue;
         }
 
@@ -88,7 +89,7 @@ auto fuser_main(int argc, char* argv[]) -> int {
         if (do_kill) {
             for (auto p : found_pids) {
                 if (::kill(p, SIGKILL) != 0) {
-                    std::fprintf(stderr, "cfbox fuser: cannot kill %d\n", p);
+                    CFBOX_ERR("fuser", "cannot kill %d", p);
                 }
             }
         } else if (!verbose) {

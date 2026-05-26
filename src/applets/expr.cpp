@@ -7,6 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/regex.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -166,14 +167,14 @@ static auto eval(std::vector<std::string>::iterator& it,
         } else if (op == "/") {
             ++it; auto right = eval_add(it, end);
             if (right.to_int() == 0) {
-                std::fprintf(stderr, "cfbox expr: division by zero\n");
+                CFBOX_ERR("expr", "division by zero");
                 return Value::integer(0);
             }
             left = Value::integer(left.to_int() / right.to_int());
         } else if (op == "%") {
             ++it; auto right = eval_add(it, end);
             if (right.to_int() == 0) {
-                std::fprintf(stderr, "cfbox expr: division by zero\n");
+                CFBOX_ERR("expr", "division by zero");
                 return Value::integer(0);
             }
             left = Value::integer(left.to_int() % right.to_int());
@@ -202,7 +203,7 @@ auto expr_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox expr: missing operand\n");
+        CFBOX_ERR("expr", "missing operand");
         return 2;
     }
 

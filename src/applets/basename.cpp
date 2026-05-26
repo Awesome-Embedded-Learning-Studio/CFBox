@@ -4,6 +4,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -56,7 +57,7 @@ auto basename_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox basename: missing operand\n");
+        CFBOX_ERR("basename", "missing operand");
         return 1;
     }
 

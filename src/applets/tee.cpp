@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -33,7 +34,7 @@ auto tee_main(int argc, char* argv[]) -> int {
     for (auto p : pos) {
         auto* f = std::fopen(std::string{p}.c_str(), append ? "ab" : "wb");
         if (!f) {
-            std::fprintf(stderr, "cfbox tee: %s: %s\n", std::string{p}.c_str(), std::strerror(errno));
+            CFBOX_ERR("tee", "%s: %s", std::string{p}.c_str(), std::strerror(errno));
         } else {
             files.emplace_back(f);
         }

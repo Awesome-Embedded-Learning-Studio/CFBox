@@ -5,6 +5,7 @@
 #include <cfbox/checksum.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -30,7 +31,7 @@ auto md5sum_main(int argc, char* argv[]) -> int {
     for (auto p : paths) {
         auto data_result = (p == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(p);
         if (!data_result) {
-            std::fprintf(stderr, "cfbox md5sum: %s\n", data_result.error().msg.c_str());
+            CFBOX_ERR("md5sum", "%s", data_result.error().msg.c_str());
             rc = 1;
             continue;
         }

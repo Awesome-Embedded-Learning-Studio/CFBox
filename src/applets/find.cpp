@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -192,8 +193,7 @@ auto do_find(const std::filesystem::path& root, const std::vector<Predicate>& pr
     auto it = std::filesystem::recursive_directory_iterator(root,
         std::filesystem::directory_options::follow_directory_symlink, ec);
     if (ec) {
-        std::fprintf(stderr, "cfbox find: '%s': %s\n",
-                     root.string().c_str(), ec.message().c_str());
+        CFBOX_ERR("find", "'%s': %s", root.string().c_str(), ec.message().c_str());
         return 1;
     }
 

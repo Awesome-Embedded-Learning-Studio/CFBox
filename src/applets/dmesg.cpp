@@ -8,6 +8,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -25,7 +26,7 @@ auto read_kmsg() -> std::vector<std::string> {
     cfbox::io::unique_file f(std::fopen("/var/log/dmesg", "r"));
     if (!f) f.reset(std::fopen("/var/log/kern.log", "r"));
     if (!f) {
-        std::fprintf(stderr, "cfbox dmesg: cannot open kernel log\n");
+        CFBOX_ERR("dmesg", "cannot open kernel log");
         return lines;
     }
 

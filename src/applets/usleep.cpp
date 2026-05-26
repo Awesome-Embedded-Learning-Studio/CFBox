@@ -6,6 +6,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -26,15 +27,14 @@ auto usleep_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox usleep: missing operand\n");
+        CFBOX_ERR("usleep", "missing operand");
         return 1;
     }
 
     char* end = nullptr;
     long usecs = std::strtol(std::string{pos[0]}.c_str(), &end, 10);
     if (end == std::string{pos[0]}.c_str() || usecs < 0) {
-        std::fprintf(stderr, "cfbox usleep: invalid time interval '%.*s'\n",
-                     static_cast<int>(pos[0].size()), pos[0].data());
+        CFBOX_ERR("usleep", "invalid time interval '%.*s'", static_cast<int>(pos[0].size()), pos[0].data());
         return 1;
     }
 

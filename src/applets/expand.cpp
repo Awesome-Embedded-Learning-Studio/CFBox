@@ -4,6 +4,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -28,7 +29,7 @@ auto expand_main(int argc, char* argv[]) -> int {
     if (auto t = parsed.get_any('t', "tabs")) {
         tab_stop = std::stoi(std::string{*t});
         if (tab_stop <= 0) {
-            std::fprintf(stderr, "cfbox expand: invalid tab stop: %d\n", tab_stop);
+            CFBOX_ERR("expand", "invalid tab stop: %d", tab_stop);
             return 1;
         }
     }
@@ -56,7 +57,7 @@ auto expand_main(int argc, char* argv[]) -> int {
             return true;
         });
         if (!result) {
-            std::fprintf(stderr, "cfbox expand: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("expand", "%s", result.error().msg.c_str());
             rc = 1;
         }
     }

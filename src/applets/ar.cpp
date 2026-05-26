@@ -7,6 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -37,7 +38,7 @@ auto ar_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox ar: missing archive name\n");
+        CFBOX_ERR("ar", "missing archive name");
         return 1;
     }
 
@@ -65,7 +66,7 @@ auto ar_main(int argc, char* argv[]) -> int {
         }
         auto wresult = cfbox::io::write_all(archive, output);
         if (!wresult) {
-            std::fprintf(stderr, "cfbox ar: %s\n", wresult.error().msg.c_str());
+            CFBOX_ERR("ar", "%s", wresult.error().msg.c_str());
             return 1;
         }
         return 0;
@@ -74,12 +75,12 @@ auto ar_main(int argc, char* argv[]) -> int {
     if (list || extract) {
         auto input = cfbox::io::read_all(archive);
         if (!input) {
-            std::fprintf(stderr, "cfbox ar: %s\n", input.error().msg.c_str());
+            CFBOX_ERR("ar", "%s", input.error().msg.c_str());
             return 1;
         }
         const auto& data = *input;
         if (data.size() < 8 || data.substr(0, 8) != "!<arch>\n") {
-            std::fprintf(stderr, "cfbox ar: not a valid archive\n");
+            CFBOX_ERR("ar", "not a valid archive");
             return 1;
         }
         std::size_t offset = 8;
@@ -95,7 +96,7 @@ auto ar_main(int argc, char* argv[]) -> int {
             } else if (extract) {
                 auto content = data.substr(offset + 60, fsize);
                 if (!cfbox::io::write_all(name, content)) {
-                    std::fprintf(stderr, "cfbox ar: write failed: %s\n", name.c_str());
+                    CFBOX_ERR("ar", "write failed: %s", name.c_str());
                     return 1;
                 }
             }
@@ -105,6 +106,6 @@ auto ar_main(int argc, char* argv[]) -> int {
         return 0;
     }
 
-    std::fprintf(stderr, "cfbox ar: must specify -r, -t, or -x\n");
+    CFBOX_ERR("ar", "must specify -r, -t, or -x");
     return 1;
 }

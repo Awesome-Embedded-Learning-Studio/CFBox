@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -37,7 +38,7 @@ auto uname_main(int argc, char* argv[]) -> int {
 
     struct utsname info {};
     if (::uname(&info) != 0) {
-        std::fprintf(stderr, "cfbox uname: failed to get system information\n");
+        CFBOX_ERR("uname", "failed to get system information");
         return 1;
     }
 

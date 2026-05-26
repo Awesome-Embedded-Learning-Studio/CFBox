@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -40,7 +41,7 @@ auto head_file(std::string_view path, long n_lines, long n_bytes,
 
     auto result = use_stdin ? cfbox::io::read_all_stdin() : cfbox::io::read_all(path);
     if (!result) {
-        std::fprintf(stderr, "cfbox head: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("head", "%s", result.error().msg.c_str());
         return 1;
     }
 

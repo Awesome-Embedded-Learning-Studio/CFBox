@@ -8,6 +8,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/compress.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -52,13 +53,13 @@ auto unzip_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox unzip: missing archive\n");
+        CFBOX_ERR("unzip", "missing archive");
         return 1;
     }
 
     auto input = cfbox::io::read_all(std::string{pos[0]});
     if (!input) {
-        std::fprintf(stderr, "cfbox unzip: %s\n", input.error().msg.c_str());
+        CFBOX_ERR("unzip", "%s", input.error().msg.c_str());
         return 1;
     }
     const auto& data = *input;
@@ -73,7 +74,7 @@ auto unzip_main(int argc, char* argv[]) -> int {
         }
     }
     if (eocd >= data.size()) {
-        std::fprintf(stderr, "cfbox unzip: not a valid zip file\n");
+        CFBOX_ERR("unzip", "not a valid zip file");
         return 1;
     }
 
@@ -137,7 +138,7 @@ auto unzip_main(int argc, char* argv[]) -> int {
         }
         auto wresult = cfbox::io::write_all(outpath, content);
         if (!wresult) {
-            std::fprintf(stderr, "cfbox unzip: %s\n", wresult.error().msg.c_str());
+            CFBOX_ERR("unzip", "%s", wresult.error().msg.c_str());
         }
     }
     return 0;

@@ -8,6 +8,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/terminal.hpp>
 #include <cfbox/tui.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -47,7 +48,7 @@ auto more_main(int argc, char* argv[]) -> int {
     if (!filename.empty() && filename != "-") {
         f = std::fopen(filename.c_str(), "r");
         if (!f) {
-            std::fprintf(stderr, "cfbox more: cannot open %s\n", filename.c_str());
+            CFBOX_ERR("more", "cannot open %s", filename.c_str());
             return 1;
         }
     }

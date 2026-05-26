@@ -7,6 +7,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -27,7 +28,7 @@ auto mknod_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox mknod: missing operand\n");
+        CFBOX_ERR("mknod", "missing operand");
         return 1;
     }
 
@@ -40,7 +41,7 @@ auto mknod_main(int argc, char* argv[]) -> int {
     switch (type) {
         case 'b':
             if (pos.size() < 4) {
-                std::fprintf(stderr, "cfbox mknod: missing major/minor for block device\n");
+                CFBOX_ERR("mknod", "missing major/minor for block device");
                 return 1;
             }
             mode = S_IFBLK | 0660;
@@ -49,7 +50,7 @@ auto mknod_main(int argc, char* argv[]) -> int {
             break;
         case 'c': case 'u':
             if (pos.size() < 4) {
-                std::fprintf(stderr, "cfbox mknod: missing major/minor for char device\n");
+                CFBOX_ERR("mknod", "missing major/minor for char device");
                 return 1;
             }
             mode = S_IFCHR | 0660;
@@ -60,13 +61,12 @@ auto mknod_main(int argc, char* argv[]) -> int {
             mode = S_IFIFO | 0666;
             break;
         default:
-            std::fprintf(stderr, "cfbox mknod: invalid type '%c'\n", type);
+            CFBOX_ERR("mknod", "invalid type '%c'", type);
             return 1;
     }
 
     if (mknod(name.c_str(), mode, dev) != 0) {
-        std::fprintf(stderr, "cfbox mknod: cannot create node '%s': %s\n",
-                     name.c_str(), std::strerror(errno));
+        CFBOX_ERR("mknod", "cannot create node '%s': %s", name.c_str(), std::strerror(errno));
         return 1;
     }
     return 0;

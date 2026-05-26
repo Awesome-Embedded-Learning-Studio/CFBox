@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -46,7 +47,7 @@ auto cpio_main(int argc, char* argv[]) -> int {
 
     if (copy_out) {
         auto input = cfbox::io::read_all_stdin();
-        if (!input) { std::fprintf(stderr, "cfbox cpio: read error\n"); return 1; }
+        if (!input) { CFBOX_ERR("cpio", "read error"); return 1; };
         // Read filenames from stdin
         std::vector<std::string> names;
         std::string name;
@@ -85,7 +86,7 @@ auto cpio_main(int argc, char* argv[]) -> int {
 
     if (copy_in || list_mode) {
         auto input = cfbox::io::read_all_stdin();
-        if (!input) { std::fprintf(stderr, "cfbox cpio: read error\n"); return 1; }
+        if (!input) { CFBOX_ERR("cpio", "read error"); return 1; };
         const auto& data = *input;
         std::size_t offset = 0;
         while (offset + 110 < data.size()) {
@@ -103,7 +104,7 @@ auto cpio_main(int argc, char* argv[]) -> int {
             } else {
                 auto content = data.substr(offset + hdr_size, filesize);
                 auto wresult = cfbox::io::write_all(name, content);
-                if (!wresult) std::fprintf(stderr, "cfbox cpio: %s\n", wresult.error().msg.c_str());
+                if (!wresult) CFBOX_ERR("cpio", "%s", wresult.error().msg.c_str());
             }
             auto data_padded = (filesize + 3) & ~3u;
             offset += hdr_size + data_padded;
@@ -111,6 +112,6 @@ auto cpio_main(int argc, char* argv[]) -> int {
         return 0;
     }
 
-    std::fprintf(stderr, "cfbox cpio: must specify -o, -i, or -t\n");
+    CFBOX_ERR("cpio", "must specify -o, -i, or -t");
     return 1;
 }

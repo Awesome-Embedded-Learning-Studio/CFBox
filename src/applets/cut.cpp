@@ -8,6 +8,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -64,7 +65,7 @@ auto cut_main(int argc, char* argv[]) -> int {
     char delim = '\t';
     if (auto d = parsed.get_any('d', "delimiter")) {
         if (d->size() != 1) {
-            std::fprintf(stderr, "cfbox cut: delimiter must be a single character\n");
+            CFBOX_ERR("cut", "delimiter must be a single character");
             return 1;
         }
         delim = (*d)[0];
@@ -75,7 +76,7 @@ auto cut_main(int argc, char* argv[]) -> int {
     bool char_mode = parsed.has_any('c', "characters");
 
     if (!field_mode && !char_mode) {
-        std::fprintf(stderr, "cfbox cut: you must specify a list of fields or characters\n");
+        CFBOX_ERR("cut", "you must specify a list of fields or characters");
         return 1;
     }
 
@@ -83,14 +84,14 @@ auto cut_main(int argc, char* argv[]) -> int {
     if (field_mode) {
         auto list = parsed.get_any('f', "fields");
         if (!list) {
-            std::fprintf(stderr, "cfbox cut: missing list for -f\n");
+            CFBOX_ERR("cut", "missing list for -f");
             return 1;
         }
         indices = parse_range_list(std::string{*list});
     } else {
         auto list = parsed.get_any('c', "characters");
         if (!list) {
-            std::fprintf(stderr, "cfbox cut: missing list for -c\n");
+            CFBOX_ERR("cut", "missing list for -c");
             return 1;
         }
         indices = parse_range_list(std::string{*list});
@@ -130,7 +131,7 @@ auto cut_main(int argc, char* argv[]) -> int {
             return true;
         });
         if (!result) {
-            std::fprintf(stderr, "cfbox cut: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("cut", "%s", result.error().msg.c_str());
             rc = 1;
         }
     }

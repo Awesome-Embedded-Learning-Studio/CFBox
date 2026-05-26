@@ -5,6 +5,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -34,7 +35,7 @@ auto ln_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox ln: missing operand\n");
+        CFBOX_ERR("ln", "missing operand");
         return 1;
     }
 
@@ -59,7 +60,7 @@ auto ln_main(int argc, char* argv[]) -> int {
         result = cfbox::fs::create_hard_link(target, link_name);
     }
     if (!result) {
-        std::fprintf(stderr, "cfbox ln: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("ln", "%s", result.error().msg.c_str());
         return 1;
     }
     return 0;

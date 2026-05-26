@@ -7,6 +7,7 @@
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -45,8 +46,7 @@ auto install_main(int argc, char* argv[]) -> int {
         errno = 0;
         unsigned long m = std::strtoul(mode_str->data(), &end, 8);
         if (errno != 0 || end == mode_str->data() || *end != '\0') {
-            std::fprintf(stderr, "cfbox install: invalid mode '%.*s'\n",
-                         static_cast<int>(mode_str->size()), mode_str->data());
+            CFBOX_ERR("install", "invalid mode '%.*s'", static_cast<int>(mode_str->size()), mode_str->data());
             return 1;
         }
         mode = static_cast<std::filesystem::perms>(m);
@@ -54,15 +54,14 @@ auto install_main(int argc, char* argv[]) -> int {
 
     if (mkdir_mode) {
         if (pos.empty()) {
-            std::fprintf(stderr, "cfbox install: missing operand\n");
+            CFBOX_ERR("install", "missing operand");
             return 1;
         }
         for (auto p : pos) {
             std::error_code ec;
             std::filesystem::create_directories(std::filesystem::path{p}, ec);
             if (ec) {
-                std::fprintf(stderr, "cfbox install: cannot create directory '%.*s': %s\n",
-                             static_cast<int>(p.size()), p.data(), ec.message().c_str());
+                CFBOX_ERR("install", "cannot create directory '%.*s': %s", static_cast<int>(p.size()), p.data(), ec.message().c_str());
                 return 1;
             }
             std::filesystem::permissions(std::filesystem::path{p}, mode, ec);
@@ -71,7 +70,7 @@ auto install_main(int argc, char* argv[]) -> int {
     }
 
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox install: missing operand\n");
+        CFBOX_ERR("install", "missing operand");
         return 1;
     }
 
@@ -82,7 +81,7 @@ auto install_main(int argc, char* argv[]) -> int {
         sources = pos;
     } else {
         if (pos.size() < 2) {
-            std::fprintf(stderr, "cfbox install: missing destination file operand\n");
+            CFBOX_ERR("install", "missing destination file operand");
             return 1;
         }
         dest = std::string{pos.back()};
@@ -106,13 +105,13 @@ auto install_main(int argc, char* argv[]) -> int {
 
         auto result = cfbox::io::read_all(src_path);
         if (!result) {
-            std::fprintf(stderr, "cfbox install: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("install", "%s", result.error().msg.c_str());
             rc = 1;
             continue;
         }
         auto wresult = cfbox::io::write_all(dst_path, *result);
         if (!wresult) {
-            std::fprintf(stderr, "cfbox install: %s\n", wresult.error().msg.c_str());
+            CFBOX_ERR("install", "%s", wresult.error().msg.c_str());
             rc = 1;
             continue;
         }

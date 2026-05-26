@@ -9,6 +9,7 @@
 
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
+#include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
 
@@ -78,14 +79,14 @@ auto pgrep_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox %s: no pattern specified\n", is_pkill ? "pkill" : "pgrep");
+        CFBOX_ERR_V(is_pkill ? "pkill" : "pgrep", "no pattern specified");
         return 1;
     }
     const auto& pattern = pos[0];
 
     auto result = cfbox::proc::read_all_processes();
     if (!result) {
-        std::fprintf(stderr, "cfbox %s: %s\n", is_pkill ? "pkill" : "pgrep", result.error().msg.c_str());
+        CFBOX_ERR_V(is_pkill ? "pkill" : "pgrep", "%s", result.error().msg.c_str());
         return 1;
     }
 

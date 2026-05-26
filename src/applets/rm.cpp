@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -47,7 +48,7 @@ auto rm_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
     if (pos.empty()) {
         if (!force) {
-            std::fprintf(stderr, "cfbox rm: missing operand\n");
+            CFBOX_ERR("rm", "missing operand");
             return 1;
         }
         return 0;
@@ -57,16 +58,14 @@ auto rm_main(int argc, char* argv[]) -> int {
     for (const auto& target : pos) {
         // Safety check: prevent removing /
         if (is_root_path(target)) {
-            std::fprintf(stderr, "cfbox rm: refusing to remove '%s'\n",
-                         std::string{target}.c_str());
+            CFBOX_ERR("rm", "refusing to remove '%s'", std::string{target}.c_str());
             rc = 1;
             continue;
         }
 
         if (!cfbox::fs::exists(target)) {
             if (!force) {
-                std::fprintf(stderr, "cfbox rm: cannot remove '%s': No such file or directory\n",
-                             std::string{target}.c_str());
+                CFBOX_ERR("rm", "cannot remove '%s': No such file or directory", std::string{target}.c_str());
                 rc = 1;
             }
             continue;
@@ -74,22 +73,19 @@ auto rm_main(int argc, char* argv[]) -> int {
 
         if (cfbox::fs::is_directory(target)) {
             if (!recursive) {
-                std::fprintf(stderr, "cfbox rm: cannot remove '%s': Is a directory\n",
-                             std::string{target}.c_str());
+                CFBOX_ERR("rm", "cannot remove '%s': Is a directory", std::string{target}.c_str());
                 rc = 1;
                 continue;
             }
             auto result = cfbox::fs::remove_all(target);
             if (!result) {
-                std::fprintf(stderr, "cfbox rm: cannot remove '%s': %s\n",
-                             std::string{target}.c_str(), result.error().msg.c_str());
+                CFBOX_ERR("rm", "cannot remove '%s': %s", std::string{target}.c_str(), result.error().msg.c_str());
                 rc = 1;
             }
         } else {
             auto result = cfbox::fs::remove_single(target);
             if (!result) {
-                std::fprintf(stderr, "cfbox rm: cannot remove '%s': %s\n",
-                             std::string{target}.c_str(), result.error().msg.c_str());
+                CFBOX_ERR("rm", "cannot remove '%s': %s", std::string{target}.c_str(), result.error().msg.c_str());
                 rc = 1;
             }
         }

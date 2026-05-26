@@ -4,6 +4,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/stream.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -30,7 +31,7 @@ auto fold_main(int argc, char* argv[]) -> int {
     if (auto w = parsed.get_any('w', "width")) {
         width = std::stoi(std::string{*w});
         if (width <= 0) {
-            std::fprintf(stderr, "cfbox fold: invalid width: %d\n", width);
+            CFBOX_ERR("fold", "invalid width: %d", width);
             return 1;
         }
     }
@@ -76,7 +77,7 @@ auto fold_main(int argc, char* argv[]) -> int {
             return true;
         });
         if (!result) {
-            std::fprintf(stderr, "cfbox fold: %s\n", result.error().msg.c_str());
+            CFBOX_ERR("fold", "%s", result.error().msg.c_str());
             rc = 1;
         }
     }

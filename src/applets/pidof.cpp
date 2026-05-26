@@ -6,6 +6,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/proc.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -30,13 +31,13 @@ auto pidof_main(int argc, char* argv[]) -> int {
     bool single = parsed.has('s') || parsed.has_long("single");
     const auto& names = parsed.positional();
     if (names.empty()) {
-        std::fprintf(stderr, "cfbox pidof: no program name specified\n");
+        CFBOX_ERR("pidof", "no program name specified");
         return 1;
     }
 
     auto result = cfbox::proc::read_all_processes();
     if (!result) {
-        std::fprintf(stderr, "cfbox pidof: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("pidof", "%s", result.error().msg.c_str());
         return 1;
     }
 

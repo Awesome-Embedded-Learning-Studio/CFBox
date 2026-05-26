@@ -7,6 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -243,14 +244,14 @@ auto diff_main(int argc, char* argv[]) -> int {
     bool unified = parsed.has('u');
     const auto& pos = parsed.positional();
     if (pos.size() < 2) {
-        std::fprintf(stderr, "cfbox diff: missing operand\n");
+        CFBOX_ERR("diff", "missing operand");
         return 2;
     }
 
     auto a_result = cfbox::io::read_lines(std::string{pos[0]});
     auto b_result = cfbox::io::read_lines(std::string{pos[1]});
-    if (!a_result) { std::fprintf(stderr, "cfbox diff: %s\n", a_result.error().msg.c_str()); return 2; }
-    if (!b_result) { std::fprintf(stderr, "cfbox diff: %s\n", b_result.error().msg.c_str()); return 2; }
+    if (!a_result) { CFBOX_ERR("diff", "%s", a_result.error().msg.c_str()); return 2; };
+    if (!b_result) { CFBOX_ERR("diff", "%s", b_result.error().msg.c_str()); return 2; };
 
     if (*a_result == *b_result) return 0;
 

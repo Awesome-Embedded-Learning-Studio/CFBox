@@ -7,6 +7,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -56,8 +57,7 @@ auto df_main(int argc, char* argv[]) -> int {
         for (auto p : pos) {
             struct statvfs vfs;
             if (statvfs(std::string{p}.c_str(), &vfs) != 0) {
-                std::fprintf(stderr, "cfbox df: cannot stat '%.*s': %s\n",
-                             static_cast<int>(p.size()), p.data(), std::strerror(errno));
+                CFBOX_ERR("df", "cannot stat '%.*s': %s", static_cast<int>(p.size()), p.data(), std::strerror(errno));
                 continue;
             }
             auto bsize = static_cast<unsigned long long>(vfs.f_bsize);
@@ -73,7 +73,7 @@ auto df_main(int argc, char* argv[]) -> int {
         auto* mtab = setmntent("/proc/mounts", "r");
         if (!mtab) mtab = setmntent("/etc/mtab", "r");
         if (!mtab) {
-            std::fprintf(stderr, "cfbox df: cannot read mount table\n");
+            CFBOX_ERR("df", "cannot read mount table");
             return 1;
         }
         struct mntent* mnt;

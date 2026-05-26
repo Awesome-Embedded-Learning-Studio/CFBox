@@ -13,6 +13,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/regex.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -50,7 +51,7 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
 
     cfbox::util::scoped_regex re;
     if (re.compile(pattern.c_str(), cflags) != 0) {
-        std::fprintf(stderr, "cfbox grep: invalid regex: %s\n", pattern.c_str());
+        CFBOX_ERR("grep", "invalid regex: %s", pattern.c_str());
         return 2;
     }
 
@@ -69,12 +70,12 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
 
             if (opts.quiet) return false;
             if (opts.files_with_matches) {
-                std::printf("%s\n", std::string{path}.c_str());
+                std::printf("%s\n", path.data());
                 return false;
             }
             if (!opts.count_only) {
                 if (print_filename) {
-                    std::printf("%s:", std::string{path}.c_str());
+                    std::printf("%s:", path.data());
                 }
                 if (opts.line_numbers) {
                     std::printf("%zu:", line_num);
@@ -87,7 +88,7 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
 
     auto result = cfbox::io::for_each_line(path, process_line);
     if (!result) {
-        std::fprintf(stderr, "cfbox grep: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("grep", "%s", result.error().msg.c_str());
         return 2;
     }
 
@@ -144,7 +145,7 @@ auto grep_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox grep: missing pattern\n");
+        CFBOX_ERR("grep", "missing pattern");
         return 2;
     }
 

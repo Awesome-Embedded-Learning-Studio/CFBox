@@ -5,6 +5,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -35,7 +36,7 @@ auto seq_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox seq: missing operand\n");
+        CFBOX_ERR("seq", "missing operand");
         return 1;
     }
 
@@ -52,7 +53,7 @@ auto seq_main(int argc, char* argv[]) -> int {
     }
 
     if (incr == 0) {
-        std::fprintf(stderr, "cfbox seq: zero increment\n");
+        CFBOX_ERR("seq", "zero increment");
         return 1;
     }
 

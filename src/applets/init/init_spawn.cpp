@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <cfbox/error.hpp>
 
 namespace cfbox::init {
 
@@ -13,8 +14,7 @@ auto spawn_process(InitState& state, const InittabEntry& entry, bool respawn) ->
 
     pid_t pid = fork();
     if (pid < 0) {
-        std::fprintf(stderr, "cfbox init: fork failed for '%s': %s\n",
-                     entry.process.c_str(), std::strerror(errno));
+        CFBOX_ERR("init", "fork failed for '%s': %s", entry.process.c_str(), std::strerror(errno));
         return -1;
     }
 
@@ -33,8 +33,7 @@ auto spawn_process(InitState& state, const InittabEntry& entry, bool respawn) ->
 
         execv(shell, argv);
         // If execv fails, try /bin/cfbox sh
-        std::fprintf(stderr, "cfbox init: exec failed for '%s': %s\n",
-                     entry.process.c_str(), std::strerror(errno));
+        CFBOX_ERR("init", "exec failed for '%s': %s", entry.process.c_str(), std::strerror(errno));
         _exit(127);
     }
 

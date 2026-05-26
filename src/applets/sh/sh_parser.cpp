@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <utility>
+#include <cfbox/error.hpp>
 
 namespace cfbox::sh {
 
@@ -247,7 +248,7 @@ auto Parser::parse_redirect() -> std::optional<Redir> {
 
     // Get target
     if (current_.type != TokType::Word) {
-        std::fprintf(stderr, "cfbox sh: syntax error: missing redirect target\n");
+        CFBOX_ERR("sh", "syntax error: missing redirect target");
         return std::nullopt;
     }
 
@@ -275,7 +276,7 @@ auto Parser::parse_if() -> std::unique_ptr<IfClause> {
     // Parse condition (until 'then')
     auto cond = parse_compound_list();
     if (!expect_keyword("then")) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected 'then'\n");
+        CFBOX_ERR("sh", "syntax error: expected 'then'");
         return result;
     }
 
@@ -289,7 +290,7 @@ auto Parser::parse_if() -> std::unique_ptr<IfClause> {
         advance();
         auto elif_cond = parse_compound_list();
         if (!expect_keyword("then")) {
-            std::fprintf(stderr, "cfbox sh: syntax error: expected 'then'\n");
+            CFBOX_ERR("sh", "syntax error: expected 'then'");
             break;
         }
         auto elif_body = parse_compound_list();
@@ -304,7 +305,7 @@ auto Parser::parse_if() -> std::unique_ptr<IfClause> {
     }
 
     if (!expect_keyword("fi")) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected 'fi'\n");
+        CFBOX_ERR("sh", "syntax error: expected 'fi'");
     }
 
     return result;
@@ -317,13 +318,13 @@ auto Parser::parse_while() -> std::unique_ptr<WhileClause> {
 
     result->condition = parse_compound_list();
     if (!expect_keyword("do")) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected 'do'\n");
+        CFBOX_ERR("sh", "syntax error: expected 'do'");
         return result;
     }
 
     result->body = parse_compound_list();
     if (!expect_keyword("done")) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected 'done'\n");
+        CFBOX_ERR("sh", "syntax error: expected 'done'");
     }
 
     return result;
@@ -334,7 +335,7 @@ auto Parser::parse_for() -> std::unique_ptr<ForClause> {
     advance(); // consume 'for'
 
     if (current_.type != TokType::Word) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected variable name after 'for'\n");
+        CFBOX_ERR("sh", "syntax error: expected variable name after 'for'");
         return result;
     }
     result->var_name = std::move(current_.value);
@@ -354,13 +355,13 @@ auto Parser::parse_for() -> std::unique_ptr<ForClause> {
     while (current_.type == TokType::Semi || current_.type == TokType::Newline) advance();
 
     if (!expect_keyword("do")) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected 'do'\n");
+        CFBOX_ERR("sh", "syntax error: expected 'do'");
         return result;
     }
 
     result->body = parse_compound_list();
     if (!expect_keyword("done")) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected 'done'\n");
+        CFBOX_ERR("sh", "syntax error: expected 'done'");
     }
 
     return result;
@@ -371,7 +372,7 @@ auto Parser::parse_subshell() -> std::unique_ptr<Subshell> {
     auto result = std::make_unique<Subshell>();
     result->body = parse_compound_list();
     if (!expect(TokType::RParen)) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected ')'\n");
+        CFBOX_ERR("sh", "syntax error: expected ');'");
     }
     return result;
 }
@@ -383,7 +384,7 @@ auto Parser::parse_brace_group() -> std::unique_ptr<BraceGroup> {
     if (current_.type == TokType::Newline) advance();
     result->body = parse_compound_list();
     if (current_.type != TokType::RBrace) {
-        std::fprintf(stderr, "cfbox sh: syntax error: expected '}'\n");
+        CFBOX_ERR("sh", "syntax error: expected '}'");
     } else {
         advance();
     }

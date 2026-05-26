@@ -11,6 +11,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -66,7 +67,7 @@ auto parse_owner_spec(std::string_view spec) -> OwnerSpec {
 
 auto chown_one(const std::string& path, uid_t uid, gid_t gid, bool verbose) -> int {
     if (::chown(path.c_str(), uid, gid) != 0) {
-        std::fprintf(stderr, "cfbox chown: %s: %s\n", path.c_str(), std::strerror(errno));
+        CFBOX_ERR("chown", "%s: %s", path.c_str(), std::strerror(errno));
         return 1;
     }
     if (verbose) std::printf("ownership of '%s' changed\n", path.c_str());
@@ -95,13 +96,13 @@ auto chown_main(int argc, char* argv[]) -> int {
     if (parsed.has_long("reference")) {
         auto rfile = parsed.get_long("reference");
         if (!rfile) {
-            std::fprintf(stderr, "cfbox chown: --reference requires an argument\n");
+            CFBOX_ERR("chown", "--reference requires an argument");
             return 2;
         }
         struct stat st;
         std::string rfile_str(*rfile);
         if (stat(rfile_str.c_str(), &st) != 0) {
-            std::fprintf(stderr, "cfbox chown: %s: %s\n", rfile_str.c_str(), std::strerror(errno));
+            CFBOX_ERR("chown", "%s: %s", rfile_str.c_str(), std::strerror(errno));
             return 1;
         }
         owner.uid = st.st_uid;
@@ -110,12 +111,12 @@ auto chown_main(int argc, char* argv[]) -> int {
         owner.set_gid = true;
         files_start = 0;
         if (pos.empty()) {
-            std::fprintf(stderr, "cfbox chown: missing operand\n");
+            CFBOX_ERR("chown", "missing operand");
             return 2;
         }
     } else {
         if (pos.size() < 2) {
-            std::fprintf(stderr, "cfbox chown: missing operand\n");
+            CFBOX_ERR("chown", "missing operand");
             return 2;
         }
         owner = parse_owner_spec(pos[0]);

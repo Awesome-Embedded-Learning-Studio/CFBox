@@ -7,6 +7,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -48,7 +49,7 @@ auto rev_main(int argc, char* argv[]) -> int {
         } else {
             std::ifstream f(fn);
             if (!f) {
-                std::fprintf(stderr, "cfbox rev: cannot open %s\n", fn.c_str());
+                CFBOX_ERR("rev", "cannot open %s", fn.c_str());
                 rc = 1;
                 continue;
             }

@@ -4,6 +4,7 @@
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -32,7 +33,7 @@ auto touch_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
 
     if (pos.empty()) {
-        std::fprintf(stderr, "cfbox touch: missing operand\n");
+        CFBOX_ERR("touch", "missing operand");
         return 1;
     }
 
@@ -43,8 +44,7 @@ auto touch_main(int argc, char* argv[]) -> int {
             if (no_create) continue;
             int fd = ::open(path.c_str(), O_CREAT | O_WRONLY, 0666);
             if (fd < 0) {
-                std::fprintf(stderr, "cfbox touch: cannot touch '%s': %s\n",
-                             path.c_str(), std::strerror(errno));
+                CFBOX_ERR("touch", "cannot touch '%s': %s", path.c_str(), std::strerror(errno));
                 rc = 1;
                 continue;
             }
@@ -52,8 +52,7 @@ auto touch_main(int argc, char* argv[]) -> int {
         }
         // Update timestamps
         if (::utime(path.c_str(), nullptr) != 0) {
-            std::fprintf(stderr, "cfbox touch: cannot touch '%s': %s\n",
-                         path.c_str(), std::strerror(errno));
+            CFBOX_ERR("touch", "cannot touch '%s': %s", path.c_str(), std::strerror(errno));
             rc = 1;
         }
     }

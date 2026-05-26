@@ -3,6 +3,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/error.hpp>
 
 namespace {
 constexpr cfbox::help::HelpEntry HELP = {
@@ -27,7 +28,7 @@ auto pwd_main(int argc, char* argv[]) -> int {
 
     auto result = cfbox::fs::current_path();
     if (!result) {
-        std::fprintf(stderr, "cfbox pwd: %s\n", result.error().msg.c_str());
+        CFBOX_ERR("pwd", "%s", result.error().msg.c_str());
         return 1;
     }
     std::puts(result->c_str());
