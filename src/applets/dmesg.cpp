@@ -7,6 +7,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 
@@ -21,23 +22,21 @@ constexpr cfbox::help::HelpEntry HELP = {
 
 auto read_kmsg() -> std::vector<std::string> {
     std::vector<std::string> lines;
-    // Try /var/log/dmesg first (works without CAP_SYSLOG)
-    FILE* f = std::fopen("/var/log/dmesg", "r");
-    if (!f) f = std::fopen("/var/log/kern.log", "r");
+    cfbox::io::unique_file f(std::fopen("/var/log/dmesg", "r"));
+    if (!f) f.reset(std::fopen("/var/log/kern.log", "r"));
     if (!f) {
         std::fprintf(stderr, "cfbox dmesg: cannot open kernel log\n");
         return lines;
     }
 
     char buf[4096];
-    while (std::fgets(buf, sizeof(buf), f)) {
+    while (std::fgets(buf, sizeof(buf), f.get())) {
         auto len = std::strlen(buf);
         while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
             buf[--len] = '\0';
         }
         lines.emplace_back(buf);
     }
-    std::fclose(f);
     return lines;
 }
 

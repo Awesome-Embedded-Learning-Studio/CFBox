@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <csignal>
 #include <cstdio>
 #include <string>
 #include <string_view>
@@ -54,9 +55,9 @@ struct InitState {
     RunLevel runlevel = RunLevel::SysInit;
     std::vector<InittabEntry> entries;
     std::vector<SpawnedProcess> children;
-    bool shutting_down = false;
-    bool sigchld_received = false;
-    bool sigint_received = false;
+    volatile sig_atomic_t shutting_down = 0;
+    volatile sig_atomic_t sigchld_received = 0;
+    volatile sig_atomic_t sigint_received = 0;
 };
 
 // --- Module interfaces ---
