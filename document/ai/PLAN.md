@@ -18,7 +18,7 @@
 
 | 批 | 范围 | 状态 | Commit | 测试 |
 |----|------|------|--------|------|
-| 批1 | `tail -f/-F`（fd-based follow：fstat 轮询 + 64KiB quantum + -F drain-switch + SIGINT 退出 0） | ✅ | —(待回填) | 381/0 |
+| 批1 | `tail -f/-F`（fd-based follow：fstat 轮询 + 64KiB quantum + -F drain-switch + SIGINT 退出 0） | ✅ | bff34e9 | 381/0 |
 | 批2 | `cp -a`（归档模式：保权限/属主/时间戳/symlink/递归） | 🔄 NEXT | — | — |
 | 批3 | `test` POSIX 子集（文件测试/字符串/整数/复合表达式，退出码语义） | ⏳ | — | — |
 | 批4 | `ls -R` 递归 + `--color`（LS_COLORS 感知、递归缩进） | ⏳ | — | — |
