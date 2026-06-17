@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unistd.h>
 #include <vector>
 
 #include <cfbox/error.hpp>
@@ -18,6 +19,36 @@ struct FileCloser {
     }
 };
 using unique_file = std::unique_ptr<std::FILE, FileCloser>;
+
+// RAII wrapper for a raw POSIX file descriptor. Not unique_ptr<int, ...>: a
+// descriptor is a value, not a pointer — no heap alloc, every method noexcept.
+class unique_fd {
+public:
+    explicit unique_fd(int fd = -1) noexcept : fd_{fd} {}
+    ~unique_fd() noexcept { reset(); }
+    unique_fd(unique_fd&& other) noexcept : fd_{other.release()} {}
+    auto operator=(unique_fd&& other) noexcept -> unique_fd& {
+        reset(other.release());
+        return *this;
+    }
+    unique_fd(const unique_fd&) = delete;
+    auto operator=(const unique_fd&) = delete;
+
+    [[nodiscard]] auto get() const noexcept -> int { return fd_; }
+    [[nodiscard]] auto release() noexcept -> int {
+        int fd = fd_;
+        fd_ = -1;
+        return fd;
+    }
+    auto reset(int fd = -1) noexcept -> void {
+        if (fd_ >= 0) ::close(fd_);
+        fd_ = fd;
+    }
+    [[nodiscard]] explicit operator bool() const noexcept { return fd_ >= 0; }
+
+private:
+    int fd_{-1};
+};
 
 [[nodiscard]] inline auto open_file(std::string_view path, const char* mode)
     -> base::Result<unique_file> {

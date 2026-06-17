@@ -60,4 +60,19 @@ TEST(TailTest, NonexistentFile) {
     EXPECT_NE(tail_main(2, argv), 0);
 }
 
+// Follow-mode option handling. The follow loop itself blocks (it waits on
+// appended data / SIGINT), so it is exercised by the integration script; here
+// we cover the argument-parsing edges that exit before the loop starts.
+TEST(TailFollow, NoFilesErrors) {
+    char a0[] = "tail", a1[] = "-f";
+    char* argv[] = {a0, a1};
+    EXPECT_NE(tail_main(2, argv), 0);
+}
+
+TEST(TailFollow, BadIntervalErrors) {
+    char a0[] = "tail", a1[] = "-s", a2[] = "abc", a3[] = "-f";
+    char* argv[] = {a0, a1, a2, a3};
+    EXPECT_NE(tail_main(4, argv), 0);
+}
+
 #endif // CFBOX_ENABLE_TAIL
