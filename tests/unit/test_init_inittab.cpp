@@ -17,21 +17,26 @@ struct InittabEntry {
 
 auto parse_inittab_line(std::string_view line) -> InittabEntry {
     InittabEntry entry;
-    if (line.empty() || line[0] == '#') return entry;
+    if (line.empty() || line[0] == '#')
+        return entry;
 
     auto c1 = line.find(':');
-    if (c1 == std::string_view::npos) return entry;
+    if (c1 == std::string_view::npos)
+        return entry;
     auto c2 = line.find(':', c1 + 1);
-    if (c2 == std::string_view::npos) return entry;
+    if (c2 == std::string_view::npos)
+        return entry;
     auto c3 = line.find(':', c2 + 1);
-    if (c3 == std::string_view::npos) return entry;
+    if (c3 == std::string_view::npos)
+        return entry;
 
     entry.id = std::string(line.substr(0, c1));
     entry.runlevels = std::string(line.substr(c1 + 1, c2 - c1 - 1));
     entry.action = std::string(line.substr(c2 + 1, c3 - c2 - 1));
     entry.process = std::string(line.substr(c3 + 1));
 
-    while (!entry.process.empty() && (entry.process.back() == ' ' || entry.process.back() == '\t' || entry.process.back() == '\r'))
+    while (!entry.process.empty() && (entry.process.back() == ' ' || entry.process.back() == '\t' ||
+                                      entry.process.back() == '\r'))
         entry.process.pop_back();
 
     return entry;
@@ -87,4 +92,15 @@ TEST(InittabTest, ParseShutdown) {
     auto entry = parse_inittab_line("::shutdown:/bin/umount -a");
     EXPECT_EQ(entry.action, "shutdown");
     EXPECT_EQ(entry.process, "/bin/umount -a");
+}
+
+// imx-forge console getty: the leading '-' on the process means "give me the
+// controlling console"; the parser must preserve it verbatim so init can strip
+// it before exec (see init_spawn.cpp).
+TEST(InittabTest, ParseAskfirst) {
+    auto entry = parse_inittab_line("console::askfirst:-/bin/sh");
+    EXPECT_EQ(entry.id, "console");
+    EXPECT_EQ(entry.runlevels, "");
+    EXPECT_EQ(entry.action, "askfirst");
+    EXPECT_EQ(entry.process, "-/bin/sh");
 }
