@@ -340,6 +340,9 @@ extern auto which_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_MOUNT
 extern auto mount_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_MDEV
+extern auto mdev_main(int argc, char* argv[]) -> int;
+#endif
 #if CFBOX_ENABLE_MOUNTPOINT
 extern auto mountpoint_main(int argc, char* argv[]) -> int;
 #endif
@@ -692,6 +695,9 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_MOUNT
     {"mount", mount_main, "mount a filesystem"},
+#endif
+#if CFBOX_ENABLE_MDEV
+    {"mdev", mdev_main, "populate /dev from sysfs"},
 #endif
 #if CFBOX_ENABLE_MOUNTPOINT
     {"mountpoint", mountpoint_main, "check if a path is a mountpoint"},
