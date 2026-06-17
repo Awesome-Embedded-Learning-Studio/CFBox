@@ -1,3 +1,6 @@
 [submodule "third_party/linux"]
 	path = third_party/linux
 	url = https://github.com/torvalds/linux.git
+[submodule "projects/imx-forge-demo"]
+	path = projects/imx-forge-demo
+	url = https://github.com/Awesome-Embedded-Learning-Studio/imx-forge
