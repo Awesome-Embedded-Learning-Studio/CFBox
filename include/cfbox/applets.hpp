@@ -355,6 +355,16 @@ extern auto chown_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_CHGRP
 extern auto chgrp_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_UMOUNT
+extern auto umount_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_SWAPOFF
+extern auto swapoff_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_REBOOT
+extern auto reboot_main(int argc, char* argv[]) -> int;
+extern auto poweroff_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -710,5 +720,15 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_CHGRP
     {"chgrp", chgrp_main, "change group ownership"},
+#endif
+#if CFBOX_ENABLE_UMOUNT
+    {"umount", umount_main, "unmount filesystems"},
+#endif
+#if CFBOX_ENABLE_SWAPOFF
+    {"swapoff", swapoff_main, "disable swap"},
+#endif
+#if CFBOX_ENABLE_REBOOT
+    {"reboot", reboot_main, "reboot the system"},
+    {"poweroff", poweroff_main, "power off the system"},
 #endif
 });

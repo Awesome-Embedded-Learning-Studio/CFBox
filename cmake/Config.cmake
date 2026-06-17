@@ -28,6 +28,7 @@ set(CFBOX_APPLETS
     watch top
     dmesg hexdump more rev cal renice
     clear which mount mountpoint mdev chmod chown chgrp
+    umount swapoff reboot
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)
