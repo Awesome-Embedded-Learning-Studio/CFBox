@@ -1,30 +1,34 @@
 #include "sh.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <termios.h>
+#include <unistd.h>
 
-#include <cfbox/help.hpp>
 #include <cfbox/error.hpp>
+#include <cfbox/help.hpp>
 
 namespace {
 
 constexpr cfbox::help::HelpEntry HELP = {
-    .name    = "sh",
+    .name = "sh",
     .version = CFBOX_VERSION_STRING,
     .one_line = "POSIX shell command interpreter",
-    .usage   = "sh [-c command] [script [args...]]",
+    .usage = "sh [-c command] [script [args...]]",
     .options = "  -c CMD   execute CMD string\n"
                "  -s       read commands from stdin",
-    .extra   = "",
+    .extra = "",
 };
 
 auto run_string(const std::string& script, cfbox::sh::ShellState& state) -> int {
     cfbox::sh::Lexer lexer(script);
     cfbox::sh::Parser parser(lexer);
     auto ast = parser.parse_program();
-    if (ast) return cfbox::sh::execute(*ast, state);
+    if (ast)
+        return cfbox::sh::execute(*ast, state);
     return 0;
 }
 
@@ -43,7 +47,30 @@ auto run_file(const char* path, cfbox::sh::ShellState& state) -> int {
     return run_string(script, state);
 }
 
+// Force the controlling tty into canonical mode so the kernel handles line
+// editing (backspace, Ctrl-C). Without it a serial console echoes raw control
+// bytes. Restored when the guard goes out of scope — no leaked global state.
+struct CookedTermios {
+    int fd;
+    bool changed = false;
+    struct termios saved{};
+    explicit CookedTermios(int f) : fd(f) {
+        if (isatty(fd) && tcgetattr(fd, &saved) == 0) {
+            struct termios c = saved;
+            c.c_lflag |= ICANON | ECHO | ECHOE | ECHOK | ISIG;
+            c.c_iflag |= ICRNL | IXON;
+            c.c_oflag |= OPOST | ONLCR;
+            changed = tcsetattr(fd, TCSANOW, &c) == 0;
+        }
+    }
+    ~CookedTermios() {
+        if (changed)
+            (void)tcsetattr(fd, TCSANOW, &saved);
+    }
+};
+
 auto run_interactive(cfbox::sh::ShellState& state) -> int {
+    CookedTermios tty(STDIN_FILENO);
     std::string line;
     int last_rc = 0;
 
@@ -56,7 +83,8 @@ auto run_interactive(cfbox::sh::ShellState& state) -> int {
             break;
         }
 
-        if (line.empty()) continue;
+        if (line.empty())
+            continue;
 
         cfbox::sh::Lexer lexer(line);
         cfbox::sh::Parser parser(lexer);
@@ -82,14 +110,21 @@ auto sh_main(int argc, char* argv[]) -> int {
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg{argv[i]};
-        if (arg == "--help")    { cfbox::help::print_help(HELP); return 0; }
-        if (arg == "--version") { cfbox::help::print_version(HELP); return 0; }
+        if (arg == "--help") {
+            cfbox::help::print_help(HELP);
+            return 0;
+        }
+        if (arg == "--version") {
+            cfbox::help::print_version(HELP);
+            return 0;
+        }
         if (arg == "-c" && i + 1 < argc) {
             command = argv[++i];
             first_positional = i + 1;
             break; // remaining args after -c CMD are positional
         } else if (arg == "-s") {
-            from_stdin = true; (void)from_stdin;
+            from_stdin = true;
+            (void)from_stdin;
         } else if (arg[0] != '-') {
             script_arg = i;
             break;
@@ -120,10 +155,16 @@ auto sh_main(int argc, char* argv[]) -> int {
         state.set_script_name(argc > 0 ? argv[0] : "sh");
     }
 
-    // Set essential env vars
+    // Set essential env vars. cfbox init execs sh with only HOME/TERM, so PATH
+    // is usually empty here — fall back to a sane default and export it so child
+    // applets (which, ...) can resolve commands too.
     if (state.get_var("PATH").empty()) {
         const char* path = std::getenv("PATH");
-        if (path) state.set_var("PATH", path);
+        if (!path || !*path) {
+            path = "/bin:/sbin:/usr/bin:/usr/sbin";
+            setenv("PATH", path, 1);
+        }
+        state.set_var("PATH", path);
     }
 
     if (!command.empty()) {
