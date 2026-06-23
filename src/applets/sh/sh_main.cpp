@@ -60,6 +60,7 @@ struct CookedTermios {
             c.c_lflag |= ICANON | ECHO | ECHOE | ECHOK | ISIG;
             c.c_iflag |= ICRNL | IXON;
             c.c_oflag |= OPOST | ONLCR;
+            c.c_cc[VERASE] = 0x08; // treat Ctrl-H (BS) as erase; default VERASE is often DEL
             changed = tcsetattr(fd, TCSANOW, &c) == 0;
         }
     }
