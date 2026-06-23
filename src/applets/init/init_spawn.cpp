@@ -39,7 +39,10 @@ auto spawn_process(InitState& state, const InittabEntry& entry, bool respawn, bo
         // exits quietly; init respawns, re-prompting once a tty appears.
         if (askfirst) {
             static constexpr char prompt[] = "\nPlease press Enter to activate this console.";
-            (void)write(STDERR_FILENO, prompt, sizeof(prompt) - 1);
+            if (write(STDERR_FILENO, prompt, sizeof(prompt) - 1) < 0) {
+                // best-effort prompt: a write failure does not block the
+                // Enter wait below, so ignore it.
+            }
             char c = 0;
             if (read(STDIN_FILENO, &c, 1) <= 0 || c != '\n') {
                 _exit(0);
