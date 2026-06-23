@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -13,7 +14,7 @@ class BitWriter {
     int bit_pos_ = 0;
     std::uint8_t current_ = 0;
 
-public:
+  public:
     explicit BitWriter(std::vector<std::uint8_t>& out) : out_(out) {}
     ~BitWriter() { flush(); }
 
@@ -72,33 +73,27 @@ inline auto encode_fixed_dist(std::uint8_t dist_code, BitWriter& bw) -> void {
     bw.write_huffman(static_cast<std::uint32_t>(dist_code), 5);
 }
 
-static constexpr int len_base[] = {
-    3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-    35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
-};
-static constexpr int len_extra[] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-    3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
-};
-static constexpr int dst_base[] = {
-    1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
-    257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-    8193, 12289, 16385, 24577
-};
-static constexpr int dst_extra[] = {
-    0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
-    7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
-};
+static constexpr int len_base[] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
+                                   31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
+static constexpr int len_extra[] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
+                                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
+static constexpr int dst_base[] = {1,    2,    3,    4,    5,    7,    9,    13,    17,    25,
+                                   33,   49,   65,   97,   129,  193,  257,  385,   513,   769,
+                                   1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
+static constexpr int dst_extra[] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
+                                    6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 
 inline auto find_length_code(int length) -> int {
     for (int i = 28; i >= 0; --i)
-        if (length >= len_base[i]) return i;
+        if (length >= len_base[i])
+            return i;
     return 0;
 }
 
 inline auto find_dist_code(int dist) -> int {
     for (int i = 29; i >= 0; --i)
-        if (dist >= dst_base[i]) return i;
+        if (dist >= dst_base[i])
+            return i;
     return 0;
 }
 
@@ -120,19 +115,23 @@ class Matcher {
         auto b = static_cast<unsigned>(data_[pos + 1]);
         auto c = static_cast<unsigned>(data_[pos + 2]);
         return (static_cast<std::size_t>(a) << HASH_BITS ^
-                static_cast<std::size_t>(b) << (HASH_BITS - 5) ^
-                c) & (HASH_SIZE - 1);
+                static_cast<std::size_t>(b) << (HASH_BITS - 5) ^ c) &
+               (HASH_SIZE - 1);
     }
 
-public:
+  public:
     Matcher(const std::uint8_t* data, std::size_t size)
         : head_(HASH_SIZE, -1), prev_(size, -1), data_(data), size_(size) {}
 
-    struct Match { int length; int distance; };
+    struct Match {
+        int length;
+        int distance;
+    };
 
     auto find(std::size_t pos) -> Match {
         Match best{0, 0};
-        if (pos + MIN_MATCH > size_) return best;
+        if (pos + MIN_MATCH > size_)
+            return best;
 
         auto h = hash3(pos);
         int chain = head_[h];
@@ -140,17 +139,21 @@ public:
 
         while (chain >= 0 && tries-- > 0) {
             auto dist = static_cast<int>(pos - static_cast<std::size_t>(chain));
-            if (dist > 32768) break;
+            if (dist > 32768)
+                break;
 
             int len = 0;
-            auto max_len = static_cast<int>(std::min(
-                static_cast<std::size_t>(MAX_MATCH), size_ - pos));
-            while (len < max_len && data_[static_cast<std::size_t>(chain) + static_cast<std::size_t>(len)] == data_[pos + static_cast<std::size_t>(len)])
+            auto max_len =
+                static_cast<int>(std::min(static_cast<std::size_t>(MAX_MATCH), size_ - pos));
+            while (len < max_len &&
+                   data_[static_cast<std::size_t>(chain) + static_cast<std::size_t>(len)] ==
+                       data_[pos + static_cast<std::size_t>(len)])
                 ++len;
 
             if (len >= MIN_MATCH && len > best.length) {
                 best = {len, dist};
-                if (len == MAX_MATCH) break;
+                if (len == MAX_MATCH)
+                    break;
             }
             chain = prev_[static_cast<std::size_t>(chain)];
         }
@@ -186,14 +189,12 @@ inline auto deflate_compress(const std::uint8_t* data, std::size_t size)
             int lc = find_length_code(match.length);
             encode_fixed_lit(static_cast<std::uint16_t>(lc + 257), bw);
             if (len_extra[lc] > 0)
-                bw.write(static_cast<std::uint32_t>(match.length - len_base[lc]),
-                         len_extra[lc]);
+                bw.write(static_cast<std::uint32_t>(match.length - len_base[lc]), len_extra[lc]);
 
             int dc = find_dist_code(match.distance);
             encode_fixed_dist(static_cast<std::uint8_t>(dc), bw);
             if (dst_extra[dc] > 0)
-                bw.write(static_cast<std::uint32_t>(match.distance - dst_base[dc]),
-                         dst_extra[dc]);
+                bw.write(static_cast<std::uint32_t>(match.distance - dst_base[dc]), dst_extra[dc]);
 
             // Update hash chains for skipped positions
             auto end = pos + static_cast<std::size_t>(match.length);

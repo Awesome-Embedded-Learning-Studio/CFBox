@@ -1,5 +1,6 @@
 #include "init.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <cfbox/error.hpp>
 #include <cstdlib>

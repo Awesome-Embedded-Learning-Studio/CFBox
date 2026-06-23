@@ -48,7 +48,10 @@ auto swapoff_main(int argc, char* argv[]) -> int {
         if (!f)
             return 0; // no swap configured — nothing to do
         char line[512];
-        std::fgets(line, sizeof(line), f); // skip header
+        if (!std::fgets(line, sizeof(line), f)) { // skip header; empty swaps file is fine
+            std::fclose(f);
+            return 0;
+        }
         int rc = 0;
         while (std::fgets(line, sizeof(line), f)) {
             std::string dev = first_token(line);

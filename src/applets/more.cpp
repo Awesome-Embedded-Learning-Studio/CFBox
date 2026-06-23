@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -5,20 +6,20 @@
 
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
+#include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/terminal.hpp>
 #include <cfbox/tui.hpp>
-#include <cfbox/error.hpp>
 
 namespace {
 
 constexpr cfbox::help::HelpEntry HELP = {
-    .name    = "more",
+    .name = "more",
     .version = CFBOX_VERSION_STRING,
     .one_line = "file perusal filter for crt viewing",
-    .usage   = "more [FILE]",
+    .usage = "more [FILE]",
     .options = "",
-    .extra   = "Space=next page  Enter=next line  q=quit",
+    .extra = "Space=next page  Enter=next line  q=quit",
 };
 
 auto read_lines(std::FILE* f) -> std::vector<std::string> {
@@ -38,8 +39,14 @@ auto read_lines(std::FILE* f) -> std::vector<std::string> {
 
 auto more_main(int argc, char* argv[]) -> int {
     auto parsed = cfbox::args::parse(argc, argv, {});
-    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
-    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
+    if (parsed.has_long("help")) {
+        cfbox::help::print_help(HELP);
+        return 0;
+    }
+    if (parsed.has_long("version")) {
+        cfbox::help::print_version(HELP);
+        return 0;
+    }
 
     const auto& pos = parsed.positional();
     std::string filename = pos.empty() ? "" : std::string(pos[0]);
@@ -54,19 +61,23 @@ auto more_main(int argc, char* argv[]) -> int {
     }
 
     auto lines = read_lines(f);
-    if (f != stdin) std::fclose(f);
+    if (f != stdin)
+        std::fclose(f);
 
-    if (lines.empty()) return 0;
+    if (lines.empty())
+        return 0;
 
     // Check if output is a terminal
     if (!isatty(STDOUT_FILENO)) {
-        for (const auto& line : lines) std::printf("%s\n", line.c_str());
+        for (const auto& line : lines)
+            std::printf("%s\n", line.c_str());
         return 0;
     }
 
     auto [rows, cols] = cfbox::terminal::get_size();
     int usable_rows = rows - 1; // Leave room for status line
-    if (usable_rows < 1) usable_rows = 1;
+    if (usable_rows < 1)
+        usable_rows = 1;
 
     cfbox::terminal::RawMode raw_mode;
     std::size_t top_line = 0;
@@ -89,7 +100,8 @@ auto more_main(int argc, char* argv[]) -> int {
         // Status line
         cfbox::terminal::invert_video(true);
         cfbox::terminal::move_cursor(rows, 1);
-        std::printf("--More--(%zu%%)", std::min(end * 100 / lines.size(), static_cast<std::size_t>(100)));
+        std::printf("--More--(%zu%%)",
+                    std::min(end * 100 / lines.size(), static_cast<std::size_t>(100)));
         cfbox::terminal::clear_line();
         cfbox::terminal::invert_video(false);
         std::fflush(stdout);
@@ -97,17 +109,19 @@ auto more_main(int argc, char* argv[]) -> int {
         // Wait for key
         while (true) {
             auto key = cfbox::tui::read_key(0, -1);
-            if (!key) continue;
+            if (!key)
+                continue;
 
-            if (key->is_char() && key->ch == 'q') return 0;
-            if (key->type == cfbox::tui::KeyType::Escape) return 0;
+            if (key->is_char() && key->ch == 'q')
+                return 0;
+            if (key->type == cfbox::tui::KeyType::Escape)
+                return 0;
 
             if (key->type == cfbox::tui::KeyType::Enter) {
                 top_line += 1;
                 break;
             }
-            if ((key->is_char() && key->ch == ' ') ||
-                key->type == cfbox::tui::KeyType::PageDown) {
+            if ((key->is_char() && key->ch == ' ') || key->type == cfbox::tui::KeyType::PageDown) {
                 top_line += static_cast<std::size_t>(usable_rows);
                 break;
             }

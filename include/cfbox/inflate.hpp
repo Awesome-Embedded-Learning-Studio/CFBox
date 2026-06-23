@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -28,9 +29,8 @@ class BitReader {
         }
     }
 
-public:
-    BitReader(const std::uint8_t* data, std::size_t size)
-        : data_(data), size_(size) {}
+  public:
+    BitReader(const std::uint8_t* data, std::size_t size) : data_(data), size_(size) {}
 
     auto read(int n) -> std::uint32_t {
         fill(n);
@@ -52,7 +52,10 @@ public:
 
     auto align() -> void {
         auto discard = static_cast<int>(buf_bits_ % 8);
-        if (discard > 0) { buf_ >>= discard; buf_bits_ -= discard; }
+        if (discard > 0) {
+            buf_ >>= discard;
+            buf_bits_ -= discard;
+        }
     }
 
     auto read_block(std::size_t n, std::uint8_t* out) -> bool {
@@ -64,7 +67,8 @@ public:
         }
         buf_bits_ = 0;
         buf_ = 0;
-        if (pos_ + n > size_) return false;
+        if (pos_ + n > size_)
+            return false;
         std::memcpy(out, data_ + pos_, n);
         pos_ += n;
         return true;
@@ -77,7 +81,9 @@ inline auto build_huffman_table(const std::vector<int>& lengths, int max_bits)
     std::vector<HuffEntry> table(sz, {0, 0});
 
     std::vector<int> bl_count(max_bits + 1, 0);
-    for (auto l : lengths) if (l > 0) bl_count[l]++;
+    for (auto l : lengths)
+        if (l > 0)
+            bl_count[l]++;
 
     std::vector<int> next_code(max_bits + 1, 0);
     int code = 0;
@@ -88,7 +94,8 @@ inline auto build_huffman_table(const std::vector<int>& lengths, int max_bits)
 
     for (std::size_t sym = 0; sym < lengths.size(); ++sym) {
         int len = lengths[sym];
-        if (len == 0) continue;
+        if (len == 0)
+            continue;
         int c = next_code[len]++;
         std::uint32_t rev = 0;
         for (int i = 0; i < len; ++i)
@@ -100,38 +107,34 @@ inline auto build_huffman_table(const std::vector<int>& lengths, int max_bits)
     return table;
 }
 
-inline auto decode_symbol(BitReader& br, const std::vector<HuffEntry>& table, int max_bits)
-    -> int {
+inline auto decode_symbol(BitReader& br, const std::vector<HuffEntry>& table, int max_bits) -> int {
     auto peek = br.peek(max_bits);
     auto& e = table[peek];
     br.skip(e.bits);
     return e.symbol;
 }
 
-static constexpr int length_base[] = {
-    3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-    35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258
-};
-static constexpr int length_extra[] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2,
-    3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0
-};
-static constexpr int dist_base[] = {
-    1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
-    257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-    8193, 12289, 16385, 24577
-};
-static constexpr int dist_extra[] = {
-    0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
-    7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13
-};
+static constexpr int length_base[] = {3,  4,  5,  6,   7,   8,   9,   10,  11, 13,
+                                      15, 17, 19, 23,  27,  31,  35,  43,  51, 59,
+                                      67, 83, 99, 115, 131, 163, 195, 227, 258};
+static constexpr int length_extra[] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
+                                       2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
+static constexpr int dist_base[] = {1,    2,    3,    4,    5,    7,    9,    13,    17,    25,
+                                    33,   49,   65,   97,   129,  193,  257,  385,   513,   769,
+                                    1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
+static constexpr int dist_extra[] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
+                                     6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 
 inline auto fixed_lit_lengths() -> std::vector<int> {
     std::vector<int> l(288);
-    for (int i = 0; i <= 143; ++i) l[static_cast<std::size_t>(i)] = 8;
-    for (int i = 144; i <= 255; ++i) l[static_cast<std::size_t>(i)] = 9;
-    for (int i = 256; i <= 279; ++i) l[static_cast<std::size_t>(i)] = 7;
-    for (int i = 280; i <= 287; ++i) l[static_cast<std::size_t>(i)] = 8;
+    for (int i = 0; i <= 143; ++i)
+        l[static_cast<std::size_t>(i)] = 8;
+    for (int i = 144; i <= 255; ++i)
+        l[static_cast<std::size_t>(i)] = 9;
+    for (int i = 256; i <= 279; ++i)
+        l[static_cast<std::size_t>(i)] = 7;
+    for (int i = 280; i <= 287; ++i)
+        l[static_cast<std::size_t>(i)] = 8;
     return l;
 }
 
@@ -139,14 +142,14 @@ inline auto fixed_dist_lengths() -> std::vector<int> {
     return std::vector<int>(32, 5);
 }
 
-inline auto decode_dynamic_tables(BitReader& br,
-    std::vector<HuffEntry>& lit_table, int& lit_bits,
-    std::vector<HuffEntry>& dist_table, int& dist_bits) -> bool {
+inline auto decode_dynamic_tables(BitReader& br, std::vector<HuffEntry>& lit_table, int& lit_bits,
+                                  std::vector<HuffEntry>& dist_table, int& dist_bits) -> bool {
     auto hlit = static_cast<std::size_t>(br.read(5)) + 257;
     auto hdist = static_cast<std::size_t>(br.read(5)) + 1;
     int hclen = static_cast<int>(br.read(4)) + 4;
 
-    static constexpr int cl_order[] = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
+    static constexpr int cl_order[] = {16, 17, 18, 0, 8,  7, 9,  6, 10, 5,
+                                       11, 4,  12, 3, 13, 2, 14, 1, 15};
     std::vector<int> cl_lengths(19, 0);
     for (int i = 0; i < hclen; ++i)
         cl_lengths[static_cast<std::size_t>(cl_order[i])] = static_cast<int>(br.read(3));
@@ -163,13 +166,16 @@ inline auto decode_dynamic_tables(BitReader& br,
         } else if (sym == 16) {
             int rep = static_cast<int>(br.read(2)) + 3;
             int prev = (i > 0) ? all[i - 1] : 0;
-            for (int j = 0; j < rep && i < total; ++j) all[i++] = prev;
+            for (int j = 0; j < rep && i < total; ++j)
+                all[i++] = prev;
         } else if (sym == 17) {
             int rep = static_cast<int>(br.read(3)) + 3;
-            for (int j = 0; j < rep && i < total; ++j) all[i++] = 0;
+            for (int j = 0; j < rep && i < total; ++j)
+                all[i++] = 0;
         } else if (sym == 18) {
             int rep = static_cast<int>(br.read(7)) + 11;
-            for (int j = 0; j < rep && i < total; ++j) all[i++] = 0;
+            for (int j = 0; j < rep && i < total; ++j)
+                all[i++] = 0;
         } else {
             return false;
         }
@@ -179,9 +185,11 @@ inline auto decode_dynamic_tables(BitReader& br,
     std::vector<int> dl(all.begin() + static_cast<std::ptrdiff_t>(hlit), all.end());
 
     lit_bits = 1;
-    for (auto v : ll) lit_bits = std::max(lit_bits, v);
+    for (auto v : ll)
+        lit_bits = std::max(lit_bits, v);
     dist_bits = 1;
-    for (auto v : dl) dist_bits = std::max(dist_bits, v);
+    for (auto v : dl)
+        dist_bits = std::max(dist_bits, v);
 
     lit_table = build_huffman_table(ll, lit_bits);
     dist_table = build_huffman_table(dl, dist_bits);
@@ -192,7 +200,8 @@ inline auto inflate(const std::uint8_t* data, std::size_t size, std::size_t expe
     -> std::string {
     BitReader br(data, size);
     std::string out;
-    if (expected > 0) out.reserve(expected);
+    if (expected > 0)
+        out.reserve(expected);
 
     bool done = false;
     while (!done) {
@@ -202,11 +211,12 @@ inline auto inflate(const std::uint8_t* data, std::size_t size, std::size_t expe
         if (btype == 0) {
             br.align();
             std::uint8_t hdr[4];
-            if (!br.read_block(4, hdr)) break;
-            auto len = static_cast<std::size_t>(hdr[0]) |
-                       (static_cast<std::size_t>(hdr[1]) << 8);
+            if (!br.read_block(4, hdr))
+                break;
+            auto len = static_cast<std::size_t>(hdr[0]) | (static_cast<std::size_t>(hdr[1]) << 8);
             std::string blk(len, '\0');
-            if (!br.read_block(len, reinterpret_cast<std::uint8_t*>(blk.data()))) break;
+            if (!br.read_block(len, reinterpret_cast<std::uint8_t*>(blk.data())))
+                break;
             out += blk;
         } else if (btype == 1 || btype == 2) {
             std::vector<HuffEntry> lt, dt;
@@ -215,9 +225,11 @@ inline auto inflate(const std::uint8_t* data, std::size_t size, std::size_t expe
             if (btype == 1) {
                 lt = build_huffman_table(fixed_lit_lengths(), 9);
                 dt = build_huffman_table(fixed_dist_lengths(), 5);
-                lb = 9; db = 5;
+                lb = 9;
+                db = 5;
             } else {
-                if (!decode_dynamic_tables(br, lt, lb, dt, db)) break;
+                if (!decode_dynamic_tables(br, lt, lb, dt, db))
+                    break;
             }
 
             for (;;) {
