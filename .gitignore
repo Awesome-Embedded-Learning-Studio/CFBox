@@ -64,3 +64,6 @@ third_party/linux/scripts/mod/
 third_party/linux/tools/objtool/objtool
 third_party/linux/source
 third_party/linux/*.cpio
+
+# Demo source video (large, not tracked)
+*.mp4
