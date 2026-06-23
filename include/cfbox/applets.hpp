@@ -337,6 +337,12 @@ extern auto clear_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_WHICH
 extern auto which_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_MOUNT
+extern auto mount_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_MDEV
+extern auto mdev_main(int argc, char* argv[]) -> int;
+#endif
 #if CFBOX_ENABLE_MOUNTPOINT
 extern auto mountpoint_main(int argc, char* argv[]) -> int;
 #endif
@@ -349,135 +355,145 @@ extern auto chown_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_CHGRP
 extern auto chgrp_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_UMOUNT
+extern auto umount_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_SWAPOFF
+extern auto swapoff_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_REBOOT
+extern auto reboot_main(int argc, char* argv[]) -> int;
+extern auto poweroff_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #if CFBOX_ENABLE_ECHO
-    {"echo",   echo_main,   "display a line of text"},
+    {"echo", echo_main, "display a line of text"},
 #endif
 #if CFBOX_ENABLE_PRINTF
     {"printf", printf_main, "format and print data"},
 #endif
 #if CFBOX_ENABLE_CAT
-    {"cat",    cat_main,    "concatenate files and print"},
+    {"cat", cat_main, "concatenate files and print"},
 #endif
 #if CFBOX_ENABLE_HEAD
-    {"head",   head_main,   "output the first part of files"},
+    {"head", head_main, "output the first part of files"},
 #endif
 #if CFBOX_ENABLE_TAIL
-    {"tail",   tail_main,   "output the last part of files"},
+    {"tail", tail_main, "output the last part of files"},
 #endif
 #if CFBOX_ENABLE_WC
-    {"wc",     wc_main,     "print newline, word, and byte counts"},
+    {"wc", wc_main, "print newline, word, and byte counts"},
 #endif
 #if CFBOX_ENABLE_SORT
-    {"sort",   sort_main,   "sort lines of text"},
+    {"sort", sort_main, "sort lines of text"},
 #endif
 #if CFBOX_ENABLE_UNIQ
-    {"uniq",   uniq_main,   "report or omit repeated lines"},
+    {"uniq", uniq_main, "report or omit repeated lines"},
 #endif
 #if CFBOX_ENABLE_MKDIR
-    {"mkdir",  mkdir_main,  "create directories"},
+    {"mkdir", mkdir_main, "create directories"},
 #endif
 #if CFBOX_ENABLE_RM
-    {"rm",     rm_main,     "remove files or directories"},
+    {"rm", rm_main, "remove files or directories"},
 #endif
 #if CFBOX_ENABLE_CP
-    {"cp",     cp_main,     "copy files and directories"},
+    {"cp", cp_main, "copy files and directories"},
 #endif
 #if CFBOX_ENABLE_MV
-    {"mv",     mv_main,     "move or rename files"},
+    {"mv", mv_main, "move or rename files"},
 #endif
 #if CFBOX_ENABLE_LS
-    {"ls",     ls_main,     "list directory contents"},
+    {"ls", ls_main, "list directory contents"},
 #endif
 #if CFBOX_ENABLE_GREP
-    {"grep",   grep_main,   "search patterns in text"},
+    {"grep", grep_main, "search patterns in text"},
 #endif
 #if CFBOX_ENABLE_FIND
-    {"find",   find_main,   "search for files in directory hierarchy"},
+    {"find", find_main, "search for files in directory hierarchy"},
 #endif
 #if CFBOX_ENABLE_SED
-    {"sed",    sed_main,    "stream editor for filtering and transforming text"},
+    {"sed", sed_main, "stream editor for filtering and transforming text"},
 #endif
 #if CFBOX_ENABLE_INIT
-    {"init",   init_main,   "system init for boot testing (PID 1)"},
+    {"init", init_main, "system init for boot testing (PID 1)"},
 #endif
 #if CFBOX_ENABLE_TRUE
-    {"true",   true_main,   "do nothing, exit with status 0"},
+    {"true", true_main, "do nothing, exit with status 0"},
 #endif
 #if CFBOX_ENABLE_FALSE
-    {"false",  false_main,  "do nothing, exit with status 1"},
+    {"false", false_main, "do nothing, exit with status 1"},
 #endif
 #if CFBOX_ENABLE_YES
-    {"yes",    yes_main,    "output a string repeatedly until killed"},
+    {"yes", yes_main, "output a string repeatedly until killed"},
 #endif
 #if CFBOX_ENABLE_PWD
-    {"pwd",    pwd_main,    "print working directory"},
+    {"pwd", pwd_main, "print working directory"},
 #endif
 #if CFBOX_ENABLE_BASENAME
     {"basename", basename_main, "strip directory and suffix from file names"},
 #endif
 #if CFBOX_ENABLE_DIRNAME
-    {"dirname",  dirname_main,  "strip last component from file name"},
+    {"dirname", dirname_main, "strip last component from file name"},
 #endif
 #if CFBOX_ENABLE_UNAME
-    {"uname",  uname_main,  "print system information"},
+    {"uname", uname_main, "print system information"},
 #endif
 #if CFBOX_ENABLE_NPROC
-    {"nproc",  nproc_main,  "print number of available processors"},
+    {"nproc", nproc_main, "print number of available processors"},
 #endif
 #if CFBOX_ENABLE_LINK
-    {"link",   link_main,   "create a hard link"},
+    {"link", link_main, "create a hard link"},
 #endif
 #if CFBOX_ENABLE_HOSTNAME
     {"hostname", hostname_main, "show or set the system host name"},
 #endif
 #if CFBOX_ENABLE_LOGNAME
-    {"logname", logname_main,  "print the user's login name"},
+    {"logname", logname_main, "print the user's login name"},
 #endif
 #if CFBOX_ENABLE_WHOAMI
     {"whoami", whoami_main, "print effective user ID"},
 #endif
 #if CFBOX_ENABLE_TTY
-    {"tty",    tty_main,    "print the file name of the terminal connected to stdin"},
+    {"tty", tty_main, "print the file name of the terminal connected to stdin"},
 #endif
 #if CFBOX_ENABLE_SLEEP
-    {"sleep",  sleep_main,  "delay for a specified amount of time"},
+    {"sleep", sleep_main, "delay for a specified amount of time"},
 #endif
 #if CFBOX_ENABLE_ID
-    {"id",     id_main,     "print real and effective user and group IDs"},
+    {"id", id_main, "print real and effective user and group IDs"},
 #endif
 #if CFBOX_ENABLE_TEST
-    {"test",   test_main,   "evaluate conditional expression"},
-    {"[",      test_main,   "evaluate conditional expression"},
+    {"test", test_main, "evaluate conditional expression"},
+    {"[", test_main, "evaluate conditional expression"},
 #endif
 #if CFBOX_ENABLE_SH
-    {"sh",     sh_main,     "POSIX shell command interpreter"},
+    {"sh", sh_main, "POSIX shell command interpreter"},
 #endif
 #if CFBOX_ENABLE_PRINTENV
     {"printenv", printenv_main, "print all or part of environment"},
 #endif
 #if CFBOX_ENABLE_HOSTID
-    {"hostid",  hostid_main,  "print the numeric identifier for the current host"},
+    {"hostid", hostid_main, "print the numeric identifier for the current host"},
 #endif
 #if CFBOX_ENABLE_SYNC
-    {"sync",    sync_main,    "synchronize cached writes to persistent storage"},
+    {"sync", sync_main, "synchronize cached writes to persistent storage"},
 #endif
 #if CFBOX_ENABLE_USLEEP
-    {"usleep",  usleep_main,  "sleep for a specified number of microseconds"},
+    {"usleep", usleep_main, "sleep for a specified number of microseconds"},
 #endif
 #if CFBOX_ENABLE_RMDIR
-    {"rmdir",   rmdir_main,   "remove empty directories"},
+    {"rmdir", rmdir_main, "remove empty directories"},
 #endif
 #if CFBOX_ENABLE_UNLINK
-    {"unlink",  unlink_main,  "call the unlink function to remove a file"},
+    {"unlink", unlink_main, "call the unlink function to remove a file"},
 #endif
 #if CFBOX_ENABLE_WHO
-    {"who",     who_main,     "show who is logged on"},
+    {"who", who_main, "show who is logged on"},
 #endif
 #if CFBOX_ENABLE_ENV
-    {"env",     env_main,     "run a program in a modified environment"},
+    {"env", env_main, "run a program in a modified environment"},
 #endif
 #if CFBOX_ENABLE_READLINK
     {"readlink", readlink_main, "print the value of a symbolic link"},
@@ -486,217 +502,233 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
     {"realpath", realpath_main, "print the resolved path"},
 #endif
 #if CFBOX_ENABLE_TOUCH
-    {"touch",    touch_main,    "change file timestamps"},
+    {"touch", touch_main, "change file timestamps"},
 #endif
 #if CFBOX_ENABLE_TRUNCATE
     {"truncate", truncate_main, "shrink or extend the size of a file"},
 #endif
 #if CFBOX_ENABLE_STAT
-    {"stat",     stat_main,     "display file or file system status"},
+    {"stat", stat_main, "display file or file system status"},
 #endif
 #if CFBOX_ENABLE_INSTALL
-    {"install",  install_main,  "copy files and set attributes"},
+    {"install", install_main, "copy files and set attributes"},
 #endif
 #if CFBOX_ENABLE_MKTEMP
-    {"mktemp",   mktemp_main,   "create a temporary file or directory"},
+    {"mktemp", mktemp_main, "create a temporary file or directory"},
 #endif
 #if CFBOX_ENABLE_LN
-    {"ln",       ln_main,       "make links between files"},
+    {"ln", ln_main, "make links between files"},
 #endif
 #if CFBOX_ENABLE_MKFIFO
-    {"mkfifo",   mkfifo_main,   "make FIFOs (named pipes)"},
+    {"mkfifo", mkfifo_main, "make FIFOs (named pipes)"},
 #endif
 #if CFBOX_ENABLE_MKNOD
-    {"mknod",    mknod_main,    "make block or character special files"},
+    {"mknod", mknod_main, "make block or character special files"},
 #endif
 #if CFBOX_ENABLE_DU
-    {"du",       du_main,       "estimate file space usage"},
+    {"du", du_main, "estimate file space usage"},
 #endif
 #if CFBOX_ENABLE_SEQ
-    {"seq",      seq_main,      "print a sequence of numbers"},
+    {"seq", seq_main, "print a sequence of numbers"},
 #endif
 #if CFBOX_ENABLE_TEE
-    {"tee",      tee_main,      "read from stdin and write to stdout and files"},
+    {"tee", tee_main, "read from stdin and write to stdout and files"},
 #endif
 #if CFBOX_ENABLE_TAC
-    {"tac",      tac_main,      "concatenate and print files in reverse"},
+    {"tac", tac_main, "concatenate and print files in reverse"},
 #endif
 #if CFBOX_ENABLE_FOLD
-    {"fold",     fold_main,     "wrap each input line to fit in specified width"},
+    {"fold", fold_main, "wrap each input line to fit in specified width"},
 #endif
 #if CFBOX_ENABLE_EXPAND
-    {"expand",   expand_main,   "convert tabs to spaces"},
+    {"expand", expand_main, "convert tabs to spaces"},
 #endif
 #if CFBOX_ENABLE_CUT
-    {"cut",      cut_main,      "remove sections from each line of files"},
+    {"cut", cut_main, "remove sections from each line of files"},
 #endif
 #if CFBOX_ENABLE_PASTE
-    {"paste",    paste_main,    "merge lines of files"},
+    {"paste", paste_main, "merge lines of files"},
 #endif
 #if CFBOX_ENABLE_NL
-    {"nl",       nl_main,       "number lines of files"},
+    {"nl", nl_main, "number lines of files"},
 #endif
 #if CFBOX_ENABLE_COMM
-    {"comm",     comm_main,     "compare two sorted files line by line"},
+    {"comm", comm_main, "compare two sorted files line by line"},
 #endif
 #if CFBOX_ENABLE_TR
-    {"tr",       tr_main,       "translate, squeeze, and/or delete characters"},
+    {"tr", tr_main, "translate, squeeze, and/or delete characters"},
 #endif
 #if CFBOX_ENABLE_CKSUM
-    {"cksum",    cksum_main,    "checksum and count the bytes in a file"},
+    {"cksum", cksum_main, "checksum and count the bytes in a file"},
 #endif
 #if CFBOX_ENABLE_MD5SUM
-    {"md5sum",   md5sum_main,   "compute and check MD5 message digest"},
+    {"md5sum", md5sum_main, "compute and check MD5 message digest"},
 #endif
 #if CFBOX_ENABLE_SUM
-    {"sum",      sum_main,      "checksum and count the blocks in a file"},
+    {"sum", sum_main, "checksum and count the blocks in a file"},
 #endif
 #if CFBOX_ENABLE_DATE
-    {"date",     date_main,     "print or set the system date and time"},
+    {"date", date_main, "print or set the system date and time"},
 #endif
 #if CFBOX_ENABLE_OD
-    {"od",       od_main,       "dump files in octal and other formats"},
+    {"od", od_main, "dump files in octal and other formats"},
 #endif
 #if CFBOX_ENABLE_SPLIT
-    {"split",    split_main,    "split a file into pieces"},
+    {"split", split_main, "split a file into pieces"},
 #endif
 #if CFBOX_ENABLE_SHUF
-    {"shuf",     shuf_main,     "generate random permutations"},
+    {"shuf", shuf_main, "generate random permutations"},
 #endif
 #if CFBOX_ENABLE_FACTOR
-    {"factor",   factor_main,   "print the prime factors of numbers"},
+    {"factor", factor_main, "print the prime factors of numbers"},
 #endif
 #if CFBOX_ENABLE_TIMEOUT
-    {"timeout",  timeout_main,  "run a command with a time limit"},
+    {"timeout", timeout_main, "run a command with a time limit"},
 #endif
 #if CFBOX_ENABLE_NICE
-    {"nice",     nice_main,     "run a program with modified scheduling priority"},
+    {"nice", nice_main, "run a program with modified scheduling priority"},
 #endif
 #if CFBOX_ENABLE_NOHUP
-    {"nohup",    nohup_main,    "run a command immune to hangups"},
+    {"nohup", nohup_main, "run a command immune to hangups"},
 #endif
 #if CFBOX_ENABLE_DF
-    {"df",       df_main,       "report file system disk space usage"},
+    {"df", df_main, "report file system disk space usage"},
 #endif
 #if CFBOX_ENABLE_EXPR
-    {"expr",     expr_main,     "evaluate expressions"},
+    {"expr", expr_main, "evaluate expressions"},
 #endif
 #if CFBOX_ENABLE_TSORT
-    {"tsort",    tsort_main,    "perform topological sort"},
+    {"tsort", tsort_main, "perform topological sort"},
 #endif
 #if CFBOX_ENABLE_XARGS
-    {"xargs",    xargs_main,    "build and execute command lines from stdin"},
+    {"xargs", xargs_main, "build and execute command lines from stdin"},
 #endif
 #if CFBOX_ENABLE_GZIP
-    {"gzip",     gzip_main,     "compress files"},
+    {"gzip", gzip_main, "compress files"},
 #endif
 #if CFBOX_ENABLE_GUNZIP
-    {"gunzip",   gunzip_main,   "decompress files"},
+    {"gunzip", gunzip_main, "decompress files"},
 #endif
 #if CFBOX_ENABLE_DIFF
-    {"diff",     diff_main,     "compare files line by line"},
+    {"diff", diff_main, "compare files line by line"},
 #endif
 #if CFBOX_ENABLE_CMP
-    {"cmp",      cmp_main,      "compare two files byte by byte"},
+    {"cmp", cmp_main, "compare two files byte by byte"},
 #endif
 #if CFBOX_ENABLE_PATCH
-    {"patch",    patch_main,    "apply a diff file to an original"},
+    {"patch", patch_main, "apply a diff file to an original"},
 #endif
 #if CFBOX_ENABLE_ED
-    {"ed",       ed_main,       "line-oriented text editor"},
+    {"ed", ed_main, "line-oriented text editor"},
 #endif
 #if CFBOX_ENABLE_TAR
-    {"tar",      tar_main,      "create, extract, or list tar archives"},
+    {"tar", tar_main, "create, extract, or list tar archives"},
 #endif
 #if CFBOX_ENABLE_CPIO
-    {"cpio",     cpio_main,     "copy files to and from archives"},
+    {"cpio", cpio_main, "copy files to and from archives"},
 #endif
 #if CFBOX_ENABLE_AR
-    {"ar",       ar_main,       "create, modify, and extract from archives"},
+    {"ar", ar_main, "create, modify, and extract from archives"},
 #endif
 #if CFBOX_ENABLE_UNZIP
-    {"unzip",    unzip_main,    "list, test and extract compressed files in a ZIP archive"},
+    {"unzip", unzip_main, "list, test and extract compressed files in a ZIP archive"},
 #endif
 #if CFBOX_ENABLE_AWK
-    {"awk",      awk_main,      "pattern-directed scanning and processing language"},
+    {"awk", awk_main, "pattern-directed scanning and processing language"},
 #endif
 #if CFBOX_ENABLE_FREE
-    {"free",     free_main,     "display amount of free and used memory"},
+    {"free", free_main, "display amount of free and used memory"},
 #endif
 #if CFBOX_ENABLE_UPTIME
-    {"uptime",   uptime_main,   "tell how long the system has been running"},
+    {"uptime", uptime_main, "tell how long the system has been running"},
 #endif
 #if CFBOX_ENABLE_KILL
-    {"kill",     kill_main,     "send a signal to a process"},
+    {"kill", kill_main, "send a signal to a process"},
 #endif
 #if CFBOX_ENABLE_PIDOF
-    {"pidof",    pidof_main,    "find the process ID of a running program"},
+    {"pidof", pidof_main, "find the process ID of a running program"},
 #endif
 #if CFBOX_ENABLE_PS
-    {"ps",       ps_main,       "report a snapshot of current processes"},
+    {"ps", ps_main, "report a snapshot of current processes"},
 #endif
 #if CFBOX_ENABLE_PGREP
-    {"pgrep",    pgrep_main,    "look up processes based on name"},
-    {"pkill",    pgrep_main,    "signal processes based on name"},
+    {"pgrep", pgrep_main, "look up processes based on name"},
+    {"pkill", pgrep_main, "signal processes based on name"},
 #endif
 #if CFBOX_ENABLE_SYSCTL
-    {"sysctl",   sysctl_main,   "configure kernel parameters at runtime"},
+    {"sysctl", sysctl_main, "configure kernel parameters at runtime"},
 #endif
 #if CFBOX_ENABLE_PWDX
-    {"pwdx",     pwdx_main,     "print working directory of a process"},
+    {"pwdx", pwdx_main, "print working directory of a process"},
 #endif
 #if CFBOX_ENABLE_PSTREE
-    {"pstree",   pstree_main,   "display a tree of processes"},
+    {"pstree", pstree_main, "display a tree of processes"},
 #endif
 #if CFBOX_ENABLE_PMAP
-    {"pmap",     pmap_main,     "display memory map of a process"},
+    {"pmap", pmap_main, "display memory map of a process"},
 #endif
 #if CFBOX_ENABLE_FUSER
-    {"fuser",    fuser_main,    "identify processes using files or sockets"},
+    {"fuser", fuser_main, "identify processes using files or sockets"},
 #endif
 #if CFBOX_ENABLE_IOSTAT
-    {"iostat",   iostat_main,   "report CPU and I/O statistics"},
+    {"iostat", iostat_main, "report CPU and I/O statistics"},
 #endif
 #if CFBOX_ENABLE_WATCH
-    {"watch",    watch_main,    "execute a program periodically"},
+    {"watch", watch_main, "execute a program periodically"},
 #endif
 #if CFBOX_ENABLE_TOP
-    {"top",      top_main,      "display Linux processes"},
+    {"top", top_main, "display Linux processes"},
 #endif
 #if CFBOX_ENABLE_DMESG
-    {"dmesg",    dmesg_main,    "print kernel ring buffer"},
+    {"dmesg", dmesg_main, "print kernel ring buffer"},
 #endif
 #if CFBOX_ENABLE_HEXDUMP
-    {"hexdump",  hexdump_main,  "display file contents in hexadecimal"},
+    {"hexdump", hexdump_main, "display file contents in hexadecimal"},
 #endif
 #if CFBOX_ENABLE_MORE
-    {"more",     more_main,     "file perusal filter for crt viewing"},
+    {"more", more_main, "file perusal filter for crt viewing"},
 #endif
 #if CFBOX_ENABLE_REV
-    {"rev",      rev_main,      "reverse lines characterwise"},
+    {"rev", rev_main, "reverse lines characterwise"},
 #endif
 #if CFBOX_ENABLE_CAL
-    {"cal",      cal_main,      "display a calendar"},
+    {"cal", cal_main, "display a calendar"},
 #endif
 #if CFBOX_ENABLE_RENICE
-    {"renice",   renice_main,   "alter priority of running processes"},
+    {"renice", renice_main, "alter priority of running processes"},
 #endif
 #if CFBOX_ENABLE_CLEAR
-    {"clear",    clear_main,    "clear the terminal screen"},
+    {"clear", clear_main, "clear the terminal screen"},
 #endif
 #if CFBOX_ENABLE_WHICH
-    {"which",    which_main,    "locate a command"},
+    {"which", which_main, "locate a command"},
+#endif
+#if CFBOX_ENABLE_MOUNT
+    {"mount", mount_main, "mount a filesystem"},
+#endif
+#if CFBOX_ENABLE_MDEV
+    {"mdev", mdev_main, "populate /dev from sysfs"},
 #endif
 #if CFBOX_ENABLE_MOUNTPOINT
     {"mountpoint", mountpoint_main, "check if a path is a mountpoint"},
 #endif
 #if CFBOX_ENABLE_CHMOD
-    {"chmod",    chmod_main,    "change file mode bits"},
+    {"chmod", chmod_main, "change file mode bits"},
 #endif
 #if CFBOX_ENABLE_CHOWN
-    {"chown",    chown_main,    "change file owner and group"},
+    {"chown", chown_main, "change file owner and group"},
 #endif
 #if CFBOX_ENABLE_CHGRP
-    {"chgrp",    chgrp_main,    "change group ownership"},
+    {"chgrp", chgrp_main, "change group ownership"},
+#endif
+#if CFBOX_ENABLE_UMOUNT
+    {"umount", umount_main, "unmount filesystems"},
+#endif
+#if CFBOX_ENABLE_SWAPOFF
+    {"swapoff", swapoff_main, "disable swap"},
+#endif
+#if CFBOX_ENABLE_REBOOT
+    {"reboot", reboot_main, "reboot the system"},
+    {"poweroff", poweroff_main, "power off the system"},
 #endif
 });

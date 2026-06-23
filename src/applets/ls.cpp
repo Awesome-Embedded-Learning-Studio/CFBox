@@ -2,14 +2,18 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <grp.h>
+#include <pwd.h>
 #include <string>
 #include <string_view>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/error.hpp>
 #include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
-#include <cfbox/error.hpp>
 
 namespace {
 
@@ -34,14 +38,14 @@ auto format_permissions(std::filesystem::perms p) -> std::string {
     char buf[11];
     buf[0] = '-'; // will be overridden for special types
 
-    buf[1] = (p & std::filesystem::perms::owner_read)  != std::filesystem::perms::none ? 'r' : '-';
+    buf[1] = (p & std::filesystem::perms::owner_read) != std::filesystem::perms::none ? 'r' : '-';
     buf[2] = (p & std::filesystem::perms::owner_write) != std::filesystem::perms::none ? 'w' : '-';
-    buf[3] = (p & std::filesystem::perms::owner_exec)  != std::filesystem::perms::none ? 'x' : '-';
-    buf[4] = (p & std::filesystem::perms::group_read)  != std::filesystem::perms::none ? 'r' : '-';
+    buf[3] = (p & std::filesystem::perms::owner_exec) != std::filesystem::perms::none ? 'x' : '-';
+    buf[4] = (p & std::filesystem::perms::group_read) != std::filesystem::perms::none ? 'r' : '-';
     buf[5] = (p & std::filesystem::perms::group_write) != std::filesystem::perms::none ? 'w' : '-';
-    buf[6] = (p & std::filesystem::perms::group_exec)  != std::filesystem::perms::none ? 'x' : '-';
+    buf[6] = (p & std::filesystem::perms::group_exec) != std::filesystem::perms::none ? 'x' : '-';
     buf[7] = (p & std::filesystem::perms::others_read) != std::filesystem::perms::none ? 'r' : '-';
-    buf[8] = (p & std::filesystem::perms::others_write)!= std::filesystem::perms::none ? 'w' : '-';
+    buf[8] = (p & std::filesystem::perms::others_write) != std::filesystem::perms::none ? 'w' : '-';
     buf[9] = (p & std::filesystem::perms::others_exec) != std::filesystem::perms::none ? 'x' : '-';
     buf[10] = '\0';
     return std::string{buf, 10};
@@ -49,13 +53,20 @@ auto format_permissions(std::filesystem::perms p) -> std::string {
 
 auto format_type_char(std::filesystem::file_type type) -> char {
     switch (type) {
-        case std::filesystem::file_type::directory:     return 'd';
-        case std::filesystem::file_type::symlink:       return 'l';
-        case std::filesystem::file_type::block:         return 'b';
-        case std::filesystem::file_type::character:     return 'c';
-        case std::filesystem::file_type::fifo:          return 'p';
-        case std::filesystem::file_type::socket:        return 's';
-        default:                                         return '-';
+        case std::filesystem::file_type::directory:
+            return 'd';
+        case std::filesystem::file_type::symlink:
+            return 'l';
+        case std::filesystem::file_type::block:
+            return 'b';
+        case std::filesystem::file_type::character:
+            return 'c';
+        case std::filesystem::file_type::fifo:
+            return 'p';
+        case std::filesystem::file_type::socket:
+            return 's';
+        default:
+            return '-';
     }
 }
 
@@ -68,10 +79,25 @@ auto format_time(std::filesystem::file_time_type ftime) -> std::string {
     return buf;
 }
 
+// Resolve uid/gid to a name; fall back to the numeric id when NSS cannot
+// resolve it (a statically linked cfbox on a minimal rootfs has no NSS libs,
+// so names silently fail — show the number instead of a blank field).
+auto owner_of(uid_t uid) -> std::string {
+    if (auto* pw = getpwuid(uid))
+        return pw->pw_name;
+    return std::to_string(uid);
+}
+
+auto group_of(gid_t gid) -> std::string {
+    if (auto* gr = getgrgid(gid))
+        return gr->gr_name;
+    return std::to_string(gid);
+}
+
 struct LsOptions {
-    bool all = false;       // -a
+    bool all = false;         // -a
     bool long_format = false; // -l
-    bool human = false;     // -h
+    bool human = false;       // -h
 };
 
 auto list_directory(const std::string& path, const LsOptions& opts) -> int {
@@ -88,21 +114,23 @@ auto list_directory(const std::string& path, const LsOptions& opts) -> int {
     visible.reserve(entries.size());
     for (const auto& e : entries) {
         std::string name = e.path().filename().string();
-        if (!opts.all && !name.empty() && name[0] == '.') continue;
+        if (!opts.all && !name.empty() && name[0] == '.')
+            continue;
         visible.push_back(e);
     }
 
     // Sort entries
-    std::sort(visible.begin(), visible.end(),
-              [](const std::filesystem::directory_entry& a,
-                 const std::filesystem::directory_entry& b) {
-                  return a.path().filename().string() < b.path().filename().string();
-              });
+    std::sort(
+        visible.begin(), visible.end(),
+        [](const std::filesystem::directory_entry& a, const std::filesystem::directory_entry& b) {
+            return a.path().filename().string() < b.path().filename().string();
+        });
 
     if (opts.long_format) {
         for (const auto& e : visible) {
             auto status_result = cfbox::fs::symlink_status(e.path().string());
-            if (!status_result) continue;
+            if (!status_result)
+                continue;
             auto& st = status_result.value();
 
             char type_char = format_type_char(st.type());
@@ -129,6 +157,13 @@ auto list_directory(const std::string& path, const LsOptions& opts) -> int {
             }
 
             std::string name = e.path().filename().string();
+            std::string owner = "?";
+            std::string group = "?";
+            struct stat lst;
+            if (::lstat(e.path().string().c_str(), &lst) == 0) {
+                owner = owner_of(lst.st_uid);
+                group = group_of(lst.st_gid);
+            }
             if (st.type() == std::filesystem::file_type::symlink) {
                 std::error_code ec;
                 auto target = std::filesystem::read_symlink(e.path(), ec);
@@ -137,15 +172,9 @@ auto list_directory(const std::string& path, const LsOptions& opts) -> int {
                 }
             }
 
-            std::printf("%s %3ju %-8s %-8s %*s %s %s\n",
-                        perms.c_str(),
-                        static_cast<std::uintmax_t>(nlinks),
-                        "", // owner (placeholder)
-                        "", // group (placeholder)
-                        opts.human ? 5 : 8,
-                        size_str.c_str(),
-                        time_str.c_str(),
-                        name.c_str());
+            std::printf("%s %3ju %-8s %-8s %*s %s %s\n", perms.c_str(),
+                        static_cast<std::uintmax_t>(nlinks), owner.c_str(), group.c_str(),
+                        opts.human ? 5 : 8, size_str.c_str(), time_str.c_str(), name.c_str());
         }
     } else {
         for (const auto& e : visible) {
@@ -189,15 +218,17 @@ auto list_path(const std::string& path, const LsOptions& opts, bool show_header)
 
             std::string size_str = opts.human ? format_size_human(size) : std::to_string(size);
             std::string name = std::filesystem::path{path}.filename().string();
+            std::string owner = "?";
+            std::string group = "?";
+            struct stat lst;
+            if (::lstat(path.c_str(), &lst) == 0) {
+                owner = owner_of(lst.st_uid);
+                group = group_of(lst.st_gid);
+            }
 
-            std::printf("%s %3ju %-8s %-8s %*s %s %s\n",
-                        perms.c_str(),
-                        static_cast<std::uintmax_t>(nlinks),
-                        "", "",
-                        opts.human ? 5 : 8,
-                        size_str.c_str(),
-                        time_str.c_str(),
-                        name.c_str());
+            std::printf("%s %3ju %-8s %-8s %*s %s %s\n", perms.c_str(),
+                        static_cast<std::uintmax_t>(nlinks), owner.c_str(), group.c_str(),
+                        opts.human ? 5 : 8, size_str.c_str(), time_str.c_str(), name.c_str());
         } else {
             auto fname = std::filesystem::path{path}.filename().string();
             std::printf("%s\n", fname.c_str());
@@ -212,27 +243,34 @@ auto list_path(const std::string& path, const LsOptions& opts, bool show_header)
 }
 
 constexpr cfbox::help::HelpEntry HELP = {
-    .name    = "ls",
+    .name = "ls",
     .version = CFBOX_VERSION_STRING,
     .one_line = "list directory contents",
-    .usage   = "ls [OPTIONS] [FILE]...",
+    .usage = "ls [OPTIONS] [FILE]...",
     .options = "  -a     do not ignore entries starting with .\n"
                "  -l     use a long listing format\n"
                "  -h     print sizes in human readable format",
-    .extra   = "",
+    .extra = "",
 };
 
 } // namespace
 
 auto ls_main(int argc, char* argv[]) -> int {
-    auto parsed = cfbox::args::parse(argc, argv, {
-        cfbox::args::OptSpec{'a', false, "all"},
-        cfbox::args::OptSpec{'l', false, "long"},
-        cfbox::args::OptSpec{'h', false, "human-readable"},
-    });
+    auto parsed = cfbox::args::parse(argc, argv,
+                                     {
+                                         cfbox::args::OptSpec{'a', false, "all"},
+                                         cfbox::args::OptSpec{'l', false, "long"},
+                                         cfbox::args::OptSpec{'h', false, "human-readable"},
+                                     });
 
-    if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
-    if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
+    if (parsed.has_long("help")) {
+        cfbox::help::print_help(HELP);
+        return 0;
+    }
+    if (parsed.has_long("version")) {
+        cfbox::help::print_version(HELP);
+        return 0;
+    }
 
     LsOptions opts;
     opts.all = parsed.has('a');

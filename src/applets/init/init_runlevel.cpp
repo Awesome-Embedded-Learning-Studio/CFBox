@@ -10,9 +10,9 @@ auto run_sysinit(InitState& state) -> void {
 
     // Mount essential filesystems if PID 1
     if (state.is_pid1) {
-        mount("proc",     "/proc", "proc",     0, nullptr);
-        mount("sysfs",    "/sys",  "sysfs",    0, nullptr);
-        mount("devtmpfs", "/dev",  "devtmpfs", 0, nullptr);
+        mount("proc", "/proc", "proc", 0, nullptr);
+        mount("sysfs", "/sys", "sysfs", 0, nullptr);
+        mount("devtmpfs", "/dev", "devtmpfs", 0, nullptr);
     }
 
     // Run sysinit entries (sequentially, wait for each)
@@ -52,9 +52,13 @@ auto run_level_entries(InitState& state, const std::string& level) -> void {
         bool should_respawn = (e.action == "respawn");
         bool should_wait = (e.action == "wait");
         bool is_once = (e.action == "once");
+        bool is_askfirst = (e.action == "askfirst");
 
-        if (should_respawn || is_once || should_wait) {
-            auto pid = spawn_process(state, e, should_respawn);
+        if (should_respawn || is_once || should_wait || is_askfirst) {
+            // askfirst is tracked and restarted like respawn, but each launch
+            // waits for a console keypress before exec'ing the process.
+            bool track = should_respawn || is_askfirst;
+            auto pid = spawn_process(state, e, track, is_askfirst);
             if (pid > 0 && should_wait) {
                 int status = 0;
                 waitpid(pid, &status, 0);
