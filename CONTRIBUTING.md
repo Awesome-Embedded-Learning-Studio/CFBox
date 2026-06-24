@@ -31,7 +31,7 @@ Release builds use `-O2` by default and enable LTO. For size-optimized builds, a
 ## Running Tests
 
 ```bash
-# Unit tests (331 GTest cases)
+# Unit tests (399 GTest cases)
 ctest --test-dir build --output-on-failure
 
 # Integration tests (54 shell scripts comparing against GNU coreutils)

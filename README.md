@@ -159,7 +159,7 @@ echo "Hello, World!"   # 通过符号链接调用 cfbox
 
 ## 下一步计划
 
-当前版本 v0.2.0+。**Phase 1.5 代码质量审查 + L2 rootfs 启动骨架已完成**(cfbox 已上 i.MX6ULL),进入 Phase 2 核心命令深化:
+当前版本 v0.3.0。**Phase 1.5 代码质量审查 + L2 rootfs 启动骨架已完成**(cfbox 已上 i.MX6ULL),进入 Phase 2 核心命令深化:
 
 ### 已完成:L2 rootfs 启动骨架(✅ 端到端验证)
 

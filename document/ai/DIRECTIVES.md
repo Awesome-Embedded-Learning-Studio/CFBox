@@ -11,7 +11,7 @@
 - **公共基础设施复用**：文件系统操作走 `cfbox::fs::*`（返回 `Result<T>`），I/O 走 `cfbox::io::*`（流式 `for_each_line()` 优先于 `read_all()`），参数解析走 `cfbox::args`，流处理走 `cfbox::stream`。**勿在各 applet 里重复造递归遍历/错误格式/POSIX 封装**（质量扫描 A 维度盯这些）。
 - **RAII 资源管理**：`unique_file`（FILE*）、`scoped_regex`（regex_t）、`unique_pipe`（popen/pclose）—— ASan 验证零泄漏。**禁止裸 FILE*/regfree 漏 close 路径**。
 - **零外部依赖**：手写轻量 deflate/inflate 替代 zlib（[deflate.hpp](../../include/cfbox/deflate.hpp)/[inflate.hpp](../../include/cfbox/inflate.hpp)）；regex 走 POSIX `regex_t` 而非 `std::regex`。新增可选依赖必须经构建开关隔离。
-- **体积预算（头等约束）**：size-opt 构建（`-Os` + LTO + strip）目标 **≤ 550 KB**，当前 406 KB。新增代码须核查体积影响；优先流式处理、避免 iostream/`<filesystem>` 滥用、控制 inline 膨胀（质量扫描 B 维度）。
+- **体积预算（头等约束）**：size-opt 构建（`-Os` + LTO + strip）目标 **≤ 550 KB**，当前 418 KB。新增代码须核查体积影响；优先流式处理、避免 iostream/`<filesystem>` 滥用、控制 inline 膨胀（质量扫描 B 维度）。
 
 ## B. 编码 / 注释约定
 
@@ -23,7 +23,7 @@
 
 ## C. 操作模型（长期，Claude 主力开发）
 
-- **L1 一批一commit一验证**：`cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure`（379 GTest，93 文件）**且** `bash tests/integration/run_all.sh`（54 脚本）全绿才提交；红则不提交、不更新 PLAN。
+- **L1 一批一commit一验证**：`cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure`（399 GTest，98 文件）**且** `bash tests/integration/run_all.sh`（54 脚本）全绿才提交；红则不提交、不更新 PLAN。
 - **L2 提交信息** `<type>(<scope>): <简述>`——**英文**简述变更（对齐既有 git 历史），**不带 Co-Authored-By 或任何 AI 署名 trailer**。里程碑/批归属由 [PLAN.md](PLAN.md) 的 commit 列跟踪，不入 commit msg。
 - **L3 propose-then-execute**：新 Phase/跨子系统大改，先出草案等确认；已确认的批内可自主推进。
 - **L4 改前查牵连**：改任何 applet/头/CMake 前先 grep 引用方（`APPLET_REGISTRY`、`cfbox::fs::`、`CFBOX_ENABLE_*`、被改头文件的 include 方）；ROADMAP/PLAN/`document/todo`/git 状态变更需同步。

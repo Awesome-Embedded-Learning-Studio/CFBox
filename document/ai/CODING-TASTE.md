@@ -67,7 +67,7 @@ CFBOX_ERR("rm", "cannot remove '%s': %s", path, reason);
 - 公共工具放 `include/cfbox/`，实现可内联或对应 `src/`；applet 实现放 `src/applets/`。
 
 ## 8. 测试
-- 单元测试：[tests/unit/test_*.cpp](../../tests/unit/)，GTest，共 93 文件 / 379 用例；改公共头/分发逻辑后跑 `ctest --test-dir build --output-on-failure`。
+- 单元测试：[tests/unit/test_*.cpp](../../tests/unit/)，GTest，共 98 文件 / 399 用例；改公共头/分发逻辑后跑 `ctest --test-dir build --output-on-failure`。
 - 集成测试：[tests/integration/test_*.sh](../../tests/integration/)，54 脚本；跑 `bash tests/integration/run_all.sh`。
 - 新增 applet 必须带对应 `test_<name>.cpp`（质量扫描 F 维度盯缺测）。
 

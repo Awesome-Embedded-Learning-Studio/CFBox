@@ -22,7 +22,9 @@
 - 兼容性裁决见 [compatibility-policy.md](../todo/compatibility-policy.md)；v1.0 验收边界见 [v1-production-criteria.md](../todo/v1-production-criteria.md)。
 
 ## 当前焦点
-**Phase 2 核心命令深化** 🔄（批级进度见 [PLAN.md](PLAN.md)）：tail -f、cp -a、test POSIX、ls -R/--color 为第一批。基线 379 GTest + 54 集成脚本，115 applet，406 KB（size-opt）。
+**Phase 2 核心命令深化** 🔄（批级进度见 [PLAN.md](PLAN.md)）。基线 399 GTest + 54 集成脚本，123 applet，418 KB（size-opt）。
+> **v0.3.0 已发布**：L2 rootfs 启动骨架（`init` askfirst / `mount` / `mdev` / `umount` / `swapoff` / `reboot`·`poweroff`，117→123 applet）+ `tail -f` —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox，端到端实测。详见 [changelogs/v0.3.0.md](../../changelogs/v0.3.0.md)。
+> 焦点回到 Phase 2 核心深化：批2 `cp -a`（归档模式）→ `test` POSIX → `ls -R`/`--color`。
 
 ## 当前焦点之后下一个可启动的
 **Phase 3 网络最小闭环**（基础网络配置/诊断/下载）——Phase 2 核心命令深度到位后启动。更远：Phase 4 质量门禁（fuzzing/release 工程）→ Phase 5 多用户 → Phase 6 长尾。

@@ -1,7 +1,7 @@
 # Codex 等价命令（粘贴式 prompt）
 
 > Codex / 无 slash 命令的客户端用：复制下列整段进对话即可。这些命令在 Claude Code 里对应 [.claude/commands/](../../.claude/commands/) 下的同名文件。Codex 会自动读根目录 [AGENTS.md](../../AGENTS.md)。
-> CFBox 验证基线：`cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure`（379 GTest）+ `bash tests/integration/run_all.sh`（54 脚本）。
+> CFBox 验证基线：`cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure`（399 GTest）+ `bash tests/integration/run_all.sh`（54 脚本）。
 
 ## /resume
 读 document/ai/PLAN.md 与 document/ai/DIRECTIVES.md，跑 `git log --oneline -10`。三行回答：①你在哪(最近✅批+commit) ②下一步(🔄批+范围,grep 定位文件) ③相关陷阱(PLAN 的 OPEN GOTCHAS)。git 与 PLAN 不一致先指出。只读不改。

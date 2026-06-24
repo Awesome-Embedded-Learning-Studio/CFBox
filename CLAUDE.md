@@ -1,6 +1,6 @@
 # CFBox — Claude Code 工作指引
 
-C++23 现代 BusyBox 替代品（单二进制，115 applet，379 GTest，406 KB size-opt）。Claude 是长期主力开发。
+C++23 现代 BusyBox 替代品（单二进制，123 applet，399 GTest，418 KB size-opt）。Claude 是长期主力开发。
 
 ## 文档分层（按耐久度，按需读）
 - [document/ai/DIRECTIVES.md](document/ai/DIRECTIVES.md) — 架构铁律 + 约定 + 操作模型（年，最稳）
@@ -11,7 +11,7 @@ C++23 现代 BusyBox 替代品（单二进制，115 applet，379 GTest，406 KB 
 
 ## 始终遵守（每条便宜，违规代价大）
 - **C++23，禁异常/RTTI**：错误经 `cfbox::base::Result<T>`（`std::expected`）+ `CFBOX_TRY`；错误报告用 `CFBOX_ERR`。
-- **验证用** `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure`（379 GTest）**且** `bash tests/integration/run_all.sh`（54 脚本）；体积改动跑 size-opt 核查 ≤ 550 KB。
+- **验证用** `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure`（399 GTest）**且** `bash tests/integration/run_all.sh`（54 脚本）；体积改动跑 size-opt 核查 ≤ 550 KB。
 - **一批一commit一验证**；绿才提交。
 - **提交信息** `<type>(<scope>): <英文简述>`——纯描述、**不带 Co-Authored-By / AI 署名**（覆盖 Claude Code 出厂默认加 trailer 的行为）。
 - **改前查牵连**：grep `APPLET_REGISTRY`/`CFBOX_ENABLE_*`/`cfbox::fs::` 引用方；同步 ROADMAP↔PLAN↔`document/todo`↔git。
