@@ -5,7 +5,7 @@
 用现代 C++23 实现的 BusyBox 替代品 —— 单二进制、123 applet、399 测试。可在 i.MX6ULL 上作为 PID 1 运行,替代 BusyBox。
 
 <p align="center">
-  <img src="docs/screenshots/enter_shell.png" alt="cfbox on i.MX6ULL: rcS → askfirst → console" width="720">
+  <img src="document/screenshots/enter_shell.png" alt="cfbox on i.MX6ULL: rcS → askfirst → console" width="720">
 </p>
 
 > 上图:cfbox 作为 PID 1 启动 imx-forge rootfs —— 跑 `rcS`(mount/mdev),打印 `Please press Enter to activate this console.`(askfirst),回车进入 cfbox `sh`。
@@ -36,13 +36,13 @@ cfbox 在 NXP i.MX6ULL(armhf,Cortex-A7)上**替代 BusyBox**,作为 [imx-forge](
 | 关机 | `umount -a -r` / `swapoff -a` / `reboot` |
 
 <p align="center">
-  <img src="docs/screenshots/cat_cpuinfo.png" alt="cat /proc/cpuinfo on cfbox: ARMv7 i.MX6ULL" width="560">
+  <img src="document/screenshots/cat_cpuinfo.png" alt="cat /proc/cpuinfo on cfbox: ARMv7 i.MX6ULL" width="560">
 </p>
 
 实测:`/proc/cpuinfo` 显示 `ARMv7 Processor rev 5 (v7l)`(i.MX6ULL),cfbox `sh` 交互,`ls`/`cat`/`df`/`ps`/`uname`/`free` 等正常 dispatch。
 
 <p align="center">
-  <img src="docs/screenshots/cfbox-demo.gif" alt="cfbox interactive demo" width="720">
+  <img src="document/screenshots/cfbox-demo.gif" alt="cfbox interactive demo" width="720">
 </p>
 
 > armhf 静态构建(自包含,直接当 PID 1 跑):

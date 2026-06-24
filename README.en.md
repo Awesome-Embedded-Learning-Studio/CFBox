@@ -5,7 +5,7 @@
 A modern C++23 BusyBox alternative — single binary, 123 applets, 399 tests. Runs as PID 1 on the i.MX6ULL, replacing BusyBox.
 
 <p align="center">
-  <img src="docs/screenshots/enter_shell.png" alt="cfbox on i.MX6ULL: rcS → askfirst → console" width="720">
+  <img src="document/screenshots/enter_shell.png" alt="cfbox on i.MX6ULL: rcS → askfirst → console" width="720">
 </p>
 
 > Above: cfbox booting the imx-forge rootfs as PID 1 — runs `rcS` (mount/mdev), prints `Please press Enter to activate this console.` (askfirst), and drops into a cfbox `sh` after Enter.
@@ -36,13 +36,13 @@ cfbox **replaces BusyBox** on the NXP i.MX6ULL (armhf, Cortex-A7), serving as PI
 | Shutdown | `umount -a -r` / `swapoff -a` / `reboot` |
 
 <p align="center">
-  <img src="docs/screenshots/cat_cpuinfo.png" alt="cat /proc/cpuinfo on cfbox: ARMv7 i.MX6ULL" width="560">
+  <img src="document/screenshots/cat_cpuinfo.png" alt="cat /proc/cpuinfo on cfbox: ARMv7 i.MX6ULL" width="560">
 </p>
 
 Verified live: `/proc/cpuinfo` reports `ARMv7 Processor rev 5 (v7l)` (i.MX6ULL); cfbox `sh` is interactive, and `ls`/`cat`/`df`/`ps`/`uname`/`free` dispatch normally.
 
 <p align="center">
-  <img src="docs/screenshots/cfbox-demo.gif" alt="cfbox interactive demo" width="720">
+  <img src="document/screenshots/cfbox-demo.gif" alt="cfbox interactive demo" width="720">
 </p>
 
 > armhf static build (self-contained, run directly as PID 1):

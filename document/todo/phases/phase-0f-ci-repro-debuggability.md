@@ -547,14 +547,14 @@ scripts/analysis/
 ```markdown
 ## Profile 变更 PR 检查清单
 - [ ] 更新 size report（scripts/measure_size.sh）
-- [ ] 更新 profile 文档（docs/profiles.md）
+- [ ] 更新 profile 文档（document/profiles.md）
 - [ ] 确认其他 profile 不受影响
 ```
 
 ```markdown
 ## 特权命令 PR 检查清单
 - [ ] 隔离测试（chroot / namespace 模拟）
-- [ ] 权限文档（docs/privileges.md）
+- [ ] 权限文档（document/privileges.md）
 - [ ] capability 需求声明
 - [ ] 降级路径（非 root 环境的 fallback 行为）
 ```
@@ -568,10 +568,10 @@ scripts/analysis/
 
 ### 用户文档结构
 
-建议在 `docs/` 目录下维护以下文档：
+建议在 `document/` 目录下维护以下文档：
 
 ```text
-docs/
+document/
 ├── profiles.md           # profile 选择指南
 ├── building.md           # 构建、配置、链接方式说明
 ├── debugging.md          # debug artifact 使用方式
