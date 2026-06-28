@@ -3,6 +3,8 @@ set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
 
 pass=0 fail=0
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
 
 run_test() {
     local name="$1" expected="$2"; shift 2
@@ -58,6 +60,35 @@ run_test() {
 
 # Bracket form
 "$CFBOX" [ "abc" = "abc" ] ; ((++pass)) || { echo "FAIL: [ ] form"; ((++fail)); }
+
+# --- POSIX three-state exit codes: 0 true / 1 false / 2 error ---
+# invalid integer operand -> 2
+assert_exit 2 test abc -eq abc && ((++pass)) || { echo "FAIL: abc -eq abc should be 2"; ((++fail)); }
+assert_exit 2 test 5 -eq 5x && ((++pass)) || { echo "FAIL: 5 -eq 5x should be 2"; ((++fail)); }
+
+# bare unary op without operand -> 2
+assert_exit 2 test -z && ((++pass)) || { echo "FAIL: bare -z should be 2"; ((++fail)); }
+
+# unknown operator -> 2
+assert_exit 2 test -q foo && ((++pass)) || { echo "FAIL: -q should be 2"; ((++fail)); }
+
+# stray close paren -> 2
+assert_exit 2 test a ')' && ((++pass)) || { echo "FAIL: stray ) should be 2"; ((++fail)); }
+
+# -h alias for -L (symlink)
+ln -s /dev/null "$tmpdir/link"
+assert_exit 0 test -h "$tmpdir/link" && ((++pass)) || { echo "FAIL: -h symlink"; ((++fail)); }
+
+# string < > (byte order)
+assert_exit 0 test "a" "<" "b" && ((++pass)) || { echo "FAIL: str <"; ((++fail)); }
+assert_exit 1 test "b" "<" "a" && ((++pass)) || { echo "FAIL: str < false"; ((++fail)); }
+
+# -ef same file
+echo x > "$tmpdir/a.txt"
+assert_exit 0 test "$tmpdir/a.txt" -ef "$tmpdir/a.txt" && ((++pass)) || { echo "FAIL: -ef same file"; ((++fail)); }
+
+# nested parens with OR
+assert_exit 0 test '(' a = a -o b = c ')' && ((++pass)) || { echo "FAIL: nested parens OR"; ((++fail)); }
 
 echo "test: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]
