@@ -115,6 +115,24 @@ out=$($SH -c 'echo $(( (2 + 3) * 4 ))')
 assert_output "20" "$out"
 ((++pass))
 
+# ── case statement ───────────────────────────────────────────────
+out=$($SH -c 'case start in start) echo go;; stop) echo halt;; esac')
+assert_output "go" "$out"
+((++pass))
+
+out=$($SH -c 'case x in a|b) echo ab;; *) echo other;; esac')
+assert_output "other" "$out"
+((++pass))
+
+out=$($SH -c 'case foo in f*) echo begins_f;; *) echo no;; esac')
+assert_output "begins_f" "$out"
+((++pass))
+
+out=$($SH -c 'for w in 1 2 3; do case $w in 1) echo one;; 2) echo two;; *) echo many;; esac; done')
+expected=$'one\ntwo\nmany'
+assert_output "$expected" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'

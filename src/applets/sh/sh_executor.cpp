@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <fnmatch.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <cfbox/error.hpp>
@@ -309,6 +310,20 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
         }
         else if constexpr (std::is_same_v<T, std::unique_ptr<BraceGroup>>) {
             return node->body ? execute(*node->body, state) : 0;
+        }
+        else if constexpr (std::is_same_v<T, std::unique_ptr<CaseClause>>) {
+            // Expand the case word, then match against each branch's glob patterns.
+            // Patterns use expand_noglob so * ? [ ] stay as pattern syntax.
+            std::string value = expand_noglob(node->word, state);
+            for (auto& br : node->branches) {
+                for (auto& pat : br.patterns) {
+                    std::string pat_str = expand_noglob(pat, state);
+                    if (::fnmatch(pat_str.c_str(), value.c_str(), 0) == 0) {
+                        return br.body ? execute(*br.body, state) : 0;
+                    }
+                }
+            }
+            return 0;  // no pattern matched
         }
         else {
             return 1;

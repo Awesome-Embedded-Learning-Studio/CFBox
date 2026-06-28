@@ -384,4 +384,29 @@ auto expand_words(const std::vector<std::string>& words, const ShellState& state
     return result;
 }
 
+// Expand param/arith/command substitution and quotes, but skip field splitting
+// and filename globbing. Used for `case` words and patterns, where the glob
+// metacharacters (* ? [ ]) are pattern syntax rather than filename globs.
+auto expand_noglob(const std::string& word, const ShellState& state) -> std::string {
+    std::string expanded;
+    bool in_double_quotes = false;
+    auto it = word.cbegin();
+    auto end = word.cend();
+    while (it != end) {
+        char c = *it;
+        if (c == '"') { in_double_quotes = !in_double_quotes; ++it; continue; }
+        if (c == '\\' && !in_double_quotes) { ++it; if (it != end) { expanded += *it++; } continue; }
+        if (c == '$') { expanded += process_dollar(it, end, state); continue; }
+        if (c == '~' && !in_double_quotes && expanded.empty()) {
+            ++it;
+            const char* home = std::getenv("HOME");
+            expanded += home ? home : "/root";
+            continue;
+        }
+        expanded += c;
+        ++it;
+    }
+    return expanded;
+}
+
 } // namespace cfbox::sh

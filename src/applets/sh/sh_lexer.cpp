@@ -97,7 +97,13 @@ auto Lexer::read_operator() -> std::optional<Token> {
             tok.type = TokType::Semi; pos_ += 1;
         }
         return tok;
-    case ';': tok.type = TokType::Semi; pos_ += 1; return tok;
+    case ';':
+        if (pos_ + 1 < input_.size() && input_[pos_ + 1] == ';') {
+            tok.type = TokType::DSemi; pos_ += 2;
+        } else {
+            tok.type = TokType::Semi; pos_ += 1;
+        }
+        return tok;
     case '(': tok.type = TokType::LParen; pos_ += 1; return tok;
     case ')': tok.type = TokType::RParen; pos_ += 1; return tok;
     case '{': tok.type = TokType::LBrace; pos_ += 1; return tok;

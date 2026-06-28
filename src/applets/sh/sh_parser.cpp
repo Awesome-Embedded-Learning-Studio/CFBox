@@ -146,6 +146,7 @@ auto Parser::parse_command() -> Command {
         if (current_.value == "while") return parse_while();
         if (current_.value == "until") return parse_while(); // reuse, set is_until
         if (current_.value == "for") return parse_for();
+        if (current_.value == "case") return parse_case();
     }
 
     return parse_simple_command();
@@ -387,6 +388,64 @@ auto Parser::parse_brace_group() -> std::unique_ptr<BraceGroup> {
         CFBOX_ERR("sh", "syntax error: expected '}'");
     } else {
         advance();
+    }
+    return result;
+}
+
+auto Parser::parse_case() -> std::unique_ptr<CaseClause> {
+    auto result = std::make_unique<CaseClause>();
+    advance(); // consume 'case'
+
+    if (current_.type != TokType::Word) {
+        CFBOX_ERR("sh", "syntax error: expected word after 'case'");
+        return result;
+    }
+    result->word = current_.value;
+    advance();
+
+    while (current_.type == TokType::Newline) advance();
+    if (!expect_keyword("in")) {
+        CFBOX_ERR("sh", "syntax error: expected 'in' after case word");
+        return result;
+    }
+    while (current_.type == TokType::Newline) advance();
+
+    while (!(current_.type == TokType::Word && current_.value == "esac")) {
+        if (current_.type == TokType::Eof) {
+            CFBOX_ERR("sh", "syntax error: unexpected EOF in case");
+            break;
+        }
+        CaseBranch br;
+        if (current_.type == TokType::Word) {
+            br.patterns.push_back(current_.value);
+            advance();
+        }
+        while (current_.type == TokType::Pipe) {
+            advance();
+            if (current_.type == TokType::Word) {
+                br.patterns.push_back(current_.value);
+                advance();
+            }
+        }
+        if (current_.type != TokType::RParen) {
+            CFBOX_ERR("sh", "syntax error: expected ')' in case pattern");
+            break;
+        }
+        advance(); // consume ')'
+
+        br.body = parse_compound_list(); // stops at DSemi / esac
+        result->branches.push_back(std::move(br));
+
+        if (current_.type == TokType::DSemi) {
+            advance();
+            while (current_.type == TokType::Newline) advance();
+        } else {
+            break; // only esac may follow without ;;
+        }
+    }
+
+    if (!expect_keyword("esac")) {
+        CFBOX_ERR("sh", "syntax error: expected 'esac'");
     }
     return result;
 }

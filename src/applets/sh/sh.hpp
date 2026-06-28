@@ -16,7 +16,7 @@ namespace cfbox::sh {
 // ── Token ────────────────────────────────────────────────────────
 enum class TokType {
     Word, Newline, Eof,
-    Pipe, Semi, And, Or,       // | ; && ||
+    Pipe, Semi, DSemi, And, Or,       // | ; ;; && ||
     LParen, RParen, LBrace, RBrace,
     Less, Great, DGreate,      // < > >>
     LessAnd, GreatAnd,         // <& >&
@@ -50,6 +50,7 @@ struct WhileClause;
 struct ForClause;
 struct Subshell;
 struct BraceGroup;
+struct CaseClause;
 
 using Command = std::variant<SimpleCommand,
                              std::unique_ptr<Pipeline>,
@@ -57,7 +58,8 @@ using Command = std::variant<SimpleCommand,
                              std::unique_ptr<WhileClause>,
                              std::unique_ptr<ForClause>,
                              std::unique_ptr<Subshell>,
-                             std::unique_ptr<BraceGroup>>;
+                             std::unique_ptr<BraceGroup>,
+                             std::unique_ptr<CaseClause>>;
 
 struct Pipeline {
     std::vector<Command> commands;
@@ -94,6 +96,16 @@ struct Subshell {
 
 struct BraceGroup {
     std::unique_ptr<AndOr> body;
+};
+
+struct CaseBranch {
+    std::vector<std::string> patterns;  // pat1 | pat2 (glob, pre-expansion)
+    std::unique_ptr<AndOr> body;        // nullptr for an empty branch body
+};
+
+struct CaseClause {
+    std::string word;                   // value to match (pre-expansion)
+    std::vector<CaseBranch> branches;
 };
 
 // ── Shell State ──────────────────────────────────────────────────
@@ -187,6 +199,7 @@ private:
     auto parse_for() -> std::unique_ptr<ForClause>;
     auto parse_subshell() -> std::unique_ptr<Subshell>;
     auto parse_brace_group() -> std::unique_ptr<BraceGroup>;
+    auto parse_case() -> std::unique_ptr<CaseClause>;
 
     Lexer& lexer_;
     Token current_;
@@ -206,5 +219,8 @@ auto run_builtin(const std::string& name, std::vector<std::string>& args, ShellS
 // ── Word Expansion ───────────────────────────────────────────────
 auto expand_word(const std::string& word, const ShellState& state) -> std::vector<std::string>;
 auto expand_words(const std::vector<std::string>& words, const ShellState& state) -> std::vector<std::string>;
+// Expand param/arith/command/quote but skip field splitting and globbing —
+// for case words/patterns where * ? [ ] are pattern syntax, not filename globs.
+auto expand_noglob(const std::string& word, const ShellState& state) -> std::string;
 
 } // namespace cfbox::sh
