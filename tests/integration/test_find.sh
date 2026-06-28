@@ -89,6 +89,41 @@ run_test "name_and_type" "$tmpdir/file1.txt
 $tmpdir/subdir/nested.txt
 $tmpdir/subdir/deep/deep.txt" "$tmpdir" -name "*.txt" -type f
 
+# -o (OR): txt or cpp files
+run_test "or" "$tmpdir/file1.txt
+$tmpdir/file2.cpp
+$tmpdir/subdir/nested.txt
+$tmpdir/subdir/deep/deep.txt" "$tmpdir" -name "*.txt" -o -name "*.cpp"
+
+# ! -type f (NOT): dirs and symlinks, exclude regular files
+run_test "not_type_f" "$tmpdir
+$tmpdir/link1
+$tmpdir/subdir
+$tmpdir/subdir/deep" "$tmpdir" ! -type f
+
+# ( ... ) grouping
+run_test "parens" "$tmpdir/file1.txt
+$tmpdir/file2.cpp
+$tmpdir/subdir/nested.txt
+$tmpdir/subdir/deep/deep.txt" "$tmpdir" \( -name "*.txt" -o -name "*.cpp" \)
+
+# explicit -a (AND)
+run_test "explicit_and" "$tmpdir/file1.txt
+$tmpdir/subdir/nested.txt
+$tmpdir/subdir/deep/deep.txt" "$tmpdir" -name "*.txt" -a -type f
+
+# unknown predicate -> exit 1
+set +e
+"$CFBOX" find "$tmpdir" -badop 2>/dev/null
+rc=$?
+set -e
+if [[ "$rc" -eq 1 ]]; then
+    ((++pass))
+else
+    echo "FAIL [unknown_pred]: expected exit 1, got $rc"
+    ((++fail))
+fi
+
 # -exec echo
 result=$("$CFBOX" find "$tmpdir" -name "file1.txt" -exec echo "found" ";" 2>/dev/null)
 count=$(echo "$result" | grep -c "found" || true)
