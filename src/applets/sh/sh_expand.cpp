@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <fnmatch.h>
 #include <glob.h>
 #include <memory>
 
@@ -145,28 +146,75 @@ auto eval_arith(const std::string& expr, const cfbox::sh::ShellState& state) -> 
     return std::to_string(v);
 }
 
+// Length of the shortest/longest prefix of val that matches glob pat (0 = none).
+auto glob_prefix_len(const std::string& pat, const std::string& val, bool longest) -> std::size_t {
+    if (longest) {
+        for (std::size_t k = val.size(); k > 0; --k)
+            if (::fnmatch(pat.c_str(), val.substr(0, k).c_str(), 0) == 0) return k;
+    } else {
+        for (std::size_t k = 1; k <= val.size(); ++k)
+            if (::fnmatch(pat.c_str(), val.substr(0, k).c_str(), 0) == 0) return k;
+    }
+    return 0;
+}
+
+// Length of the shortest/longest suffix of val that matches glob pat (0 = none).
+auto glob_suffix_len(const std::string& pat, const std::string& val, bool longest) -> std::size_t {
+    if (longest) {
+        for (std::size_t k = val.size(); k > 0; --k)
+            if (::fnmatch(pat.c_str(), val.substr(val.size() - k).c_str(), 0) == 0) return k;
+    } else {
+        for (std::size_t k = 1; k <= val.size(); ++k)
+            if (::fnmatch(pat.c_str(), val.substr(val.size() - k).c_str(), 0) == 0) return k;
+    }
+    return 0;
+}
+
 } // namespace
 
 namespace cfbox::sh {
 
 static auto expand_param(const std::string& name, const ShellState& state) -> std::string {
-    // Handle ${VAR:-default}
-    auto colon_pos = name.find(":-");
-    if (colon_pos != std::string::npos) {
-        auto var_name = name.substr(0, colon_pos);
-        auto default_val = name.substr(colon_pos + 2);
-        auto val = state.get_var(var_name);
-        return val.empty() ? default_val : val;
+    // ${#NAME} -> length of NAME's value.
+    if (name.size() >= 2 && name[0] == '#') {
+        return std::to_string(state.get_var(name.substr(1)).size());
     }
-    // Handle ${VAR:+alt}
-    colon_pos = name.find(":+");
-    if (colon_pos != std::string::npos) {
-        auto var_name = name.substr(0, colon_pos);
-        auto alt_val = name.substr(colon_pos + 2);
-        auto val = state.get_var(var_name);
-        return val.empty() ? "" : alt_val;
+
+    // Locate the operator following the variable name ([A-Za-z0-9_]+).
+    std::size_t i = 0;
+    while (i < name.size() &&
+           (std::isalnum(static_cast<unsigned char>(name[i])) || name[i] == '_')) {
+        ++i;
     }
-    return state.get_var(name);
+    if (i == 0 || i >= name.size()) {
+        return state.get_var(name);  // plain ${VAR}, no operator
+    }
+
+    const bool colon = (name[i] == ':');
+    const std::size_t op_idx = colon ? i + 1 : i;
+    if (op_idx >= name.size()) return state.get_var(name);
+
+    const char opc = name[op_idx];
+    const bool dbl = (op_idx + 1 < name.size() && name[op_idx + 1] == opc &&
+                      (opc == '#' || opc == '%'));
+    const std::string var_name = name.substr(0, i);
+    const std::string arg = name.substr(op_idx + (dbl ? 2 : 1));
+    const std::string val = state.get_var(var_name);
+
+    switch (opc) {
+    case '#': {  // strip matching prefix (# shortest, ## longest)
+        return val.substr(glob_prefix_len(arg, val, dbl));
+    }
+    case '%': {  // strip matching suffix (% shortest, %% longest)
+        return val.substr(0, val.size() - glob_suffix_len(arg, val, dbl));
+    }
+    case '-':  // default: empty/unset -> arg
+        return val.empty() ? arg : val;
+    case '+':  // alternative: non-empty -> arg
+        return val.empty() ? std::string{} : arg;
+    default:
+        return val;
+    }
 }
 
 // Process $ expansions in a word fragment, returns the expanded string

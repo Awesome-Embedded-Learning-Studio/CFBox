@@ -174,6 +174,27 @@ EOF')
 assert_output "7" "$out"
 ((++pass))
 
+# ── Advanced ${} parameter expansion ─────────────────────────────
+out=$($SH -c 'X=hello; echo ${#X}')
+assert_output "5" "$out"
+((++pass))
+
+out=$($SH -c 'F=a.txt; echo ${F%.txt}')
+assert_output "a" "$out"
+((++pass))
+
+out=$($SH -c 'F=pre_data; echo ${F#pre_}')
+assert_output "data" "$out"
+((++pass))
+
+out=$($SH -c 'P=/a/b/c.txt; echo ${P##*/}')
+assert_output "c.txt" "$out"
+((++pass))
+
+out=$($SH -c 'echo ${MISS:-fallback}')
+assert_output "fallback" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'
