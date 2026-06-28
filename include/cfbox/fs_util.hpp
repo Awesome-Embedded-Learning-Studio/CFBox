@@ -3,11 +3,14 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <sys/stat.h>
 #include <system_error>
 #include <unistd.h>
+#include <vector>
 
 #include <cfbox/error.hpp>
 
@@ -251,6 +254,27 @@ inline auto chown(std::string_view path, uid_t uid, gid_t gid) -> base::Result<v
 
 inline auto lchown(std::string_view path, uid_t uid, gid_t gid) -> base::Result<void> {
     if (::lchown(std::string{path}.c_str(), uid, gid) != 0) {
+        return std::unexpected(base::Error{errno, std::strerror(errno)});
+    }
+    return {};
+}
+
+// lstat — link-aware status (does NOT follow symlinks). Archive copy must read
+// the link itself rather than its target, so it cannot use std::filesystem::status.
+inline auto lstat(std::string_view path) -> base::Result<struct stat> {
+    struct stat st{};
+    if (::lstat(std::string{path}.c_str(), &st) != 0) {
+        return std::unexpected(base::Error{errno, std::strerror(errno)});
+    }
+    return st;
+}
+
+// Set atime/mtime via utimensat. no_follow applies AT_SYMLINK_NOFOLLOW so a
+// symlink's own timestamps are set without dereferencing its target (utime(2)
+// cannot do this). times[0]=atime, times[1]=mtime.
+inline auto set_times(std::string_view path, const struct timespec times[2], bool no_follow) -> base::Result<void> {
+    int flags = no_follow ? AT_SYMLINK_NOFOLLOW : 0;
+    if (::utimensat(AT_FDCWD, std::string{path}.c_str(), times, flags) != 0) {
         return std::unexpected(base::Error{errno, std::strerror(errno)});
     }
     return {};
