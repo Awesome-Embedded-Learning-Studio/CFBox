@@ -237,6 +237,18 @@ static int builtin_local(std::vector<std::string>& args, ShellState& state) {
     return 0;
 }
 
+static int builtin_break(std::vector<std::string>& args, ShellState& state) {
+    int n = (args.size() > 1) ? std::atoi(args[1].c_str()) : 1;
+    if (n < 1) n = 1;
+    state.break_depth = n;
+    return 0;
+}
+
+static int builtin_continue(std::vector<std::string>& /*args*/, ShellState& state) {
+    state.continue_loop = true;
+    return 0;
+}
+
 auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
     static const std::unordered_map<std::string, BuiltinFunc> builtins = {
         {"echo", builtin_echo},
@@ -256,6 +268,8 @@ auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
         {".", builtin_source},
         {"return", builtin_return},
         {"local", builtin_local},
+        {"break", builtin_break},
+        {"continue", builtin_continue},
     };
     return builtins;
 }

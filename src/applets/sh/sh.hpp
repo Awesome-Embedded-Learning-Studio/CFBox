@@ -155,8 +155,7 @@ public:
     // Control flow flags
     bool should_exit = false;
     int exit_status = 0;
-    bool break_loop = false;
-    int break_count = 0;
+    int break_depth = 0;     // break N: counts enclosing loops to exit
     bool continue_loop = false;
     bool return_pending = false;
     int return_status = 0;

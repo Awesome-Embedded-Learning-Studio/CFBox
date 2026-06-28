@@ -309,7 +309,7 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
 
                 if (state.should_exit) break;
                 if (state.return_pending) break;
-                if (state.break_loop) { state.break_loop = false; break; }
+                if (state.break_depth > 0) { --state.break_depth; break; }
                 if (state.continue_loop) { state.continue_loop = false; continue; }
             }
             return rc;
@@ -328,7 +328,7 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                 }
                 if (state.should_exit) break;
                 if (state.return_pending) break;
-                if (state.break_loop) { state.break_loop = false; break; }
+                if (state.break_depth > 0) { --state.break_depth; break; }
                 if (state.continue_loop) { state.continue_loop = false; continue; }
             }
             return rc;
@@ -387,6 +387,8 @@ auto execute(AndOr& node, ShellState& state) -> int {
 
         if (state.should_exit) break;
         if (state.return_pending) break;
+        if (state.break_depth > 0) break;
+        if (state.continue_loop) break;
     }
 
     return last_rc;

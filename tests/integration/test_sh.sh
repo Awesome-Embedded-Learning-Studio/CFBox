@@ -195,6 +195,20 @@ out=$($SH -c 'echo ${MISS:-fallback}')
 assert_output "fallback" "$out"
 ((++pass))
 
+# ── break / continue / break N ──────────────────────────────────
+out=$($SH -c 'for i in 1 2 3; do [ $i = 2 ] && break; echo $i; done')
+assert_output "1" "$out"
+((++pass))
+
+out=$($SH -c 'for i in 1 2 3; do [ $i = 2 ] && continue; echo $i; done')
+expected=$'1\n3'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'for i in 1 2; do for j in a b; do [ $j = b ] && break 2; echo $j; done; echo X; done')
+assert_output "a" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'

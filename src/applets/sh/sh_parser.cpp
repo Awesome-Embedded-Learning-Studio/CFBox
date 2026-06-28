@@ -70,16 +70,11 @@ auto Parser::parse_compound_list() -> std::unique_ptr<AndOr> {
         auto next = parse_and_or();
         if (next) {
             auto merged = std::make_unique<AndOr>();
-            // Merge: append entries from result, then from next
-            for (auto& e : result->entries) {
-                merged->entries.push_back(std::move(e));
-            }
-            for (auto& e : next->entries) {
-                merged->entries.back().first = AndOr::Op::Semi; // chain with semi
-                merged->entries.push_back(std::move(e));
-            }
-            // Actually simpler: just extend entries
-            // The first entry of 'next' chains after the last of 'result'
+            // Concatenate entries; the first entry of `next` is (Semi, …), which
+            // naturally chains the two lists. Do NOT rewrite the op of result's
+            // last entry — that would corrupt a trailing && / || relationship.
+            for (auto& e : result->entries) merged->entries.push_back(std::move(e));
+            for (auto& e : next->entries) merged->entries.push_back(std::move(e));
             result = std::move(merged);
         }
     }
