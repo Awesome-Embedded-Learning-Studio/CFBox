@@ -141,32 +141,50 @@ static int builtin_shift(std::vector<std::string>& args, ShellState& state) {
 }
 
 static int builtin_read(std::vector<std::string>& args, ShellState& state) {
+    std::string prompt;
+    // Options: -r (raw, keep backslashes — we already do), -p PROMPT.
+    std::size_t i = 1;
+    while (i < args.size() && args[i].size() >= 2 && args[i][0] == '-' && args[i] != "--") {
+        if (args[i] == "-r") {
+            ++i;
+        } else if (args[i] == "-p") {
+            ++i;
+            if (i < args.size()) { prompt = args[i]; ++i; }
+        } else if (args[i].size() > 2 && args[i][1] == 'p') {
+            prompt = args[i].substr(2);
+            ++i;
+        } else {
+            break;
+        }
+    }
+    if (i < args.size() && args[i] == "--") ++i;
+
+    if (!prompt.empty()) std::fputs(prompt.c_str(), stderr);
+
     std::string line;
     if (!std::getline(std::cin, line)) return 1;
 
-    if (args.size() <= 1) {
+    std::vector<std::string> names(args.begin() + static_cast<long>(i), args.end());
+    if (names.empty()) {
         state.set_var("REPLY", line);
         return 0;
     }
 
-    // Split line by IFS into variables
+    // Split line by IFS into the named variables; the last gets the remainder.
     std::string ifs = state.get_var("IFS");
     if (ifs.empty()) ifs = " \t\n";
 
     std::size_t pos = 0;
-    for (std::size_t i = 1; i < args.size(); ++i) {
-        if (i == args.size() - 1) {
-            // Last variable gets the rest
-            state.set_var(args[i], line.substr(pos));
+    for (std::size_t k = 0; k < names.size(); ++k) {
+        if (k == names.size() - 1) {
+            while (pos < line.size() && ifs.find(line[pos]) != std::string::npos) ++pos;
+            state.set_var(names[k], line.substr(pos));
             break;
         }
-
-        // Skip leading IFS
         while (pos < line.size() && ifs.find(line[pos]) != std::string::npos) ++pos;
         std::size_t end = pos;
         while (end < line.size() && ifs.find(line[end]) == std::string::npos) ++end;
-
-        state.set_var(args[i], line.substr(pos, end - pos));
+        state.set_var(names[k], line.substr(pos, end - pos));
         pos = end;
     }
     return 0;

@@ -209,6 +209,19 @@ out=$($SH -c 'for i in 1 2; do for j in a b; do [ $j = b ] && break 2; echo $j; 
 assert_output "a" "$out"
 ((++pass))
 
+# ── read (with -p prompt) ───────────────────────────────────────
+out=$(echo hello | $SH -c 'read x; echo got=$x')
+assert_output "got=hello" "$out"
+((++pass))
+
+out=$(echo a b c | $SH -c 'read x y z; echo "$x|$y|$z"')
+assert_output "a|b|c" "$out"
+((++pass))
+
+out=$(echo bob | $SH -c 'read -p "N: " x; echo hi=$x' 2>&1)
+assert_output "N: hi=bob" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'
