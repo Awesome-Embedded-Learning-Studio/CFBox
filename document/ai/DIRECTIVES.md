@@ -22,6 +22,7 @@
 - Result：`auto v = CFBOX_TRY(expr)`（宏展开判 `!v` 后 `return std::unexpected`）；成功 `return value;` / `Result<void>` 用 `return {};`；失败 `return std::unexpected(base::make_error(code, msg));`。
 - 测试 / 覆盖率 / 差分（对照）正确性标尺见 [COVERAGE.md](COVERAGE.md)：三种"覆盖率"语义、对照测试（标准答案）、测试数量只升不降。
 - 结构与工艺标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)：职责/DRY/抽象边界/控制流纪律 + 机械护栏（禁裸 fopen、stoi/stol、不安全 C 函数；layering；clang-format 软门）。
+- 性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)：只动 wall-clock 不动输出、4 步闭环、Phase-0 测量基建（google-benchmark via CPM）先行。
 
 ## C. 操作模型（长期，Claude 主力开发）
 

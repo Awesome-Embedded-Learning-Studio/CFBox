@@ -85,4 +85,28 @@ if(GTest_ADDED)
         gtest_discover_tests(cfbox_tests)
     endif()
 endif()
+
+# ── google-benchmark for perf micro-benchmarks (see document/ai/PERFORMANCE.md) ──
+# Opt-in: -DCFBOX_ENABLE_BENCHMARK=ON with Release -O2. Doesn't fetch unless enabled.
+option(CFBOX_ENABLE_BENCHMARK "Build perf micro-benchmarks (Release -O2)" OFF)
+if(CFBOX_ENABLE_BENCHMARK)
+CPMAddPackage(
+    NAME benchmark
+    GITHUB_REPOSITORY google/benchmark
+    GIT_TAG v1.9.0
+    OPTIONS "BENCHMARK_ENABLE_TESTING OFF"
+)
+if(benchmark_ADDED)
+    file(GLOB_RECURSE CFBOX_BENCH_SOURCES CONFIGURE_DEPENDS tests/benchmark/*.cpp)
+    if(CFBOX_BENCH_SOURCES)
+        add_executable(cfbox_bench ${CFBOX_BENCH_SOURCES} ${CFBOX_APPLET_SOURCES})
+        target_include_directories(cfbox_bench PUBLIC include)
+        target_include_directories(cfbox_bench PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
+        target_link_libraries(cfbox_bench PRIVATE
+            cfbox_compiler_flags
+            benchmark::benchmark_main
+        )
+    endif()
+endif()
+endif()
 endif()
