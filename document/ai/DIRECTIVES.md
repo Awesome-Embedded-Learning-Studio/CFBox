@@ -20,6 +20,7 @@
 - 命名：类型 `PascalCase`、函数/变量 `snake_case`、私有成员后缀 `_`、命名空间 `cfbox::*`（`base`/`fs`/`io`/`args`/`stream`/`applet`/`help`/`term`/`tui`/`proc`/`compress`/`checksum`/`awk`/`sh`/`init`/`utf`/`util`）、宏 `CFBOX_*`（`UPPER_SNAKE`）。
 - 注释一律英文；机械风格以 [.clang-format](../../.clang-format) 为准，跑 clang-format 不手调。
 - Result：`auto v = CFBOX_TRY(expr)`（宏展开判 `!v` 后 `return std::unexpected`）；成功 `return value;` / `Result<void>` 用 `return {};`；失败 `return std::unexpected(base::make_error(code, msg));`。
+- 测试 / 覆盖率 / 差分（对照）正确性标尺见 [COVERAGE.md](COVERAGE.md)：三种"覆盖率"语义、对照测试（标准答案）、测试数量只升不降。
 
 ## C. 操作模型（长期，Claude 主力开发）
 
