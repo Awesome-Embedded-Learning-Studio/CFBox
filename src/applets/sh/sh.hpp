@@ -1,5 +1,6 @@
 #pragma once
 
+#include <csignal>
 #include <cstdio>
 #include <filesystem>
 #include <memory>
@@ -16,9 +17,10 @@ namespace cfbox::sh {
 // ── Token ────────────────────────────────────────────────────────
 enum class TokType {
     Word, Newline, Eof,
-    Pipe, Semi, And, Or,       // | ; && ||
+    Pipe, Semi, DSemi, And, Or,       // | ; ;; && ||
     LParen, RParen, LBrace, RBrace,
     Less, Great, DGreate,      // < > >>
+    DLess, DLessDash,          // << <<-
     LessAnd, GreatAnd,         // <& >&
     // Keywords stored as Word with keyword flag
 };
@@ -31,7 +33,7 @@ struct Token {
 
 // ── Redirection ──────────────────────────────────────────────────
 struct Redir {
-    enum Type { Read, Write, Append, DupIn, DupOut };
+    enum Type { Read, Write, Append, DupIn, DupOut, HereDoc };
     int fd = -1;      // target fd (default inferred: 0 for Read, 1 for Write/Append)
     Type type = Read;
     std::string target; // filename or fd number for dup
@@ -50,6 +52,8 @@ struct WhileClause;
 struct ForClause;
 struct Subshell;
 struct BraceGroup;
+struct CaseClause;
+struct FuncDef;
 
 using Command = std::variant<SimpleCommand,
                              std::unique_ptr<Pipeline>,
@@ -57,7 +61,9 @@ using Command = std::variant<SimpleCommand,
                              std::unique_ptr<WhileClause>,
                              std::unique_ptr<ForClause>,
                              std::unique_ptr<Subshell>,
-                             std::unique_ptr<BraceGroup>>;
+                             std::unique_ptr<BraceGroup>,
+                             std::unique_ptr<CaseClause>,
+                             std::unique_ptr<FuncDef>>;
 
 struct Pipeline {
     std::vector<Command> commands;
@@ -96,6 +102,21 @@ struct BraceGroup {
     std::unique_ptr<AndOr> body;
 };
 
+struct CaseBranch {
+    std::vector<std::string> patterns;  // pat1 | pat2 (glob, pre-expansion)
+    std::unique_ptr<AndOr> body;        // nullptr for an empty branch body
+};
+
+struct CaseClause {
+    std::string word;                   // value to match (pre-expansion)
+    std::vector<CaseBranch> branches;
+};
+
+struct FuncDef {
+    std::string name;
+    std::unique_ptr<AndOr> body;
+};
+
 // ── Shell State ──────────────────────────────────────────────────
 class ShellState {
 public:
@@ -121,12 +142,33 @@ public:
     auto script_name() const -> const std::string& { return script_name_; }
     auto set_script_name(std::string name) -> void { script_name_ = std::move(name); }
 
+    // Functions
+    auto define_function(const std::string& name, std::unique_ptr<AndOr> body) -> void;
+    [[nodiscard]] auto is_function(const std::string& name) const -> bool;
+    auto get_function(const std::string& name) -> AndOr*;
+
+    // Local variable scopes (function-local variables)
+    auto push_scope() -> void;
+    auto pop_scope() -> void;
+    auto set_local(const std::string& name, const std::string& value) -> void;
+    [[nodiscard]] auto in_function() const -> bool { return !local_scopes_.empty(); }
+
+    // Signal / EXIT traps
+    auto set_trap(int sig, const std::string& cmd) -> void { traps_[sig] = cmd; }
+    [[nodiscard]] auto get_trap(int sig) const -> std::string {
+        auto it = traps_.find(sig);
+        return it != traps_.end() ? it->second : std::string{};
+    }
+    auto clear_trap(int sig) -> void { traps_.erase(sig); }
+    [[nodiscard]] auto all_traps() const -> const std::unordered_map<int, std::string>& { return traps_; }
+
     // Control flow flags
     bool should_exit = false;
     int exit_status = 0;
-    bool break_loop = false;
-    int break_count = 0;
+    int break_depth = 0;     // break N: counts enclosing loops to exit
     bool continue_loop = false;
+    bool return_pending = false;
+    int return_status = 0;
 
 private:
     std::unordered_map<std::string, std::string> vars_;
@@ -134,7 +176,13 @@ private:
     std::vector<std::string> positional_;
     int last_status_ = 0;
     std::string script_name_;
+    std::unordered_map<std::string, std::unique_ptr<AndOr>> functions_;
+    std::vector<std::unordered_map<std::string, std::string>> local_scopes_;
+    std::unordered_map<int, std::string> traps_;
 };
+
+// Set by the signal handler, consumed by the executor to run the trap command.
+inline volatile std::sig_atomic_t trap_pending_signal{0};
 
 // ── Lexer ────────────────────────────────────────────────────────
 class Lexer {
@@ -187,6 +235,8 @@ private:
     auto parse_for() -> std::unique_ptr<ForClause>;
     auto parse_subshell() -> std::unique_ptr<Subshell>;
     auto parse_brace_group() -> std::unique_ptr<BraceGroup>;
+    auto parse_case() -> std::unique_ptr<CaseClause>;
+    auto parse_func() -> std::unique_ptr<FuncDef>;
 
     Lexer& lexer_;
     Token current_;
@@ -206,5 +256,8 @@ auto run_builtin(const std::string& name, std::vector<std::string>& args, ShellS
 // ── Word Expansion ───────────────────────────────────────────────
 auto expand_word(const std::string& word, const ShellState& state) -> std::vector<std::string>;
 auto expand_words(const std::vector<std::string>& words, const ShellState& state) -> std::vector<std::string>;
+// Expand param/arith/command/quote but skip field splitting and globbing —
+// for case words/patterns where * ? [ ] are pattern syntax, not filename globs.
+auto expand_noglob(const std::string& word, const ShellState& state) -> std::string;
 
 } // namespace cfbox::sh

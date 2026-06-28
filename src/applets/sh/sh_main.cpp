@@ -23,13 +23,23 @@ constexpr cfbox::help::HelpEntry HELP = {
     .extra = "",
 };
 
+auto run_exit_trap(cfbox::sh::ShellState& state) -> void {
+    auto cmd = state.get_trap(0);
+    if (!cmd.empty()) {
+        cfbox::sh::Lexer lexer(cmd);
+        cfbox::sh::Parser parser(lexer);
+        auto ast = parser.parse_program();
+        if (ast) cfbox::sh::execute(*ast, state);
+    }
+}
+
 auto run_string(const std::string& script, cfbox::sh::ShellState& state) -> int {
     cfbox::sh::Lexer lexer(script);
     cfbox::sh::Parser parser(lexer);
     auto ast = parser.parse_program();
-    if (ast)
-        return cfbox::sh::execute(*ast, state);
-    return 0;
+    int rc = ast ? cfbox::sh::execute(*ast, state) : 0;
+    run_exit_trap(state);
+    return rc;
 }
 
 auto run_file(const char* path, cfbox::sh::ShellState& state) -> int {
@@ -96,6 +106,7 @@ auto run_interactive(cfbox::sh::ShellState& state) -> int {
         }
     }
 
+    run_exit_trap(state);
     return state.should_exit ? state.exit_status : last_rc;
 }
 

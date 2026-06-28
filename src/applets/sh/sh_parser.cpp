@@ -70,16 +70,11 @@ auto Parser::parse_compound_list() -> std::unique_ptr<AndOr> {
         auto next = parse_and_or();
         if (next) {
             auto merged = std::make_unique<AndOr>();
-            // Merge: append entries from result, then from next
-            for (auto& e : result->entries) {
-                merged->entries.push_back(std::move(e));
-            }
-            for (auto& e : next->entries) {
-                merged->entries.back().first = AndOr::Op::Semi; // chain with semi
-                merged->entries.push_back(std::move(e));
-            }
-            // Actually simpler: just extend entries
-            // The first entry of 'next' chains after the last of 'result'
+            // Concatenate entries; the first entry of `next` is (Semi, …), which
+            // naturally chains the two lists. Do NOT rewrite the op of result's
+            // last entry — that would corrupt a trailing && / || relationship.
+            for (auto& e : result->entries) merged->entries.push_back(std::move(e));
+            for (auto& e : next->entries) merged->entries.push_back(std::move(e));
             result = std::move(merged);
         }
     }
@@ -146,6 +141,12 @@ auto Parser::parse_command() -> Command {
         if (current_.value == "while") return parse_while();
         if (current_.value == "until") return parse_while(); // reuse, set is_until
         if (current_.value == "for") return parse_for();
+        if (current_.value == "case") return parse_case();
+    }
+
+    // Function definition: NAME ( ) { body }
+    if (current_.type == TokType::Word && lexer_.peek_token().type == TokType::LParen) {
+        return parse_func();
     }
 
     return parse_simple_command();
@@ -196,6 +197,16 @@ auto Parser::parse_simple_command() -> SimpleCommand {
 }
 
 auto Parser::parse_redirect() -> std::optional<Redir> {
+    // Here-document: the body is already carried in the token value.
+    if (current_.type == TokType::DLess || current_.type == TokType::DLessDash) {
+        Redir r;
+        r.fd = 0;
+        r.type = Redir::HereDoc;
+        r.target = std::move(current_.value);
+        advance();
+        return r;
+    }
+
     // Check for redirect: [n]<, [n]>, [n]>>, [n]<&, [n]>&
     int fd = -1;
 
@@ -385,6 +396,94 @@ auto Parser::parse_brace_group() -> std::unique_ptr<BraceGroup> {
     result->body = parse_compound_list();
     if (current_.type != TokType::RBrace) {
         CFBOX_ERR("sh", "syntax error: expected '}'");
+    } else {
+        advance();
+    }
+    return result;
+}
+
+auto Parser::parse_case() -> std::unique_ptr<CaseClause> {
+    auto result = std::make_unique<CaseClause>();
+    advance(); // consume 'case'
+
+    if (current_.type != TokType::Word) {
+        CFBOX_ERR("sh", "syntax error: expected word after 'case'");
+        return result;
+    }
+    result->word = current_.value;
+    advance();
+
+    while (current_.type == TokType::Newline) advance();
+    if (!expect_keyword("in")) {
+        CFBOX_ERR("sh", "syntax error: expected 'in' after case word");
+        return result;
+    }
+    while (current_.type == TokType::Newline) advance();
+
+    while (!(current_.type == TokType::Word && current_.value == "esac")) {
+        if (current_.type == TokType::Eof) {
+            CFBOX_ERR("sh", "syntax error: unexpected EOF in case");
+            break;
+        }
+        CaseBranch br;
+        if (current_.type == TokType::Word) {
+            br.patterns.push_back(current_.value);
+            advance();
+        }
+        while (current_.type == TokType::Pipe) {
+            advance();
+            if (current_.type == TokType::Word) {
+                br.patterns.push_back(current_.value);
+                advance();
+            }
+        }
+        if (current_.type != TokType::RParen) {
+            CFBOX_ERR("sh", "syntax error: expected ')' in case pattern");
+            break;
+        }
+        advance(); // consume ')'
+
+        br.body = parse_compound_list(); // stops at DSemi / esac
+        result->branches.push_back(std::move(br));
+
+        if (current_.type == TokType::DSemi) {
+            advance();
+            while (current_.type == TokType::Newline) advance();
+        } else {
+            break; // only esac may follow without ;;
+        }
+    }
+
+    if (!expect_keyword("esac")) {
+        CFBOX_ERR("sh", "syntax error: expected 'esac'");
+    }
+    return result;
+}
+
+auto Parser::parse_func() -> std::unique_ptr<FuncDef> {
+    auto result = std::make_unique<FuncDef>();
+    result->name = current_.value;
+    advance();  // function name
+
+    if (!expect(TokType::LParen)) {
+        CFBOX_ERR("sh", "syntax error: expected '(' in function definition");
+        return result;
+    }
+    if (!expect(TokType::RParen)) {
+        CFBOX_ERR("sh", "syntax error: expected ')' in function definition");
+        return result;
+    }
+    while (current_.type == TokType::Newline) advance();
+
+    if (current_.type != TokType::LBrace) {
+        CFBOX_ERR("sh", "syntax error: expected '{' for function body");
+        return result;
+    }
+    advance();  // {
+    if (current_.type == TokType::Newline) advance();
+    result->body = parse_compound_list();
+    if (current_.type != TokType::RBrace) {
+        CFBOX_ERR("sh", "syntax error: expected '}' to close function body");
     } else {
         advance();
     }

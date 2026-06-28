@@ -1,19 +1,19 @@
 // grep — search patterns in text
-// Supported flags: -E (extended regex), -i (ignore case), -v (invert match),
-//                  -n (line numbers), -r (recursive), -c (count only),
-//                  -l (files with matches), -q (quiet)
+// Supported flags: -E -i -v -n -r -c -l -q, plus -A/-B/-C context lines.
 
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/io.hpp>
 #include <cfbox/regex.hpp>
-#include <cfbox/error.hpp>
 
 namespace {
 
@@ -29,7 +29,10 @@ constexpr cfbox::help::HelpEntry HELP = {
                "  -r     recursive search\n"
                "  -c     print only a count of matching lines\n"
                "  -l     print only names of files with matches\n"
-               "  -q     quiet mode",
+               "  -q     quiet mode\n"
+               "  -A NUM lines of trailing context\n"
+               "  -B NUM lines of leading context\n"
+               "  -C NUM lines of leading and trailing context",
     .extra   = "",
 };
 
@@ -42,6 +45,8 @@ struct GrepOptions {
     bool count_only = false;
     bool files_with_matches = false;
     bool quiet = false;
+    int after = 0;
+    int before = 0;
 };
 
 auto grep_file(const std::string& pattern, const GrepOptions& opts,
@@ -59,6 +64,30 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
     int found_any = 0;
     std::size_t line_num = 0;
 
+    const int after = opts.after;
+    const int before = opts.before;
+    const bool printing = !opts.quiet && !opts.files_with_matches && !opts.count_only;
+
+    // Context-window state. before_buf holds up to `before` recent non-matching
+    // lines (flushed when a match prints them as leading context); after_pending
+    // counts lines still to emit after a match; need_separator + last_printed
+    // detect non-contiguous groups so a "--" separator is printed between them.
+    std::vector<std::pair<std::size_t, std::string>> before_buf;
+    int after_pending = 0;
+    bool need_separator = false;
+    std::size_t last_printed = 0;
+
+    auto emit = [&](std::size_t ln, const std::string& content) {
+        if (need_separator && ln != last_printed + 1) {
+            std::printf("--\n");
+        }
+        if (print_filename) std::printf("%s:", path.data());
+        if (opts.line_numbers) std::printf("%zu:", ln);
+        std::printf("%s\n", content.c_str());
+        last_printed = ln;
+        need_separator = false;
+    };
+
     auto process_line = [&](const std::string& line) -> bool {
         ++line_num;
         bool matched = re.exec(line.c_str(), 0, nullptr, 0) == 0;
@@ -67,20 +96,29 @@ auto grep_file(const std::string& pattern, const GrepOptions& opts,
         if (matched) {
             ++match_count;
             found_any = 1;
-
             if (opts.quiet) return false;
             if (opts.files_with_matches) {
                 std::printf("%s\n", path.data());
                 return false;
             }
-            if (!opts.count_only) {
-                if (print_filename) {
-                    std::printf("%s:", path.data());
+            if (opts.count_only) return true;
+
+            // Leading context: flush buffered previous lines, then the match.
+            for (const auto& [ln, s] : before_buf) emit(ln, s);
+            before_buf.clear();
+            emit(line_num, line);
+            after_pending = after;
+        } else if (printing) {
+            if (after_pending > 0) {
+                // Trailing context line after a match.
+                emit(line_num, line);
+                if (--after_pending == 0) need_separator = true;
+            } else if (before > 0) {
+                // Stash as potential leading context for a future match.
+                before_buf.emplace_back(line_num, line);
+                if (before_buf.size() > static_cast<std::size_t>(before)) {
+                    before_buf.erase(before_buf.begin());
                 }
-                if (opts.line_numbers) {
-                    std::printf("%zu:", line_num);
-                }
-                std::printf("%s\n", line.c_str());
             }
         }
         return true;
@@ -128,6 +166,9 @@ auto grep_main(int argc, char* argv[]) -> int {
         cfbox::args::OptSpec{'c', false, "count"},
         cfbox::args::OptSpec{'l', false, "files-with-matches"},
         cfbox::args::OptSpec{'q', false, "quiet"},
+        cfbox::args::OptSpec{'A', true, "after-context"},
+        cfbox::args::OptSpec{'B', true, "before-context"},
+        cfbox::args::OptSpec{'C', true, "context"},
     });
 
     if (parsed.has_long("help"))    { cfbox::help::print_help(HELP); return 0; }
@@ -142,6 +183,29 @@ auto grep_main(int argc, char* argv[]) -> int {
     opts.count_only = parsed.has('c');
     opts.files_with_matches = parsed.has('l');
     opts.quiet = parsed.has('q');
+
+    // Context counts: -A/-B/-C take a non-negative integer; -C sets both.
+    bool bad_num = false;
+    auto take_num = [&](char f, const char* ln) -> int {
+        auto v = parsed.get_any(f, ln);
+        if (!v) return -1;  // not specified
+        std::string s{*v};
+        char* end = nullptr;
+        long n = std::strtol(s.c_str(), &end, 10);
+        if (s.empty() || *end != '\0' || n < 0) {
+            CFBOX_ERR("grep", "invalid context count for -%c: '%s'", f, s.c_str());
+            bad_num = true;
+            return 0;
+        }
+        return static_cast<int>(n);
+    };
+    int a = take_num('A', "after-context");
+    int b = take_num('B', "before-context");
+    int c = take_num('C', "context");
+    if (bad_num) return 2;
+    if (c >= 0) { a = c; b = c; }
+    opts.after = (a >= 0) ? a : 0;
+    opts.before = (b >= 0) ? b : 0;
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {

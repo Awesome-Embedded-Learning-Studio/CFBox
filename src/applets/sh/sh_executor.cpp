@@ -1,9 +1,12 @@
 #include "sh.hpp"
 
+#include <cerrno>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <fnmatch.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <cfbox/error.hpp>
@@ -11,12 +14,12 @@
 namespace cfbox::sh {
 
 // Apply redirections, return saved fds for restoration
-static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<std::pair<int, int>> {
+static auto apply_redirections(const std::vector<Redir>& redirs, const ShellState& state) -> std::vector<std::pair<int, int>> {
     std::vector<std::pair<int, int>> saved;
 
     for (const auto& r : redirs) {
         int target_fd = r.fd;
-        if (target_fd < 0) target_fd = (r.type == Redir::Read || r.type == Redir::DupIn) ? 0 : 1;
+        if (target_fd < 0) target_fd = (r.type == Redir::Read || r.type == Redir::DupIn || r.type == Redir::HereDoc) ? 0 : 1;
 
         // Save original fd
         int saved_fd = ::dup(target_fd);
@@ -61,6 +64,21 @@ static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<
             if (src >= 0) ::dup2(src, target_fd);
             break;
         }
+        case Redir::HereDoc: {
+            // Expand param/arith/command in the body, then feed it via temp file.
+            std::string body = expand_noglob(r.target, state);
+            char tmpl[] = "/tmp/cfbox_hd_XXXXXX";
+            int tfd = ::mkstemp(tmpl);
+            if (tfd >= 0) {
+                ssize_t wr = ::write(tfd, body.c_str(), body.size());
+                (void)wr;
+                ::lseek(tfd, 0, SEEK_SET);
+                ::dup2(tfd, target_fd);
+                ::close(tfd);
+                ::unlink(tmpl);
+            }
+            break;
+        }
         }
     }
 
@@ -78,9 +96,16 @@ static auto restore_redirections(std::vector<std::pair<int, int>>& saved) -> voi
 static auto execute_pipeline(Pipeline& node, ShellState& state) -> int;
 
 static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
-    // Apply assignments
+    // Apply assignments. The RHS is expanded (param/arith/command sub); parts
+    // are joined back into one value since assignment does not field-split.
     for (auto& [name, value] : cmd.assigns) {
-        state.set_var(name, value);
+        auto parts = expand_word(value, state);
+        std::string joined;
+        for (std::size_t k = 0; k < parts.size(); ++k) {
+            if (k > 0) joined += ' ';
+            joined += parts[k];
+        }
+        state.set_var(name, joined);
     }
 
     if (cmd.words.empty()) {
@@ -94,10 +119,29 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
 
     // Check builtin
     if (is_builtin(expanded[0])) {
-        auto saved = apply_redirections(cmd.redirs);
+        auto saved = apply_redirections(cmd.redirs, state);
         int rc = run_builtin(expanded[0], expanded, state);
         std::fflush(nullptr);
         restore_redirections(saved);
+        return rc;
+    }
+
+    // User-defined function: run its body in-process with new positional
+    // parameters and a fresh local-variable scope.
+    if (state.is_function(expanded[0])) {
+        auto* body = state.get_function(expanded[0]);
+        auto saved_positional = state.positional_params();
+        std::vector<std::string> func_args(expanded.begin() + 1, expanded.end());
+        state.set_positional(std::move(func_args));
+        state.push_scope();
+        int rc = body ? execute(*body, state) : 0;
+        if (state.return_pending) {
+            rc = state.return_status;
+            state.return_pending = false;
+        }
+        state.pop_scope();
+        state.set_positional(std::move(saved_positional));
+        state.set_last_status(rc);
         return rc;
     }
 
@@ -110,7 +154,7 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
 
     if (pid == 0) {
         // Child process
-        apply_redirections(cmd.redirs);
+        apply_redirections(cmd.redirs, state);
 
         // Build argv
         std::vector<char*> argv;
@@ -124,9 +168,9 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
         ::_Exit(127);
     }
 
-    // Parent: wait for child
-    int status;
-    ::waitpid(pid, &status, 0);
+    // Parent: wait for child (retry on EINTR so signal traps don't break it)
+    int status = 0;
+    while (::waitpid(pid, &status, 0) == -1 && errno == EINTR) {}
     if (WIFEXITED(status)) return WEXITSTATUS(status);
     if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
     return 1;
@@ -178,7 +222,7 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
             auto& cmd = node.commands[static_cast<std::size_t>(i)];
             if (std::holds_alternative<SimpleCommand>(cmd)) {
                 auto& sc = std::get<SimpleCommand>(cmd);
-                apply_redirections(sc.redirs);
+                apply_redirections(sc.redirs, state);
                 auto expanded = expand_words(sc.words, state);
                 if (expanded.empty()) ::_Exit(0);
 
@@ -212,8 +256,8 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
     // Wait for all children
     int last_status = 0;
     for (int i = 0; i < n; ++i) {
-        int status;
-        ::waitpid(pids[static_cast<std::size_t>(i)], &status, 0);
+        int status = 0;
+        while (::waitpid(pids[static_cast<std::size_t>(i)], &status, 0) == -1 && errno == EINTR) {}
         if (i == n - 1) {
             if (WIFEXITED(status)) last_status = WEXITSTATUS(status);
             else if (WIFSIGNALED(status)) last_status = 128 + WTERMSIG(status);
@@ -265,7 +309,8 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                 }
 
                 if (state.should_exit) break;
-                if (state.break_loop) { state.break_loop = false; break; }
+                if (state.return_pending) break;
+                if (state.break_depth > 0) { --state.break_depth; break; }
                 if (state.continue_loop) { state.continue_loop = false; continue; }
             }
             return rc;
@@ -283,7 +328,8 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                     state.set_last_status(rc);
                 }
                 if (state.should_exit) break;
-                if (state.break_loop) { state.break_loop = false; break; }
+                if (state.return_pending) break;
+                if (state.break_depth > 0) { --state.break_depth; break; }
                 if (state.continue_loop) { state.continue_loop = false; continue; }
             }
             return rc;
@@ -294,14 +340,32 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                 int rc = node->body ? execute(*node->body, state) : 0;
                 ::_Exit(rc);
             }
-            int status;
-            ::waitpid(pid, &status, 0);
+            int status = 0;
+            while (::waitpid(pid, &status, 0) == -1 && errno == EINTR) {}
             if (WIFEXITED(status)) return WEXITSTATUS(status);
             if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
             return 1;
         }
         else if constexpr (std::is_same_v<T, std::unique_ptr<BraceGroup>>) {
             return node->body ? execute(*node->body, state) : 0;
+        }
+        else if constexpr (std::is_same_v<T, std::unique_ptr<CaseClause>>) {
+            // Expand the case word, then match against each branch's glob patterns.
+            // Patterns use expand_noglob so * ? [ ] stay as pattern syntax.
+            std::string value = expand_noglob(node->word, state);
+            for (auto& br : node->branches) {
+                for (auto& pat : br.patterns) {
+                    std::string pat_str = expand_noglob(pat, state);
+                    if (::fnmatch(pat_str.c_str(), value.c_str(), 0) == 0) {
+                        return br.body ? execute(*br.body, state) : 0;
+                    }
+                }
+            }
+            return 0;  // no pattern matched
+        }
+        else if constexpr (std::is_same_v<T, std::unique_ptr<FuncDef>>) {
+            state.define_function(node->name, std::move(node->body));
+            return 0;
         }
         else {
             return 1;
@@ -323,6 +387,21 @@ auto execute(AndOr& node, ShellState& state) -> int {
         state.set_last_status(last_rc);
 
         if (state.should_exit) break;
+        if (state.return_pending) break;
+        if (state.break_depth > 0) break;
+        if (state.continue_loop) break;
+        if (trap_pending_signal != 0) {
+            // Run the trap command for the signal that fired, then continue.
+            int sig = trap_pending_signal;
+            trap_pending_signal = 0;
+            std::string tcmd = state.get_trap(sig);
+            if (!tcmd.empty()) {
+                Lexer lexer(tcmd);
+                Parser parser(lexer);
+                auto ast = parser.parse_program();
+                if (ast) execute(*ast, state);
+            }
+        }
     }
 
     return last_rc;

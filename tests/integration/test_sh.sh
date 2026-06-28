@@ -93,6 +93,145 @@ out=$($SH -c 'echo $(echo nested)')
 assert_output "nested" "$out"
 ((++pass))
 
+# ── Arithmetic $((expr)) ─────────────────────────────────────────
+out=$($SH -c 'echo $((1 + 2 * 3))')
+assert_output "7" "$out"
+((++pass))
+
+out=$($SH -c 'echo $((10 - 4))')
+assert_output "6" "$out"
+((++pass))
+
+out=$($SH -c 'i=5; echo $((i + 1))')
+assert_output "6" "$out"
+((++pass))
+
+out=$($SH -c 'i=0; while [ $i -lt 3 ]; do echo $i; i=$((i+1)); done')
+expected=$'0\n1\n2'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'echo $(( (2 + 3) * 4 ))')
+assert_output "20" "$out"
+((++pass))
+
+# ── case statement ───────────────────────────────────────────────
+out=$($SH -c 'case start in start) echo go;; stop) echo halt;; esac')
+assert_output "go" "$out"
+((++pass))
+
+out=$($SH -c 'case x in a|b) echo ab;; *) echo other;; esac')
+assert_output "other" "$out"
+((++pass))
+
+out=$($SH -c 'case foo in f*) echo begins_f;; *) echo no;; esac')
+assert_output "begins_f" "$out"
+((++pass))
+
+out=$($SH -c 'for w in 1 2 3; do case $w in 1) echo one;; 2) echo two;; *) echo many;; esac; done')
+expected=$'one\ntwo\nmany'
+assert_output "$expected" "$out"
+((++pass))
+
+# ── Functions, return, local ─────────────────────────────────────
+out=$($SH -c 'greet() { echo hi; }; greet')
+assert_output "hi" "$out"
+((++pass))
+
+out=$($SH -c 'add() { echo $(($1 + $2)); }; add 3 4')
+assert_output "7" "$out"
+((++pass))
+
+set +e
+$SH -c 'f() { return 42; }; f'
+rc=$?
+set -e
+[[ $rc -eq 42 ]] && ((++pass)) || { echo "FAIL [return status]: $rc"; ((++fail)); }
+
+out=$($SH -c 'g() { local x=L; echo $x; }; x=G; g; echo $x')
+expected=$'L\nG'
+assert_output "$expected" "$out"
+((++pass))
+
+# ── Here-doc ────────────────────────────────────────────────────
+out=$($SH -c 'cat <<EOF
+hello
+world
+EOF')
+expected=$'hello\nworld'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'V=42; cat <<EOF
+val=$V
+EOF')
+assert_output "val=42" "$out"
+((++pass))
+
+out=$($SH -c 'cat <<EOF
+$((3+4))
+EOF')
+assert_output "7" "$out"
+((++pass))
+
+# ── Advanced ${} parameter expansion ─────────────────────────────
+out=$($SH -c 'X=hello; echo ${#X}')
+assert_output "5" "$out"
+((++pass))
+
+out=$($SH -c 'F=a.txt; echo ${F%.txt}')
+assert_output "a" "$out"
+((++pass))
+
+out=$($SH -c 'F=pre_data; echo ${F#pre_}')
+assert_output "data" "$out"
+((++pass))
+
+out=$($SH -c 'P=/a/b/c.txt; echo ${P##*/}')
+assert_output "c.txt" "$out"
+((++pass))
+
+out=$($SH -c 'echo ${MISS:-fallback}')
+assert_output "fallback" "$out"
+((++pass))
+
+# ── break / continue / break N ──────────────────────────────────
+out=$($SH -c 'for i in 1 2 3; do [ $i = 2 ] && break; echo $i; done')
+assert_output "1" "$out"
+((++pass))
+
+out=$($SH -c 'for i in 1 2 3; do [ $i = 2 ] && continue; echo $i; done')
+expected=$'1\n3'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'for i in 1 2; do for j in a b; do [ $j = b ] && break 2; echo $j; done; echo X; done')
+assert_output "a" "$out"
+((++pass))
+
+# ── read (with -p prompt) ───────────────────────────────────────
+out=$(echo hello | $SH -c 'read x; echo got=$x')
+assert_output "got=hello" "$out"
+((++pass))
+
+out=$(echo a b c | $SH -c 'read x y z; echo "$x|$y|$z"')
+assert_output "a|b|c" "$out"
+((++pass))
+
+out=$(echo bob | $SH -c 'read -p "N: " x; echo hi=$x' 2>&1)
+assert_output "N: hi=bob" "$out"
+((++pass))
+
+# ── trap (EXIT) ─────────────────────────────────────────────────
+out=$($SH -c 'trap "echo bye" EXIT; echo main')
+expected=$'main\nbye'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'trap "echo bye" EXIT; trap - EXIT; echo main')
+assert_output "main" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'

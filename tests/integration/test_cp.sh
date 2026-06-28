@@ -55,6 +55,28 @@ mkdir -p "$tmpdir/multi_dst"
 run_test "multi_into_dir" 0 "$tmpdir/m1.txt" "$tmpdir/m2.txt" "$tmpdir/multi_dst"
 [[ -f "$tmpdir/multi_dst/m1.txt" && -f "$tmpdir/multi_dst/m2.txt" ]] && ((++pass)) || { echo "FAIL [cp multi]"; ((++fail)); }
 
+# cp -a: preserve mode/time + copy symlinks as links (never follow)
+mkdir -p "$tmpdir/archsrc/sub"
+echo "data" > "$tmpdir/archsrc/file.txt"
+echo "inner" > "$tmpdir/archsrc/sub/inner.txt"
+ln -s file.txt "$tmpdir/archsrc/link.txt"
+ln -s /nonexistent "$tmpdir/archsrc/broken"
+chmod 0640 "$tmpdir/archsrc/file.txt"
+run_test "archive" 0 -a "$tmpdir/archsrc" "$tmpdir/archdst"
+
+[[ -f "$tmpdir/archdst/file.txt" && -f "$tmpdir/archdst/sub/inner.txt" ]] && ((++pass)) || { echo "FAIL [cp -a structure]"; ((++fail)); }
+
+src_mode=$(stat -c '%a' "$tmpdir/archsrc/file.txt")
+dst_mode=$(stat -c '%a' "$tmpdir/archdst/file.txt")
+[[ "$src_mode" == "$dst_mode" ]] && ((++pass)) || { echo "FAIL [cp -a mode $src_mode!=$dst_mode]"; ((++fail)); }
+
+[[ -L "$tmpdir/archdst/link.txt" ]] && ((++pass)) || { echo "FAIL [cp -a symlink not a link]"; ((++fail)); }
+src_link=$(readlink "$tmpdir/archsrc/link.txt")
+dst_link=$(readlink "$tmpdir/archdst/link.txt")
+[[ "$src_link" == "$dst_link" ]] && ((++pass)) || { echo "FAIL [cp -a link target $src_link!=$dst_link]"; ((++fail)); }
+
+[[ -L "$tmpdir/archdst/broken" ]] && ((++pass)) || { echo "FAIL [cp -a broken symlink]"; ((++fail)); }
+
 # cp no operand
 run_test "no_operand" 1
 

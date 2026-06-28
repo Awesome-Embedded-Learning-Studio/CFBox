@@ -1,7 +1,9 @@
+#include <cstdio>
+
+#include <cfbox/applet_config.hpp>
 #include <cfbox/applets.hpp>
 #include <gtest/gtest.h>
 #include "test_capture.hpp"
-#include <cfbox/applet_config.hpp>
 
 #if CFBOX_ENABLE_GREP
 
@@ -100,6 +102,78 @@ TEST(GrepTest, MissingPattern) {
     char* argv[] = {a0};
     int rc = 0;
     capture_stdout([&]{ rc = grep_main(1, argv); return 0; });
+    EXPECT_EQ(rc, 2);
+}
+
+// --- -A/-B/-C context windows ---
+TEST(GrepTest, ContextAfter) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "match\nx\nmatch\n");
+    char a0[] = "grep", a1[] = "-A1", a2[] = "match", a3[256];
+    std::snprintf(a3, sizeof(a3), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3};
+    auto out = capture_stdout([&]{ return grep_main(4, argv); });
+    EXPECT_EQ(out, "match\nx\nmatch\n");
+}
+
+TEST(GrepTest, ContextBefore) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "x\nmatch\n");
+    char a0[] = "grep", a1[] = "-B1", a2[] = "match", a3[256];
+    std::snprintf(a3, sizeof(a3), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3};
+    auto out = capture_stdout([&]{ return grep_main(4, argv); });
+    EXPECT_EQ(out, "x\nmatch\n");
+}
+
+TEST(GrepTest, ContextBoth) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "x\nmatch\ny\n");
+    char a0[] = "grep", a1[] = "-C1", a2[] = "match", a3[256];
+    std::snprintf(a3, sizeof(a3), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3};
+    auto out = capture_stdout([&]{ return grep_main(4, argv); });
+    EXPECT_EQ(out, "x\nmatch\ny\n");
+}
+
+TEST(GrepTest, ContextSeparatorBetweenGroups) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "match\na\nb\nmatch\n");
+    char a0[] = "grep", a1[] = "-A1", a2[] = "match", a3[256];
+    std::snprintf(a3, sizeof(a3), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3};
+    auto out = capture_stdout([&]{ return grep_main(4, argv); });
+    EXPECT_EQ(out, "match\na\n--\nmatch\n");
+}
+
+TEST(GrepTest, ContextZeroIsPlainGrep) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "match\nx\nmatch\n");
+    char a0[] = "grep", a1[] = "-A0", a2[] = "match", a3[256];
+    std::snprintf(a3, sizeof(a3), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3};
+    auto out = capture_stdout([&]{ return grep_main(4, argv); });
+    EXPECT_EQ(out, "match\nmatch\n");
+}
+
+TEST(GrepTest, ContextWithLineNumbers) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "match\nx\nmatch\n");
+    char a0[] = "grep", a1[] = "-n", a2[] = "-A1", a3[] = "match", a4[256];
+    std::snprintf(a4, sizeof(a4), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3, a4};
+    auto out = capture_stdout([&]{ return grep_main(5, argv); });
+    EXPECT_EQ(out, "1:match\n2:x\n3:match\n");
+}
+
+TEST(GrepTest, ContextInvalidNumberExits2) {
+    TempDir tmp;
+    auto f = tmp.write_file("d.txt", "match\n");
+    char a0[] = "grep", a1[] = "-A", a2[] = "abc", a3[] = "match", a4[256];
+    std::snprintf(a4, sizeof(a4), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3, a4};
+    int rc = 0;
+    capture_stdout([&]{ rc = grep_main(5, argv); return 0; });
     EXPECT_EQ(rc, 2);
 }
 

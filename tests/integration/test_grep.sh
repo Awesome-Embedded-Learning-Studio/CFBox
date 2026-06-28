@@ -88,5 +88,34 @@ else
     ((++fail))
 fi
 
+# -A after-context (with -- separator between non-contiguous groups)
+run_test "after_context" "hello world
+foo bar
+--
+hello again" -A1 "hello" "$tmpdir/grep1.txt"
+
+# -B before-context
+run_test "before_context" "hello world
+baz qux
+hello again" -B1 "hello" "$tmpdir/grep1.txt"
+
+# -C context both
+run_test "context_both" "hello world
+foo bar
+baz qux
+hello again" -C1 "hello" "$tmpdir/grep1.txt"
+
+# invalid -A value -> exit 2
+set +e
+"$CFBOX" grep -A abc "hello" "$tmpdir/grep1.txt" 2>/dev/null
+rc=$?
+set -e
+if [[ "$rc" -eq 2 ]]; then
+    ((++pass))
+else
+    echo "FAIL [invalid_after]: expected exit 2, got $rc"
+    ((++fail))
+fi
+
 echo "grep: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

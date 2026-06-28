@@ -1,5 +1,6 @@
 #include "sh.hpp"
 
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -141,32 +142,50 @@ static int builtin_shift(std::vector<std::string>& args, ShellState& state) {
 }
 
 static int builtin_read(std::vector<std::string>& args, ShellState& state) {
+    std::string prompt;
+    // Options: -r (raw, keep backslashes — we already do), -p PROMPT.
+    std::size_t i = 1;
+    while (i < args.size() && args[i].size() >= 2 && args[i][0] == '-' && args[i] != "--") {
+        if (args[i] == "-r") {
+            ++i;
+        } else if (args[i] == "-p") {
+            ++i;
+            if (i < args.size()) { prompt = args[i]; ++i; }
+        } else if (args[i].size() > 2 && args[i][1] == 'p') {
+            prompt = args[i].substr(2);
+            ++i;
+        } else {
+            break;
+        }
+    }
+    if (i < args.size() && args[i] == "--") ++i;
+
+    if (!prompt.empty()) std::fputs(prompt.c_str(), stderr);
+
     std::string line;
     if (!std::getline(std::cin, line)) return 1;
 
-    if (args.size() <= 1) {
+    std::vector<std::string> names(args.begin() + static_cast<long>(i), args.end());
+    if (names.empty()) {
         state.set_var("REPLY", line);
         return 0;
     }
 
-    // Split line by IFS into variables
+    // Split line by IFS into the named variables; the last gets the remainder.
     std::string ifs = state.get_var("IFS");
     if (ifs.empty()) ifs = " \t\n";
 
     std::size_t pos = 0;
-    for (std::size_t i = 1; i < args.size(); ++i) {
-        if (i == args.size() - 1) {
-            // Last variable gets the rest
-            state.set_var(args[i], line.substr(pos));
+    for (std::size_t k = 0; k < names.size(); ++k) {
+        if (k == names.size() - 1) {
+            while (pos < line.size() && ifs.find(line[pos]) != std::string::npos) ++pos;
+            state.set_var(names[k], line.substr(pos));
             break;
         }
-
-        // Skip leading IFS
         while (pos < line.size() && ifs.find(line[pos]) != std::string::npos) ++pos;
         std::size_t end = pos;
         while (end < line.size() && ifs.find(line[end]) == std::string::npos) ++end;
-
-        state.set_var(args[i], line.substr(pos, end - pos));
+        state.set_var(names[k], line.substr(pos, end - pos));
         pos = end;
     }
     return 0;
@@ -214,6 +233,91 @@ static int builtin_source(std::vector<std::string>& args, ShellState& state) {
     return 0;
 }
 
+static int builtin_return(std::vector<std::string>& args, ShellState& state) {
+    int code = state.last_status();
+    if (args.size() > 1) code = std::atoi(args[1].c_str());
+    state.return_pending = true;
+    state.return_status = code;
+    return code;
+}
+
+static int builtin_local(std::vector<std::string>& args, ShellState& state) {
+    if (!state.in_function()) {
+        CFBOX_ERR("sh", "local: can only be used in a function");
+        return 1;
+    }
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        auto& arg = args[i];
+        auto eq = arg.find('=');
+        std::string name = (eq == std::string::npos) ? arg : arg.substr(0, eq);
+        std::string val = (eq == std::string::npos) ? state.get_var(name) : arg.substr(eq + 1);
+        state.set_local(name, val);
+    }
+    return 0;
+}
+
+static int builtin_break(std::vector<std::string>& args, ShellState& state) {
+    int n = (args.size() > 1) ? std::atoi(args[1].c_str()) : 1;
+    if (n < 1) n = 1;
+    state.break_depth = n;
+    return 0;
+}
+
+static int builtin_continue(std::vector<std::string>& /*args*/, ShellState& state) {
+    state.continue_loop = true;
+    return 0;
+}
+
+// Installed for any signal with a trap; just records which signal fired. The
+// executor runs the corresponding trap command at the next safe point.
+static void trap_handler(int sig) {
+    cfbox::sh::trap_pending_signal = sig;
+}
+
+static auto signal_from_name(const std::string& name) -> int {
+    if (name == "EXIT" || name == "0") return 0;
+    if (name == "INT" || name == "SIGINT") return SIGINT;
+    if (name == "TERM" || name == "SIGTERM") return SIGTERM;
+    if (name == "HUP" || name == "SIGHUP") return SIGHUP;
+    if (name == "QUIT" || name == "SIGQUIT") return SIGQUIT;
+    char* end = nullptr;
+    long n = std::strtol(name.c_str(), &end, 10);
+    if (*end == '\0' && n >= 0) return static_cast<int>(n);
+    return -1;
+}
+
+static int builtin_trap(std::vector<std::string>& args, ShellState& state) {
+    if (args.size() == 1) {
+        for (const auto& [sig, cmd] : state.all_traps()) {
+            std::printf("trap -- '%s' %d\n", cmd.c_str(), sig);
+        }
+        return 0;
+    }
+
+    std::size_t i = 1;
+    std::string cmd;
+    bool clear = false;
+    if (args[i] == "-") { clear = true; ++i; }
+    else if (args[i] == "-l") { return 0; }  // list signal names: not implemented
+    else { cmd = args[i]; ++i; }
+
+    for (; i < args.size(); ++i) {
+        int sig = signal_from_name(args[i]);
+        if (sig < 0) {
+            CFBOX_ERR("sh", "trap: %s: bad signal", args[i].c_str());
+            return 1;
+        }
+        if (clear || cmd.empty()) {
+            state.clear_trap(sig);
+            if (sig != 0) ::signal(sig, SIG_DFL);
+        } else {
+            state.set_trap(sig, cmd);
+            if (sig != 0) ::signal(sig, trap_handler);
+        }
+    }
+    return 0;
+}
+
 auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
     static const std::unordered_map<std::string, BuiltinFunc> builtins = {
         {"echo", builtin_echo},
@@ -231,6 +335,11 @@ auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
         {"eval", builtin_eval},
         {"source", builtin_source},
         {".", builtin_source},
+        {"return", builtin_return},
+        {"local", builtin_local},
+        {"break", builtin_break},
+        {"continue", builtin_continue},
+        {"trap", builtin_trap},
     };
     return builtins;
 }

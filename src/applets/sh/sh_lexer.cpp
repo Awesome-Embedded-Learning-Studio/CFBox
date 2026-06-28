@@ -4,6 +4,11 @@
 
 namespace cfbox::sh {
 
+static auto is_op_char(char c) -> bool {
+    return c == '|' || c == ';' || c == '&' || c == '(' || c == ')' ||
+           c == '<' || c == '>' || c == '{' || c == '}' || c == '#';
+}
+
 Lexer::Lexer(std::string_view input) : input_{input} {}
 
 auto Lexer::advance() -> char {
@@ -97,7 +102,13 @@ auto Lexer::read_operator() -> std::optional<Token> {
             tok.type = TokType::Semi; pos_ += 1;
         }
         return tok;
-    case ';': tok.type = TokType::Semi; pos_ += 1; return tok;
+    case ';':
+        if (pos_ + 1 < input_.size() && input_[pos_ + 1] == ';') {
+            tok.type = TokType::DSemi; pos_ += 2;
+        } else {
+            tok.type = TokType::Semi; pos_ += 1;
+        }
+        return tok;
     case '(': tok.type = TokType::LParen; pos_ += 1; return tok;
     case ')': tok.type = TokType::RParen; pos_ += 1; return tok;
     case '{': tok.type = TokType::LBrace; pos_ += 1; return tok;
@@ -106,8 +117,35 @@ auto Lexer::read_operator() -> std::optional<Token> {
         if (pos_ + 1 < input_.size() && input_[pos_ + 1] == '&') {
             tok.type = TokType::LessAnd; pos_ += 2;
         } else if (pos_ + 1 < input_.size() && input_[pos_ + 1] == '<') {
-            // Here-document << — treat the delimiter as a word token after
-            tok.type = TokType::Less; pos_ += 1; // simplified: no here-doc support yet
+            // Here-document <<DELIM (<<- strips leading tabs). The body runs
+            // until a line equal to DELIM. <<DELIM must end the command line.
+            bool strip = pos_ + 2 < input_.size() && input_[pos_ + 2] == '-';
+            pos_ += strip ? 3 : 2;
+            while (pos_ < input_.size() && (input_[pos_] == ' ' || input_[pos_] == '\t')) ++pos_;
+            std::string delim;
+            while (pos_ < input_.size() && input_[pos_] != ' ' && input_[pos_] != '\t' &&
+                   input_[pos_] != '\n' && !is_op_char(input_[pos_])) {
+                delim += input_[pos_++];
+            }
+            while (pos_ < input_.size() && input_[pos_] != '\n') ++pos_;  // rest of line
+            if (pos_ < input_.size()) ++pos_;  // consume newline
+            std::string body;
+            while (pos_ < input_.size()) {
+                std::string line;
+                while (pos_ < input_.size() && input_[pos_] != '\n') line += input_[pos_++];
+                if (pos_ < input_.size()) ++pos_;  // consume newline
+                std::string cmp = line;
+                if (strip) {
+                    std::size_t i = 0;
+                    while (i < cmp.size() && cmp[i] == '\t') ++i;
+                    cmp.erase(0, i);
+                }
+                if (cmp == delim) break;
+                body += cmp;
+                body += '\n';
+            }
+            tok.type = strip ? TokType::DLessDash : TokType::DLess;
+            tok.value = std::move(body);
         } else {
             tok.type = TokType::Less; pos_ += 1;
         }
