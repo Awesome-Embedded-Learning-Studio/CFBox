@@ -21,6 +21,7 @@
 - 注释一律英文；机械风格以 [.clang-format](../../.clang-format) 为准，跑 clang-format 不手调。
 - Result：`auto v = CFBOX_TRY(expr)`（宏展开判 `!v` 后 `return std::unexpected`）；成功 `return value;` / `Result<void>` 用 `return {};`；失败 `return std::unexpected(base::make_error(code, msg));`。
 - 测试 / 覆盖率 / 差分（对照）正确性标尺见 [COVERAGE.md](COVERAGE.md)：三种"覆盖率"语义、对照测试（标准答案）、测试数量只升不降。
+- 结构与工艺标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)：职责/DRY/抽象边界/控制流纪律 + 机械护栏（禁裸 fopen、stoi/stol、不安全 C 函数；layering；clang-format 软门）。
 
 ## C. 操作模型（长期，Claude 主力开发）
 
