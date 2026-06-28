@@ -79,4 +79,17 @@ TEST(SortTest, EmptyFile) {
     EXPECT_EQ(out, "");
 }
 
+TEST(SortTest, ReverseNumericStableOnTies) {
+    TempDir tmp;
+    auto f = tmp.write_file("data.txt", "2 b\n2 a\n1 x\n2 c\n10 z\n9 y\n");
+    char a0[] = "sort", a1[] = "-r", a2[] = "-n", a3[256];
+    std::snprintf(a3, sizeof(a3), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3};
+    auto out = capture_stdout([&]{ return sort_main(4, argv); });
+    // 数值降序；三个并列的 "2" 保持输入序 b,a,c。
+    // 修前比较器用 `!less`，对相等数值键 (a,b) 与 (b,a) 都返回 true，违反
+    // strict-weak-ordering（std::stable_sort 的 UB），顺序会被打乱。
+    EXPECT_EQ(out, "10 z\n9 y\n2 b\n2 a\n2 c\n1 x\n");
+}
+
 #endif // CFBOX_ENABLE_SORT

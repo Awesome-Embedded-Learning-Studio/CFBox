@@ -1,0 +1,7 @@
+# 测试数量基线（防静默删测试的地板门）。只许升、不许降：加了测试就把对应数字 bump 上去。
+# 由 tests/check_test_floor.sh 读取校验。详见 document/ai/COVERAGE.md。
+# GTest 数取自 `ctest -N` 的 "Total Tests:" 行；集成脚本数取自 tests/integration/test_*.sh。
+# 2026-06-28 首次钉死真值 436+54（之前文档在 436/399、56/54 之间漂移）；
+# 同日 sort -rn 修复时新增 SortTest.ReverseNumericStableOnTies → 437：
+gtest 437
+integration 54

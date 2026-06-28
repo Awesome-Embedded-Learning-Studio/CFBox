@@ -1,15 +1,15 @@
-# 对照冒烟测试 — 已登记差异（2026-06-28 首跑 triage）
+# 对照冒烟测试 — 已登记差异清单。
 # STATUS：ACCEPTABLE = 可接受（格式风格 / POSIX 允许的行为差）
 #         DEFECT     = 待修缺陷（修好后把这一行删掉，对照测试会自动开始盯它）
 # 字段：STATUS applet case_id（case_id 见 run_diff_smoke.sh 里 compare() 的第二个参数）
 
-# ── DEFECT：head/tail 在"结尾无换行"的文件上会凭空补一个换行，coreutils/BusyBox 保留原样 ──
-DEFECT   head   notrail
-DEFECT   tail   n2_notrail
+# ── 已修复（2026-06-28）：head/tail 在结尾无换行的文件上凭空补换行 → 现 MATCH，两条 DEFECT 已删 ──
 
-# ── DEFECT：sort -rn 比较器违反 strict-weak-ordering（未定义行为），数值并列项顺序被扰乱 ──
-#    （第 3 批在对照测试保护下修复；修复后删本行）
-DEFECT   sort   rn_num
+# ── ACCEPTABLE：sort -rn 数值并列时 cfbox 保输入序（stable_sort），coreutils 用整行做 tiebreak ──
+#    原先是 DEFECT：比较器 `!less` 对相等数值键 (a,b) 与 (b,a) 都返 true，违反 strict-weak-ordering
+#    （std::stable_sort 的 UB）。UB 已修（反向改成交换操作数 b<a）。剩下的并列顺序差异是和
+#    sort -n 同类的、POSIX 允许的稳定性差异（无 -s 时并列顺序 unspecified），故改判 ACCEPTABLE。
+ACCEPTABLE sort rn_num
 
 # ── ACCEPTABLE：wc 输出列宽固定 8、空格右对齐；coreutils 用最小宽度。数字一致，纯格式差异 ──
 #    （等编译 BusyBox 后再核 BusyBox 的 wc 格式，决定是否对齐）
@@ -21,6 +21,5 @@ ACCEPTABLE wc   m_small
 ACCEPTABLE wc   empty
 ACCEPTABLE wc   c_binary
 
-# ── ACCEPTABLE：sort -n 数值并列时 cfbox 保输入序（stable_sort），coreutils 用整行做 tiebreak ──
-#    POSIX 规定无 -s 时并列顺序 unspecified，cfbox 合规；是否对齐 GNU/BusyBox 待定
+# ── ACCEPTABLE：sort -n 数值并列时 cfbox 保输入序，coreutils 用整行做 tiebreak（POSIX 允许）──
 ACCEPTABLE sort n_num

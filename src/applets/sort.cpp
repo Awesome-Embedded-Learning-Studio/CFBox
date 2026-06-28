@@ -67,13 +67,13 @@ auto sort_lines(std::vector<std::string>& lines, const SortOptions& opts) -> voi
     }
 
     std::stable_sort(entries.begin(), entries.end(), [&](const Entry& a, const Entry& b) {
-        bool less;
+        // Reverse must swap the operands (b < a), not negate (`!less`): negation makes
+        // the predicate true for equal keys, violating strict-weak-ordering and turning
+        // std::stable_sort into UB on numeric ties. Stable sort keeps equal-key order.
         if (opts.numeric) {
-            less = a.num_val < b.num_val;
-        } else {
-            less = a.key < b.key;
+            return opts.reverse ? b.num_val < a.num_val : a.num_val < b.num_val;
         }
-        return opts.reverse ? !less && a.key != b.key : less;
+        return opts.reverse ? b.key < a.key : a.key < b.key;
     });
 
     std::vector<std::string> sorted;
