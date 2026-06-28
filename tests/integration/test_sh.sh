@@ -222,6 +222,16 @@ out=$(echo bob | $SH -c 'read -p "N: " x; echo hi=$x' 2>&1)
 assert_output "N: hi=bob" "$out"
 ((++pass))
 
+# ── trap (EXIT) ─────────────────────────────────────────────────
+out=$($SH -c 'trap "echo bye" EXIT; echo main')
+expected=$'main\nbye'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'trap "echo bye" EXIT; trap - EXIT; echo main')
+assert_output "main" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'

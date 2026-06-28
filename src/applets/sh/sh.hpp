@@ -1,5 +1,6 @@
 #pragma once
 
+#include <csignal>
 #include <cstdio>
 #include <filesystem>
 #include <memory>
@@ -152,6 +153,15 @@ public:
     auto set_local(const std::string& name, const std::string& value) -> void;
     [[nodiscard]] auto in_function() const -> bool { return !local_scopes_.empty(); }
 
+    // Signal / EXIT traps
+    auto set_trap(int sig, const std::string& cmd) -> void { traps_[sig] = cmd; }
+    [[nodiscard]] auto get_trap(int sig) const -> std::string {
+        auto it = traps_.find(sig);
+        return it != traps_.end() ? it->second : std::string{};
+    }
+    auto clear_trap(int sig) -> void { traps_.erase(sig); }
+    [[nodiscard]] auto all_traps() const -> const std::unordered_map<int, std::string>& { return traps_; }
+
     // Control flow flags
     bool should_exit = false;
     int exit_status = 0;
@@ -168,7 +178,11 @@ private:
     std::string script_name_;
     std::unordered_map<std::string, std::unique_ptr<AndOr>> functions_;
     std::vector<std::unordered_map<std::string, std::string>> local_scopes_;
+    std::unordered_map<int, std::string> traps_;
 };
+
+// Set by the signal handler, consumed by the executor to run the trap command.
+inline volatile std::sig_atomic_t trap_pending_signal{0};
 
 // ── Lexer ────────────────────────────────────────────────────────
 class Lexer {

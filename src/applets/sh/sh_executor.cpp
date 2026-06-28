@@ -1,5 +1,6 @@
 #include "sh.hpp"
 
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -167,9 +168,9 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
         ::_Exit(127);
     }
 
-    // Parent: wait for child
-    int status;
-    ::waitpid(pid, &status, 0);
+    // Parent: wait for child (retry on EINTR so signal traps don't break it)
+    int status = 0;
+    while (::waitpid(pid, &status, 0) == -1 && errno == EINTR) {}
     if (WIFEXITED(status)) return WEXITSTATUS(status);
     if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
     return 1;
@@ -255,8 +256,8 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
     // Wait for all children
     int last_status = 0;
     for (int i = 0; i < n; ++i) {
-        int status;
-        ::waitpid(pids[static_cast<std::size_t>(i)], &status, 0);
+        int status = 0;
+        while (::waitpid(pids[static_cast<std::size_t>(i)], &status, 0) == -1 && errno == EINTR) {}
         if (i == n - 1) {
             if (WIFEXITED(status)) last_status = WEXITSTATUS(status);
             else if (WIFSIGNALED(status)) last_status = 128 + WTERMSIG(status);
@@ -339,8 +340,8 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                 int rc = node->body ? execute(*node->body, state) : 0;
                 ::_Exit(rc);
             }
-            int status;
-            ::waitpid(pid, &status, 0);
+            int status = 0;
+            while (::waitpid(pid, &status, 0) == -1 && errno == EINTR) {}
             if (WIFEXITED(status)) return WEXITSTATUS(status);
             if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
             return 1;
@@ -389,6 +390,18 @@ auto execute(AndOr& node, ShellState& state) -> int {
         if (state.return_pending) break;
         if (state.break_depth > 0) break;
         if (state.continue_loop) break;
+        if (trap_pending_signal != 0) {
+            // Run the trap command for the signal that fired, then continue.
+            int sig = trap_pending_signal;
+            trap_pending_signal = 0;
+            std::string tcmd = state.get_trap(sig);
+            if (!tcmd.empty()) {
+                Lexer lexer(tcmd);
+                Parser parser(lexer);
+                auto ast = parser.parse_program();
+                if (ast) execute(*ast, state);
+            }
+        }
     }
 
     return last_rc;

@@ -1,5 +1,6 @@
 #include "sh.hpp"
 
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -267,6 +268,56 @@ static int builtin_continue(std::vector<std::string>& /*args*/, ShellState& stat
     return 0;
 }
 
+// Installed for any signal with a trap; just records which signal fired. The
+// executor runs the corresponding trap command at the next safe point.
+static void trap_handler(int sig) {
+    cfbox::sh::trap_pending_signal = sig;
+}
+
+static auto signal_from_name(const std::string& name) -> int {
+    if (name == "EXIT" || name == "0") return 0;
+    if (name == "INT" || name == "SIGINT") return SIGINT;
+    if (name == "TERM" || name == "SIGTERM") return SIGTERM;
+    if (name == "HUP" || name == "SIGHUP") return SIGHUP;
+    if (name == "QUIT" || name == "SIGQUIT") return SIGQUIT;
+    char* end = nullptr;
+    long n = std::strtol(name.c_str(), &end, 10);
+    if (*end == '\0' && n >= 0) return static_cast<int>(n);
+    return -1;
+}
+
+static int builtin_trap(std::vector<std::string>& args, ShellState& state) {
+    if (args.size() == 1) {
+        for (const auto& [sig, cmd] : state.all_traps()) {
+            std::printf("trap -- '%s' %d\n", cmd.c_str(), sig);
+        }
+        return 0;
+    }
+
+    std::size_t i = 1;
+    std::string cmd;
+    bool clear = false;
+    if (args[i] == "-") { clear = true; ++i; }
+    else if (args[i] == "-l") { return 0; }  // list signal names: not implemented
+    else { cmd = args[i]; ++i; }
+
+    for (; i < args.size(); ++i) {
+        int sig = signal_from_name(args[i]);
+        if (sig < 0) {
+            CFBOX_ERR("sh", "trap: %s: bad signal", args[i].c_str());
+            return 1;
+        }
+        if (clear || cmd.empty()) {
+            state.clear_trap(sig);
+            if (sig != 0) ::signal(sig, SIG_DFL);
+        } else {
+            state.set_trap(sig, cmd);
+            if (sig != 0) ::signal(sig, trap_handler);
+        }
+    }
+    return 0;
+}
+
 auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
     static const std::unordered_map<std::string, BuiltinFunc> builtins = {
         {"echo", builtin_echo},
@@ -288,6 +339,7 @@ auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
         {"local", builtin_local},
         {"break", builtin_break},
         {"continue", builtin_continue},
+        {"trap", builtin_trap},
     };
     return builtins;
 }
