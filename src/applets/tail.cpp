@@ -35,20 +35,25 @@ constexpr cfbox::help::HelpEntry HELP = {
 
 // ===== static (non-follow) tail =====================================
 
-auto tail_lines(const std::vector<std::string>& lines, long n, bool from_start) -> void {
+auto tail_lines(const std::vector<std::string>& lines, long n, bool from_start, bool trailing_nl) -> void {
+    auto emit = [&](long i) {
+        // Only the file's actual last line can lack a terminator; preserve those
+        // bytes instead of synthesizing a newline (coreutils/tail behavior).
+        if (i == static_cast<long>(lines.size()) - 1 && !trailing_nl) {
+            std::fputs(lines[static_cast<std::size_t>(i)].c_str(), stdout);
+        } else {
+            std::printf("%s\n", lines[static_cast<std::size_t>(i)].c_str());
+        }
+    };
     if (from_start) {
         long start = n - 1;
         if (start < 0) start = 0;
-        for (long i = start; i < static_cast<long>(lines.size()); ++i) {
-            std::printf("%s\n", lines[static_cast<std::size_t>(i)].c_str());
-        }
+        for (long i = start; i < static_cast<long>(lines.size()); ++i) emit(i);
     } else {
         if (n <= 0) return;
         long start = static_cast<long>(lines.size()) - n;
         if (start < 0) start = 0;
-        for (long i = start; i < static_cast<long>(lines.size()); ++i) {
-            std::printf("%s\n", lines[static_cast<std::size_t>(i)].c_str());
-        }
+        for (long i = start; i < static_cast<long>(lines.size()); ++i) emit(i);
     }
 }
 
@@ -79,7 +84,8 @@ auto tail_file(std::string_view path, long n, bool use_bytes,
         tail_bytes(content, n);
     } else {
         auto lines = cfbox::io::split_lines(content);
-        tail_lines(lines, n, from_start);
+        bool trailing_nl = !content.empty() && content.back() == '\n';
+        tail_lines(lines, n, from_start, trailing_nl);
     }
     return 0;
 }
@@ -311,7 +317,10 @@ auto follow_files(std::vector<std::string> files, long n, bool use_bytes,
             if (use_bytes) {
                 tail_bytes(content, n);
             } else {
-                tail_lines(cfbox::io::split_lines(content), n, from_start);
+                // Follow streams appended bytes raw after this initial tail, so keep
+                // the historical always-newline behavior here; the trailing-newline
+                // fix only applies to the static tail_file path (what we test/diff).
+                tail_lines(cfbox::io::split_lines(content), n, from_start, true);
             }
             std::fflush(stdout);
             ff.offset = ff.regular ? ::lseek(ff.fd.get(), 0, SEEK_END) : 0;

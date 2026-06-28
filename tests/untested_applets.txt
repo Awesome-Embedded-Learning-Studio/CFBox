@@ -1,0 +1,35 @@
+# 暂无测试的 applet 名单（"新 applet 必须带测试"门的 grandfather 基线，老人老办法）。
+# 由 tests/check_test_floor.sh 读取。规则：一个 applet 既没有 test_<name>.cpp/.sh，
+# 又不在这个清单里 → CI 挂。所以新加的裸奔 applet 会立刻被挡。
+# 这是"只升不降"的棘轮：给下面某个 applet 补上测试后，就把那一行删掉，让门开始盯它。
+# 名单取自 2026-06-28 实测（注册表对 test_*.cpp/.sh 做集合差，别名 [ pkill poweroff 归并到主命令）。
+ar
+cpio
+df
+ed
+env
+expand
+fold
+gunzip
+init
+install
+mkfifo
+mknod
+nice
+nohup
+patch
+pgrep
+pidof
+shuf
+split
+stat
+sync
+sysctl
+tac
+tee
+timeout
+tsort
+unlink
+unzip
+usleep
+who

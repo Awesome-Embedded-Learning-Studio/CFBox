@@ -19,11 +19,18 @@ constexpr cfbox::help::HelpEntry HELP = {
     .extra   = "",
 };
 
-auto head_lines(const std::vector<std::string>& lines, long n) -> void {
+auto head_lines(const std::vector<std::string>& lines, long n, bool trailing_nl) -> void {
     long count = (n >= 0) ? n : static_cast<long>(lines.size()) + n;
     if (count < 0) count = 0;
-    for (long i = 0; i < count && i < static_cast<long>(lines.size()); ++i) {
-        std::printf("%s\n", lines[static_cast<std::size_t>(i)].c_str());
+    long total = static_cast<long>(lines.size());
+    for (long i = 0; i < count && i < total; ++i) {
+        // Only the file's actual last line can lack a terminator; preserve those
+        // bytes instead of synthesizing a newline (coreutils/head behavior).
+        if (i == total - 1 && !trailing_nl) {
+            std::fputs(lines[static_cast<std::size_t>(i)].c_str(), stdout);
+        } else {
+            std::printf("%s\n", lines[static_cast<std::size_t>(i)].c_str());
+        }
     }
 }
 
@@ -53,7 +60,8 @@ auto head_file(std::string_view path, long n_lines, long n_bytes,
 
     if (use_lines) {
         auto lines = cfbox::io::split_lines(content);
-        head_lines(lines, n_lines);
+        bool trailing_nl = !content.empty() && content.back() == '\n';
+        head_lines(lines, n_lines, trailing_nl);
     } else {
         head_bytes(content, n_bytes);
     }

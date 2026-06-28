@@ -28,7 +28,7 @@ jobs:
           restore-keys: ccache-native-${{ runner.os }}-
 
       - name: Configure (Debug)
-        run: cmake -B build -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         env:
           CCACHE_MAXSIZE: 256M
 
@@ -40,6 +40,9 @@ jobs:
 
       - name: Integration tests
         run: bash tests/integration/run_all.sh
+
+      - name: Test floor gates (count floor + new-applet-must-have-tests)
+        run: bash tests/check_test_floor.sh
 
       - name: Upload test results
         if: always()
