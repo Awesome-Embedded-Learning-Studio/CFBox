@@ -1,11 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace cfbox::checksum {
 
@@ -36,100 +36,152 @@ inline auto md5_to_hex(const MD5Hash& hash) -> std::string {
     return result;
 }
 
-inline auto md5(std::string_view data) -> MD5Hash {
-    MD5Hash result;
+namespace detail {
 
-    static constexpr std::uint32_t K[64] = {
-        0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
-        0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
-        0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
-        0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
-        0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
-        0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
-        0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
-        0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
-        0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
-        0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
-        0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
-        0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
-        0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
-        0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
-        0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
-        0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
-    };
+inline constexpr std::uint32_t k_md5_K[64] = {
+    0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
+    0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
+    0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
+    0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
+    0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa,
+    0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
+    0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed,
+    0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
+    0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c,
+    0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
+    0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05,
+    0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
+    0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039,
+    0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
+    0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
+    0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
+};
 
-    static constexpr unsigned s[64] = {
-        7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-        5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
-        4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-        6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
-    };
+inline constexpr unsigned k_md5_s[64] = {
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+    5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+};
 
-    auto left_rotate = [](std::uint32_t x, unsigned c) -> std::uint32_t {
-        return (x << c) | (x >> (32 - c));
-    };
+inline auto md5_left_rotate(std::uint32_t x, unsigned c) -> std::uint32_t {
+    return (x << c) | (x >> (32 - c));
+}
 
-    // Padding
-    std::size_t orig_len = data.size();
-    auto bit_len = static_cast<std::uint64_t>(orig_len) * 8;
-    std::size_t padded_len = ((orig_len + 8) / 64 + 1) * 64;
-    std::vector<std::uint8_t> msg(padded_len, 0);
-    std::memcpy(msg.data(), data.data(), orig_len);
-    msg[orig_len] = 0x80;
-    for (int j = 0; j < 8; ++j) {
-        msg[padded_len - 8 + j] = static_cast<std::uint8_t>(bit_len >> (j * 8));
+// Compress one 64-byte block into the running state.
+inline auto md5_process(std::uint32_t& a0, std::uint32_t& b0, std::uint32_t& c0,
+                        std::uint32_t& d0, const std::uint8_t* p) -> void {
+    std::uint32_t M[16];
+    for (std::size_t j = 0; j < 16; ++j) {
+        auto base = j * 4;
+        M[j] = static_cast<std::uint32_t>(p[base])
+             | (static_cast<std::uint32_t>(p[base + 1]) << 8)
+             | (static_cast<std::uint32_t>(p[base + 2]) << 16)
+             | (static_cast<std::uint32_t>(p[base + 3]) << 24);
     }
 
-    std::uint32_t a0 = 0x67452301;
-    std::uint32_t b0 = 0xEFCDAB89;
-    std::uint32_t c0 = 0x98BADCFE;
-    std::uint32_t d0 = 0x10325476;
+    std::uint32_t A = a0, B = b0, C = c0, D = d0;
 
-    for (std::size_t offset = 0; offset < padded_len; offset += 64) {
-        std::uint32_t M[16];
-        for (std::size_t j = 0; j < 16; ++j) {
-            auto base = offset + j * 4;
-            M[j] = static_cast<std::uint32_t>(msg[base])
-                 | (static_cast<std::uint32_t>(msg[base + 1]) << 8)
-                 | (static_cast<std::uint32_t>(msg[base + 2]) << 16)
-                 | (static_cast<std::uint32_t>(msg[base + 3]) << 24);
+    for (int j = 0; j < 64; ++j) {
+        std::uint32_t F;
+        int idx;
+        if (j < 16) {
+            F = (B & C) | (~B & D);
+            idx = j;
+        } else if (j < 32) {
+            F = (D & B) | (~D & C);
+            idx = (5 * j + 1) % 16;
+        } else if (j < 48) {
+            F = B ^ C ^ D;
+            idx = (3 * j + 5) % 16;
+        } else {
+            F = C ^ (B | ~D);
+            idx = (7 * j) % 16;
         }
+        F = F + A + k_md5_K[j] + M[idx];
+        A = D;
+        D = C;
+        C = B;
+        B = B + md5_left_rotate(F, k_md5_s[j]);
+    }
 
-        std::uint32_t A = a0, B = b0, C = c0, D = d0;
+    a0 += A; b0 += B; c0 += C; d0 += D;
+}
 
-        for (int j = 0; j < 64; ++j) {
-            std::uint32_t F;
-            int idx;
-            if (j < 16) {
-                F = (B & C) | (~B & D);
-                idx = j;
-            } else if (j < 32) {
-                F = (D & B) | (~D & C);
-                idx = (5 * j + 1) % 16;
-            } else if (j < 48) {
-                F = B ^ C ^ D;
-                idx = (3 * j + 5) % 16;
-            } else {
-                F = C ^ (B | ~D);
-                idx = (7 * j) % 16;
+} // namespace detail
+
+// Incremental MD5 — O(1) scratch memory. Feed data in chunks via update(), then
+// call finalize(). Replaces the old one-shot md5() that padded the whole input
+// into a second buffer (2× memory + had to read it all before hashing).
+struct MD5 {
+    std::uint32_t a0 = 0x67452301, b0 = 0xEFCDAB89, c0 = 0x98BADCFE, d0 = 0x10325476;
+    std::uint64_t total_bytes = 0;
+    std::array<std::uint8_t, 64> buf{};
+    unsigned buf_len = 0;
+
+    auto update(const std::uint8_t* data, std::size_t len) -> void {
+        total_bytes += len;
+        feed(data, len);
+    }
+
+    auto finalize() -> MD5Hash {
+        // Pad with 0x80, zeros, then 8-byte little-endian bit length so the
+        // length lands in the last 8 bytes of a 64-byte block (RFC 1321).
+        std::uint8_t pad[64]{};
+        pad[0] = 0x80;
+        unsigned pad_count = (buf_len < 56) ? static_cast<unsigned>(56 - buf_len)
+                                            : static_cast<unsigned>(120 - buf_len);
+        feed(pad, pad_count);  // padding is not message data — don't count in total_bytes
+        std::uint64_t bit_len = total_bytes * 8;
+        std::uint8_t lenbytes[8];
+        for (int j = 0; j < 8; ++j) {
+            lenbytes[j] = static_cast<std::uint8_t>(bit_len >> (j * 8));
+        }
+        feed(lenbytes, 8);
+
+        MD5Hash result;
+        for (int j = 0; j < 4; ++j) {
+            result.bytes[j]      = static_cast<std::uint8_t>(a0 >> (j * 8));
+            result.bytes[j + 4]  = static_cast<std::uint8_t>(b0 >> (j * 8));
+            result.bytes[j + 8]  = static_cast<std::uint8_t>(c0 >> (j * 8));
+            result.bytes[j + 12] = static_cast<std::uint8_t>(d0 >> (j * 8));
+        }
+        return result;
+    }
+
+private:
+    // Buffer bytes and process full 64-byte blocks. Does not touch total_bytes,
+    // so finalize() can feed padding without inflating the recorded length.
+    auto feed(const std::uint8_t* data, std::size_t len) -> void {
+        if (buf_len > 0) {
+            std::size_t take = std::min<std::size_t>(64 - buf_len, len);
+            std::memcpy(buf.data() + buf_len, data, take);
+            buf_len += static_cast<unsigned>(take);
+            data += take;
+            len -= take;
+            if (buf_len == 64) {
+                detail::md5_process(a0, b0, c0, d0, buf.data());
+                buf_len = 0;
             }
-            F = F + A + K[j] + M[idx];
-            A = D;
-            D = C;
-            C = B;
-            B = B + left_rotate(F, s[j]);
         }
-
-        a0 += A; b0 += B; c0 += C; d0 += D;
+        while (len >= 64) {
+            detail::md5_process(a0, b0, c0, d0, data);
+            data += 64;
+            len -= 64;
+        }
+        if (len > 0) {
+            std::memcpy(buf.data(), data, len);
+            buf_len = static_cast<unsigned>(len);
+        }
     }
+};
 
-    for (int j = 0; j < 4; ++j) {
-        result.bytes[j]      = static_cast<std::uint8_t>(a0 >> (j * 8));
-        result.bytes[j + 4]  = static_cast<std::uint8_t>(b0 >> (j * 8));
-        result.bytes[j + 8]  = static_cast<std::uint8_t>(c0 >> (j * 8));
-        result.bytes[j + 12] = static_cast<std::uint8_t>(d0 >> (j * 8));
-    }
-    return result;
+// One-shot MD5 over a contiguous buffer (kept for compatibility; now O(1) scratch
+// via the incremental struct — no padded copy).
+inline auto md5(std::string_view data) -> MD5Hash {
+    MD5 m;
+    m.update(reinterpret_cast<const std::uint8_t*>(data.data()), data.size());
+    return m.finalize();
 }
 
 struct SumResult {

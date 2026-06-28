@@ -1,5 +1,7 @@
 #include <cstdio>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include <cfbox/args.hpp>
 #include <cfbox/checksum.hpp>
@@ -27,16 +29,37 @@ auto md5sum_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
     auto paths = pos.empty() ? std::vector<std::string_view>{"-"} : pos;
 
+    constexpr std::size_t kChunk = 65536;
     int rc = 0;
     for (auto p : paths) {
-        auto data_result = (p == "-") ? cfbox::io::read_all_stdin() : cfbox::io::read_all(p);
-        if (!data_result) {
-            CFBOX_ERR("md5sum", "%s", data_result.error().msg.c_str());
+        cfbox::checksum::MD5 md5;
+        std::vector<std::uint8_t> buf(kChunk);
+        bool ok = false;
+        if (p == "-") {
+            ok = true;
+            while (std::size_t n = std::fread(buf.data(),1, kChunk, stdin)) {
+                md5.update(buf.data(), n);
+            }
+            if (std::ferror(stdin)) ok = false;
+        } else {
+            auto fh = cfbox::io::open_file(p, "rb");
+            if (!fh) {
+                CFBOX_ERR("md5sum", "%s", fh.error().msg.c_str());
+                rc = 1;
+                continue;
+            }
+            ok = true;
+            while (std::size_t n = std::fread(buf.data(),1, kChunk, fh->get())) {
+                md5.update(buf.data(), n);
+            }
+            if (std::ferror(fh->get())) ok = false;
+        }
+        if (!ok) {
+            CFBOX_ERR("md5sum", "%.*s: read error", static_cast<int>(p.size()), p.data());
             rc = 1;
             continue;
         }
-        auto hash = cfbox::checksum::md5(*data_result);
-        auto hex = cfbox::checksum::md5_to_hex(hash);
+        auto hex = cfbox::checksum::md5_to_hex(md5.finalize());
         std::printf("%s  ", hex.c_str());
         if (p == "-") {
             std::puts("-");
