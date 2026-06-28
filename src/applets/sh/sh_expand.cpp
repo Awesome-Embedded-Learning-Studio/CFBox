@@ -1,9 +1,12 @@
 #include "sh.hpp"
 
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <glob.h>
 #include <memory>
+
+#include <cfbox/error.hpp>
 
 namespace {
 
@@ -13,6 +16,134 @@ struct PipeCloser {
     }
 };
 using unique_pipe = std::unique_ptr<std::FILE, PipeCloser>;
+
+// Recursive-descent evaluator for $((expr)). Subset: + - * / %, comparisons,
+// && || !, unary +/-, parentheses, integer literals, and variables (bare names
+// or $VAR; empty/unset/non-numeric -> 0, matching shell semantics).
+struct ArithEvaluator {
+    std::string_view expr;
+    std::size_t pos = 0;
+    const cfbox::sh::ShellState& st;
+    bool error = false;
+
+    void skip_ws() {
+        while (pos < expr.size() && std::isspace(static_cast<unsigned char>(expr[pos]))) ++pos;
+    }
+    [[nodiscard]] auto eof() const -> bool { return pos >= expr.size(); }
+
+    auto match2(char a, char b) -> bool {
+        skip_ws();
+        if (pos + 1 < expr.size() && expr[pos] == a && expr[pos + 1] == b) { pos += 2; return true; }
+        return false;
+    }
+    auto match(char c) -> bool {
+        skip_ws();
+        if (!eof() && expr[pos] == c) { ++pos; return true; }
+        return false;
+    }
+
+    auto run() -> long { return parse_or(); }
+    auto parse_or() -> long {
+        auto l = parse_and();
+        while (match2('|', '|')) { auto r = parse_and(); l = (l || r) ? 1 : 0; }
+        return l;
+    }
+    auto parse_and() -> long {
+        auto l = parse_eq();
+        while (match2('&', '&')) { auto r = parse_eq(); l = (l && r) ? 1 : 0; }
+        return l;
+    }
+    auto parse_eq() -> long {
+        auto l = parse_cmp();
+        for (;;) {
+            if (match2('=', '=')) { l = (l == parse_cmp()) ? 1 : 0; }
+            else if (match2('!', '=')) { l = (l != parse_cmp()) ? 1 : 0; }
+            else break;
+        }
+        return l;
+    }
+    auto parse_cmp() -> long {
+        auto l = parse_add();
+        for (;;) {
+            if (match2('<', '=')) { l = (l <= parse_add()) ? 1 : 0; }
+            else if (match2('>', '=')) { l = (l >= parse_add()) ? 1 : 0; }
+            else if (match('<')) { l = (l < parse_add()) ? 1 : 0; }
+            else if (match('>')) { l = (l > parse_add()) ? 1 : 0; }
+            else break;
+        }
+        return l;
+    }
+    auto parse_add() -> long {
+        auto l = parse_mul();
+        for (;;) {
+            if (match('+')) l += parse_mul();
+            else if (match('-')) l -= parse_mul();
+            else break;
+        }
+        return l;
+    }
+    auto parse_mul() -> long {
+        auto l = parse_unary();
+        for (;;) {
+            if (match('*')) l *= parse_unary();
+            else if (match('/')) { auto r = parse_unary(); if (r == 0) { error = true; return 0; } l /= r; }
+            else if (match('%')) { auto r = parse_unary(); if (r == 0) { error = true; return 0; } l %= r; }
+            else break;
+        }
+        return l;
+    }
+    auto parse_unary() -> long {
+        if (match('!')) return parse_unary() == 0 ? 1 : 0;
+        if (match('-')) return -parse_unary();
+        if (match('+')) return parse_unary();
+        return parse_primary();
+    }
+    auto parse_primary() -> long {
+        skip_ws();
+        if (match('(')) {
+            auto v = parse_or();
+            match(')');
+            return v;
+        }
+        if (!eof() && std::isdigit(static_cast<unsigned char>(expr[pos]))) {
+            long v = 0;
+            while (!eof() && std::isdigit(static_cast<unsigned char>(expr[pos]))) {
+                v = v * 10 + (expr[pos] - '0');
+                ++pos;
+            }
+            return v;
+        }
+        std::string name;
+        if (!eof() && expr[pos] == '$') {
+            ++pos;
+            if (!eof() && expr[pos] == '{') {
+                ++pos;
+                while (!eof() && expr[pos] != '}') name += expr[pos++];
+                if (!eof()) ++pos;
+            } else {
+                while (!eof() && (std::isalnum(static_cast<unsigned char>(expr[pos])) || expr[pos] == '_')) name += expr[pos++];
+            }
+        } else if (!eof() && (std::isalpha(static_cast<unsigned char>(expr[pos])) || expr[pos] == '_')) {
+            while (!eof() && (std::isalnum(static_cast<unsigned char>(expr[pos])) || expr[pos] == '_')) name += expr[pos++];
+        }
+        if (name.empty()) { error = true; return 0; }
+        auto val = st.get_var(name);
+        if (val.empty()) return 0;
+        char* end = nullptr;
+        long n = std::strtol(val.c_str(), &end, 10);
+        return (*end == '\0') ? n : 0;
+    }
+};
+
+auto eval_arith(const std::string& expr, const cfbox::sh::ShellState& state) -> std::string {
+    ArithEvaluator ae{expr, 0, state};
+    auto v = ae.run();
+    if (ae.error) {
+        CFBOX_ERR("sh", "arithmetic expression error");
+        return "0";
+    }
+    return std::to_string(v);
+}
 
 } // namespace
 
@@ -59,6 +190,31 @@ static auto process_dollar(Iter& it, Iter end, const ShellState& state) -> std::
     }
 
     if (c == '(') {
+        // $((expr)) arithmetic, distinguished from $(...) command substitution.
+        auto next_it = it;
+        ++next_it;
+        if (next_it != end && *next_it == '(') {
+            ++it; ++it;  // skip both (
+            int depth = 0;
+            std::string expr;
+            while (it != end) {
+                char ch = *it;
+                if (ch == '(') { ++depth; expr += ch; }
+                else if (ch == ')') {
+                    if (depth == 0) {
+                        ++it;  // first ) of ))
+                        if (it != end && *it == ')') ++it;  // second )
+                        break;
+                    }
+                    --depth;
+                    expr += ch;
+                } else {
+                    expr += ch;
+                }
+                ++it;
+            }
+            return eval_arith(expr, state);
+        }
         // $(...) — basic command substitution support
         ++it; // skip (
         int depth = 1;

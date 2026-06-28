@@ -93,6 +93,28 @@ out=$($SH -c 'echo $(echo nested)')
 assert_output "nested" "$out"
 ((++pass))
 
+# ── Arithmetic $((expr)) ─────────────────────────────────────────
+out=$($SH -c 'echo $((1 + 2 * 3))')
+assert_output "7" "$out"
+((++pass))
+
+out=$($SH -c 'echo $((10 - 4))')
+assert_output "6" "$out"
+((++pass))
+
+out=$($SH -c 'i=5; echo $((i + 1))')
+assert_output "6" "$out"
+((++pass))
+
+out=$($SH -c 'i=0; while [ $i -lt 3 ]; do echo $i; i=$((i+1)); done')
+expected=$'0\n1\n2'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'echo $(( (2 + 3) * 4 ))')
+assert_output "20" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'

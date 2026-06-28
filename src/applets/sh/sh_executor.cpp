@@ -78,9 +78,16 @@ static auto restore_redirections(std::vector<std::pair<int, int>>& saved) -> voi
 static auto execute_pipeline(Pipeline& node, ShellState& state) -> int;
 
 static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
-    // Apply assignments
+    // Apply assignments. The RHS is expanded (param/arith/command sub); parts
+    // are joined back into one value since assignment does not field-split.
     for (auto& [name, value] : cmd.assigns) {
-        state.set_var(name, value);
+        auto parts = expand_word(value, state);
+        std::string joined;
+        for (std::size_t k = 0; k < parts.size(); ++k) {
+            if (k > 0) joined += ' ';
+            joined += parts[k];
+        }
+        state.set_var(name, joined);
     }
 
     if (cmd.words.empty()) {
