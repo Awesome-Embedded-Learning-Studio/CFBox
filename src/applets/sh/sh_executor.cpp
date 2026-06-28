@@ -109,6 +109,25 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
         return rc;
     }
 
+    // User-defined function: run its body in-process with new positional
+    // parameters and a fresh local-variable scope.
+    if (state.is_function(expanded[0])) {
+        auto* body = state.get_function(expanded[0]);
+        auto saved_positional = state.positional_params();
+        std::vector<std::string> func_args(expanded.begin() + 1, expanded.end());
+        state.set_positional(std::move(func_args));
+        state.push_scope();
+        int rc = body ? execute(*body, state) : 0;
+        if (state.return_pending) {
+            rc = state.return_status;
+            state.return_pending = false;
+        }
+        state.pop_scope();
+        state.set_positional(std::move(saved_positional));
+        state.set_last_status(rc);
+        return rc;
+    }
+
     // External command: fork and exec
     pid_t pid = ::fork();
     if (pid < 0) {
@@ -273,6 +292,7 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                 }
 
                 if (state.should_exit) break;
+                if (state.return_pending) break;
                 if (state.break_loop) { state.break_loop = false; break; }
                 if (state.continue_loop) { state.continue_loop = false; continue; }
             }
@@ -291,6 +311,7 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
                     state.set_last_status(rc);
                 }
                 if (state.should_exit) break;
+                if (state.return_pending) break;
                 if (state.break_loop) { state.break_loop = false; break; }
                 if (state.continue_loop) { state.continue_loop = false; continue; }
             }
@@ -325,6 +346,10 @@ auto execute_command(Command& cmd, ShellState& state) -> int {
             }
             return 0;  // no pattern matched
         }
+        else if constexpr (std::is_same_v<T, std::unique_ptr<FuncDef>>) {
+            state.define_function(node->name, std::move(node->body));
+            return 0;
+        }
         else {
             return 1;
         }
@@ -345,6 +370,7 @@ auto execute(AndOr& node, ShellState& state) -> int {
         state.set_last_status(last_rc);
 
         if (state.should_exit) break;
+        if (state.return_pending) break;
     }
 
     return last_rc;

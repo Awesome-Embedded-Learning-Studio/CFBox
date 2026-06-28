@@ -51,6 +51,7 @@ struct ForClause;
 struct Subshell;
 struct BraceGroup;
 struct CaseClause;
+struct FuncDef;
 
 using Command = std::variant<SimpleCommand,
                              std::unique_ptr<Pipeline>,
@@ -59,7 +60,8 @@ using Command = std::variant<SimpleCommand,
                              std::unique_ptr<ForClause>,
                              std::unique_ptr<Subshell>,
                              std::unique_ptr<BraceGroup>,
-                             std::unique_ptr<CaseClause>>;
+                             std::unique_ptr<CaseClause>,
+                             std::unique_ptr<FuncDef>>;
 
 struct Pipeline {
     std::vector<Command> commands;
@@ -108,6 +110,11 @@ struct CaseClause {
     std::vector<CaseBranch> branches;
 };
 
+struct FuncDef {
+    std::string name;
+    std::unique_ptr<AndOr> body;
+};
+
 // ── Shell State ──────────────────────────────────────────────────
 class ShellState {
 public:
@@ -133,12 +140,25 @@ public:
     auto script_name() const -> const std::string& { return script_name_; }
     auto set_script_name(std::string name) -> void { script_name_ = std::move(name); }
 
+    // Functions
+    auto define_function(const std::string& name, std::unique_ptr<AndOr> body) -> void;
+    [[nodiscard]] auto is_function(const std::string& name) const -> bool;
+    auto get_function(const std::string& name) -> AndOr*;
+
+    // Local variable scopes (function-local variables)
+    auto push_scope() -> void;
+    auto pop_scope() -> void;
+    auto set_local(const std::string& name, const std::string& value) -> void;
+    [[nodiscard]] auto in_function() const -> bool { return !local_scopes_.empty(); }
+
     // Control flow flags
     bool should_exit = false;
     int exit_status = 0;
     bool break_loop = false;
     int break_count = 0;
     bool continue_loop = false;
+    bool return_pending = false;
+    int return_status = 0;
 
 private:
     std::unordered_map<std::string, std::string> vars_;
@@ -146,6 +166,8 @@ private:
     std::vector<std::string> positional_;
     int last_status_ = 0;
     std::string script_name_;
+    std::unordered_map<std::string, std::unique_ptr<AndOr>> functions_;
+    std::vector<std::unordered_map<std::string, std::string>> local_scopes_;
 };
 
 // ── Lexer ────────────────────────────────────────────────────────
@@ -200,6 +222,7 @@ private:
     auto parse_subshell() -> std::unique_ptr<Subshell>;
     auto parse_brace_group() -> std::unique_ptr<BraceGroup>;
     auto parse_case() -> std::unique_ptr<CaseClause>;
+    auto parse_func() -> std::unique_ptr<FuncDef>;
 
     Lexer& lexer_;
     Token current_;

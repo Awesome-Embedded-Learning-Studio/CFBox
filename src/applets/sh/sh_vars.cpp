@@ -34,6 +34,11 @@ auto ShellState::get_var(std::string_view name) const -> std::string {
         return "";
     }
 
+    // Local scopes (innermost first) take precedence over globals.
+    for (auto scope_it = local_scopes_.rbegin(); scope_it != local_scopes_.rend(); ++scope_it) {
+        auto f = scope_it->find(std::string{name});
+        if (f != scope_it->end()) return f->second;
+    }
     auto it = vars_.find(std::string{name});
     if (it != vars_.end()) return it->second;
 
@@ -43,6 +48,12 @@ auto ShellState::get_var(std::string_view name) const -> std::string {
 }
 
 auto ShellState::set_var(const std::string& name, const std::string& value) -> void {
+    // If the name is an active local, update it in its scope.
+    if (!local_scopes_.empty()) {
+        auto& top = local_scopes_.back();
+        auto it = top.find(name);
+        if (it != top.end()) { it->second = value; return; }
+    }
     vars_[name] = value;
     if (exported_.count(name)) {
         ::setenv(name.c_str(), value.c_str(), 1);
@@ -82,6 +93,35 @@ auto ShellState::shift(int n) -> void {
 
 auto ShellState::shell_pid() const -> int {
     return static_cast<int>(::getpid());
+}
+
+auto ShellState::define_function(const std::string& name, std::unique_ptr<AndOr> body) -> void {
+    functions_[name] = std::move(body);
+}
+
+auto ShellState::is_function(const std::string& name) const -> bool {
+    return functions_.count(name) > 0;
+}
+
+auto ShellState::get_function(const std::string& name) -> AndOr* {
+    auto it = functions_.find(name);
+    return it != functions_.end() ? it->second.get() : nullptr;
+}
+
+auto ShellState::push_scope() -> void {
+    local_scopes_.emplace_back();
+}
+
+auto ShellState::pop_scope() -> void {
+    if (!local_scopes_.empty()) local_scopes_.pop_back();
+}
+
+auto ShellState::set_local(const std::string& name, const std::string& value) -> void {
+    if (local_scopes_.empty()) {
+        vars_[name] = value;  // outside a function: behave like a normal var
+    } else {
+        local_scopes_.back()[name] = value;
+    }
 }
 
 } // namespace cfbox::sh

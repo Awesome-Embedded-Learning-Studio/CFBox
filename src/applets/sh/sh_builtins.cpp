@@ -214,6 +214,29 @@ static int builtin_source(std::vector<std::string>& args, ShellState& state) {
     return 0;
 }
 
+static int builtin_return(std::vector<std::string>& args, ShellState& state) {
+    int code = state.last_status();
+    if (args.size() > 1) code = std::atoi(args[1].c_str());
+    state.return_pending = true;
+    state.return_status = code;
+    return code;
+}
+
+static int builtin_local(std::vector<std::string>& args, ShellState& state) {
+    if (!state.in_function()) {
+        CFBOX_ERR("sh", "local: can only be used in a function");
+        return 1;
+    }
+    for (std::size_t i = 1; i < args.size(); ++i) {
+        auto& arg = args[i];
+        auto eq = arg.find('=');
+        std::string name = (eq == std::string::npos) ? arg : arg.substr(0, eq);
+        std::string val = (eq == std::string::npos) ? state.get_var(name) : arg.substr(eq + 1);
+        state.set_local(name, val);
+    }
+    return 0;
+}
+
 auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
     static const std::unordered_map<std::string, BuiltinFunc> builtins = {
         {"echo", builtin_echo},
@@ -231,6 +254,8 @@ auto get_builtins() -> const std::unordered_map<std::string, BuiltinFunc>& {
         {"eval", builtin_eval},
         {"source", builtin_source},
         {".", builtin_source},
+        {"return", builtin_return},
+        {"local", builtin_local},
     };
     return builtins;
 }

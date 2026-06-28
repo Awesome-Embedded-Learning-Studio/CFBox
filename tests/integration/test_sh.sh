@@ -133,6 +133,26 @@ expected=$'one\ntwo\nmany'
 assert_output "$expected" "$out"
 ((++pass))
 
+# ── Functions, return, local ─────────────────────────────────────
+out=$($SH -c 'greet() { echo hi; }; greet')
+assert_output "hi" "$out"
+((++pass))
+
+out=$($SH -c 'add() { echo $(($1 + $2)); }; add 3 4')
+assert_output "7" "$out"
+((++pass))
+
+set +e
+$SH -c 'f() { return 42; }; f'
+rc=$?
+set -e
+[[ $rc -eq 42 ]] && ((++pass)) || { echo "FAIL [return status]: $rc"; ((++fail)); }
+
+out=$($SH -c 'g() { local x=L; echo $x; }; x=G; g; echo $x')
+expected=$'L\nG'
+assert_output "$expected" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'

@@ -149,6 +149,11 @@ auto Parser::parse_command() -> Command {
         if (current_.value == "case") return parse_case();
     }
 
+    // Function definition: NAME ( ) { body }
+    if (current_.type == TokType::Word && lexer_.peek_token().type == TokType::LParen) {
+        return parse_func();
+    }
+
     return parse_simple_command();
 }
 
@@ -446,6 +451,36 @@ auto Parser::parse_case() -> std::unique_ptr<CaseClause> {
 
     if (!expect_keyword("esac")) {
         CFBOX_ERR("sh", "syntax error: expected 'esac'");
+    }
+    return result;
+}
+
+auto Parser::parse_func() -> std::unique_ptr<FuncDef> {
+    auto result = std::make_unique<FuncDef>();
+    result->name = current_.value;
+    advance();  // function name
+
+    if (!expect(TokType::LParen)) {
+        CFBOX_ERR("sh", "syntax error: expected '(' in function definition");
+        return result;
+    }
+    if (!expect(TokType::RParen)) {
+        CFBOX_ERR("sh", "syntax error: expected ')' in function definition");
+        return result;
+    }
+    while (current_.type == TokType::Newline) advance();
+
+    if (current_.type != TokType::LBrace) {
+        CFBOX_ERR("sh", "syntax error: expected '{' for function body");
+        return result;
+    }
+    advance();  // {
+    if (current_.type == TokType::Newline) advance();
+    result->body = parse_compound_list();
+    if (current_.type != TokType::RBrace) {
+        CFBOX_ERR("sh", "syntax error: expected '}' to close function body");
+    } else {
+        advance();
     }
     return result;
 }
