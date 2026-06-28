@@ -1,6 +1,7 @@
 #include "sh.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
@@ -12,12 +13,12 @@
 namespace cfbox::sh {
 
 // Apply redirections, return saved fds for restoration
-static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<std::pair<int, int>> {
+static auto apply_redirections(const std::vector<Redir>& redirs, const ShellState& state) -> std::vector<std::pair<int, int>> {
     std::vector<std::pair<int, int>> saved;
 
     for (const auto& r : redirs) {
         int target_fd = r.fd;
-        if (target_fd < 0) target_fd = (r.type == Redir::Read || r.type == Redir::DupIn) ? 0 : 1;
+        if (target_fd < 0) target_fd = (r.type == Redir::Read || r.type == Redir::DupIn || r.type == Redir::HereDoc) ? 0 : 1;
 
         // Save original fd
         int saved_fd = ::dup(target_fd);
@@ -62,6 +63,21 @@ static auto apply_redirections(const std::vector<Redir>& redirs) -> std::vector<
             if (src >= 0) ::dup2(src, target_fd);
             break;
         }
+        case Redir::HereDoc: {
+            // Expand param/arith/command in the body, then feed it via temp file.
+            std::string body = expand_noglob(r.target, state);
+            char tmpl[] = "/tmp/cfbox_hd_XXXXXX";
+            int tfd = ::mkstemp(tmpl);
+            if (tfd >= 0) {
+                ssize_t wr = ::write(tfd, body.c_str(), body.size());
+                (void)wr;
+                ::lseek(tfd, 0, SEEK_SET);
+                ::dup2(tfd, target_fd);
+                ::close(tfd);
+                ::unlink(tmpl);
+            }
+            break;
+        }
         }
     }
 
@@ -102,7 +118,7 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
 
     // Check builtin
     if (is_builtin(expanded[0])) {
-        auto saved = apply_redirections(cmd.redirs);
+        auto saved = apply_redirections(cmd.redirs, state);
         int rc = run_builtin(expanded[0], expanded, state);
         std::fflush(nullptr);
         restore_redirections(saved);
@@ -137,7 +153,7 @@ static auto execute_simple(SimpleCommand& cmd, ShellState& state) -> int {
 
     if (pid == 0) {
         // Child process
-        apply_redirections(cmd.redirs);
+        apply_redirections(cmd.redirs, state);
 
         // Build argv
         std::vector<char*> argv;
@@ -205,7 +221,7 @@ static auto execute_pipeline(Pipeline& node, ShellState& state) -> int {
             auto& cmd = node.commands[static_cast<std::size_t>(i)];
             if (std::holds_alternative<SimpleCommand>(cmd)) {
                 auto& sc = std::get<SimpleCommand>(cmd);
-                apply_redirections(sc.redirs);
+                apply_redirections(sc.redirs, state);
                 auto expanded = expand_words(sc.words, state);
                 if (expanded.empty()) ::_Exit(0);
 

@@ -19,6 +19,7 @@ enum class TokType {
     Pipe, Semi, DSemi, And, Or,       // | ; ;; && ||
     LParen, RParen, LBrace, RBrace,
     Less, Great, DGreate,      // < > >>
+    DLess, DLessDash,          // << <<-
     LessAnd, GreatAnd,         // <& >&
     // Keywords stored as Word with keyword flag
 };
@@ -31,7 +32,7 @@ struct Token {
 
 // ── Redirection ──────────────────────────────────────────────────
 struct Redir {
-    enum Type { Read, Write, Append, DupIn, DupOut };
+    enum Type { Read, Write, Append, DupIn, DupOut, HereDoc };
     int fd = -1;      // target fd (default inferred: 0 for Read, 1 for Write/Append)
     Type type = Read;
     std::string target; // filename or fd number for dup

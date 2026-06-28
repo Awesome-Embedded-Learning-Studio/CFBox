@@ -202,6 +202,16 @@ auto Parser::parse_simple_command() -> SimpleCommand {
 }
 
 auto Parser::parse_redirect() -> std::optional<Redir> {
+    // Here-document: the body is already carried in the token value.
+    if (current_.type == TokType::DLess || current_.type == TokType::DLessDash) {
+        Redir r;
+        r.fd = 0;
+        r.type = Redir::HereDoc;
+        r.target = std::move(current_.value);
+        advance();
+        return r;
+    }
+
     // Check for redirect: [n]<, [n]>, [n]>>, [n]<&, [n]>&
     int fd = -1;
 

@@ -153,6 +153,27 @@ expected=$'L\nG'
 assert_output "$expected" "$out"
 ((++pass))
 
+# ── Here-doc ────────────────────────────────────────────────────
+out=$($SH -c 'cat <<EOF
+hello
+world
+EOF')
+expected=$'hello\nworld'
+assert_output "$expected" "$out"
+((++pass))
+
+out=$($SH -c 'V=42; cat <<EOF
+val=$V
+EOF')
+assert_output "val=42" "$out"
+((++pass))
+
+out=$($SH -c 'cat <<EOF
+$((3+4))
+EOF')
+assert_output "7" "$out"
+((++pass))
+
 # ── Subshell ─────────────────────────────────────────────────────
 out=$($SH -c '(echo sub1; echo sub2)')
 expected=$'sub1\nsub2'
