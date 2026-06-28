@@ -248,8 +248,22 @@ auto top_main(int argc, char* argv[]) -> int {
     int delay = 3;
     bool batch = parsed.has('b') || parsed.has_long("batch");
     int iterations = 0;
-    if (auto v = parsed.get('d')) delay = std::stoi(std::string(*v));
-    if (auto v = parsed.get('n')) iterations = std::stoi(std::string(*v));
+    if (auto v = parsed.get('d')) {
+        auto parsed_delay = cfbox::args::parse_int(*v);
+        if (!parsed_delay) {
+            CFBOX_ERR("top", "%s", parsed_delay.error().msg.c_str());
+            return 2;
+        }
+        delay = *parsed_delay;
+    }
+    if (auto v = parsed.get('n')) {
+        auto parsed_iters = cfbox::args::parse_int(*v);
+        if (!parsed_iters) {
+            CFBOX_ERR("top", "%s", parsed_iters.error().msg.c_str());
+            return 2;
+        }
+        iterations = *parsed_iters;
+    }
     if (delay < 1) delay = 1;
 
     if (batch) {

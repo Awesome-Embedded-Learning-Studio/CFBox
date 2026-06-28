@@ -165,6 +165,26 @@ static auto build_hunks(const std::vector<Edit>& edits,
     std::vector<Hunk> hunks;
     int hunk_start = std::max(0, change_idx[0] - context);
 
+    // Slice edits[start..end] into a Hunk and count its a/b line ranges.
+    auto finalize_hunk = [&](int start, int end) {
+        Hunk h;
+        h.edits.assign(edits.begin() + start, edits.begin() + end + 1);
+        h.a_start = 1; h.a_count = 0;
+        h.b_start = 1; h.b_count = 0;
+        bool a_init = false, b_init = false;
+        for (auto& e : h.edits) {
+            if (e.op == ' ' || e.op == '-') {
+                if (!a_init) { h.a_start = static_cast<int>(e.line) + 1; a_init = true; }
+                ++h.a_count;
+            }
+            if (e.op == ' ' || e.op == '+') {
+                if (!b_init) { h.b_start = static_cast<int>(e.line) + 1; b_init = true; }
+                ++h.b_count;
+            }
+        }
+        hunks.push_back(std::move(h));
+    };
+
     for (int ci = 1; ci < static_cast<int>(change_idx.size()); ++ci) {
         int gap_start = change_idx[static_cast<std::size_t>(ci - 1)] + 1;
         int gap_end = change_idx[static_cast<std::size_t>(ci)] - 1;
@@ -172,45 +192,14 @@ static auto build_hunks(const std::vector<Edit>& edits,
         if (gap_end - gap_start + 1 > 2 * context) {
             int hunk_end = std::min(static_cast<int>(edits.size()) - 1,
                                     change_idx[static_cast<std::size_t>(ci - 1)] + context);
-            Hunk h;
-            h.edits.assign(edits.begin() + hunk_start, edits.begin() + hunk_end + 1);
-            // Count a/b lines for this hunk
-            h.a_start = 1; h.a_count = 0;
-            h.b_start = 1; h.b_count = 0;
-            bool a_init = false, b_init = false;
-            for (auto& e : h.edits) {
-                if (e.op == ' ' || e.op == '-') {
-                    if (!a_init) { h.a_start = static_cast<int>(e.line) + 1; a_init = true; }
-                    ++h.a_count;
-                }
-                if (e.op == ' ' || e.op == '+') {
-                    if (!b_init) { h.b_start = static_cast<int>(e.line) + 1; b_init = true; }
-                    ++h.b_count;
-                }
-            }
-            hunks.push_back(std::move(h));
+            finalize_hunk(hunk_start, hunk_end);
             hunk_start = std::max(0, change_idx[static_cast<std::size_t>(ci)] - context);
         }
     }
     // Last hunk
     int hunk_end = std::min(static_cast<int>(edits.size()) - 1,
                             change_idx.back() + context);
-    Hunk h;
-    h.edits.assign(edits.begin() + hunk_start, edits.begin() + hunk_end + 1);
-    h.a_start = 1; h.a_count = 0;
-    h.b_start = 1; h.b_count = 0;
-    bool a_init = false, b_init = false;
-    for (auto& e : h.edits) {
-        if (e.op == ' ' || e.op == '-') {
-            if (!a_init) { h.a_start = static_cast<int>(e.line) + 1; a_init = true; }
-            ++h.a_count;
-        }
-        if (e.op == ' ' || e.op == '+') {
-            if (!b_init) { h.b_start = static_cast<int>(e.line) + 1; b_init = true; }
-            ++h.b_count;
-        }
-    }
-    hunks.push_back(std::move(h));
+    finalize_hunk(hunk_start, hunk_end);
     return hunks;
 }
 

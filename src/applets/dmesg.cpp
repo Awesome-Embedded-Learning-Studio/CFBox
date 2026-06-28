@@ -23,8 +23,12 @@ constexpr cfbox::help::HelpEntry HELP = {
 
 auto read_kmsg() -> std::vector<std::string> {
     std::vector<std::string> lines;
-    cfbox::io::unique_file f(std::fopen("/var/log/dmesg", "r"));
-    if (!f) f.reset(std::fopen("/var/log/kern.log", "r"));
+    cfbox::io::unique_file f;
+    if (auto r = cfbox::io::open_file("/var/log/dmesg", "r")) {
+        f = std::move(*r);
+    } else if (auto r2 = cfbox::io::open_file("/var/log/kern.log", "r")) {
+        f = std::move(*r2);
+    }
     if (!f) {
         CFBOX_ERR("dmesg", "cannot open kernel log");
         return lines;

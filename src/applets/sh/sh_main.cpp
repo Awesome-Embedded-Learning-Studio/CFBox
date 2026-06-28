@@ -2,7 +2,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <string>
 #include <termios.h>
@@ -10,6 +9,7 @@
 
 #include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 
@@ -43,18 +43,12 @@ auto run_string(const std::string& script, cfbox::sh::ShellState& state) -> int 
 }
 
 auto run_file(const char* path, cfbox::sh::ShellState& state) -> int {
-    auto* fp = std::fopen(path, "r");
-    if (!fp) {
-        CFBOX_ERR("sh", "%s: %s", path, std::strerror(errno));
+    auto result = cfbox::io::read_all(path);
+    if (!result) {
+        CFBOX_ERR("sh", "%s: %s", path, result.error().msg.c_str());
         return 127;
     }
-    std::string script;
-    char buf[4096];
-    while (auto n = std::fread(buf, 1, sizeof(buf), fp)) {
-        script.append(buf, n);
-    }
-    std::fclose(fp);
-    return run_string(script, state);
+    return run_string(*result, state);
 }
 
 // Force the controlling tty into canonical mode so the kernel handles line

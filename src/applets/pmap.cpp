@@ -8,6 +8,7 @@
 #include <cfbox/applet.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 #include <cfbox/proc.hpp>
 #include <cfbox/error.hpp>
 
@@ -34,12 +35,12 @@ struct MapEntry {
 
 auto parse_maps(pid_t pid) -> std::vector<MapEntry> {
     auto path = "/proc/" + std::to_string(pid) + "/maps";
-    auto* f = std::fopen(path.c_str(), "r");
-    if (!f) return {};
+    auto opened = cfbox::io::open_file(path, "r");
+    if (!opened) return {};
 
     std::vector<MapEntry> entries;
     char line[1024];
-    while (std::fgets(line, sizeof(line), f)) {
+    while (std::fgets(line, sizeof(line), opened->get())) {
         auto len = std::strlen(line);
         while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
             line[--len] = '\0';
@@ -89,7 +90,6 @@ auto parse_maps(pid_t pid) -> std::vector<MapEntry> {
 
         entries.push_back(std::move(e));
     }
-    std::fclose(f);
 
     // Calculate end_address from next entry
     for (size_t i = 0; i + 1 < entries.size(); ++i) {

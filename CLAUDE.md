@@ -8,6 +8,8 @@ C++23 现代 BusyBox 替代品（单二进制，123 applet，399 GTest，418 KB 
 - [document/ai/PLAN.md](document/ai/PLAN.md) — 当前焦点批级进度（批级，最易变）
 - [document/ai/CODING-TASTE.md](document/ai/CODING-TASTE.md) — 编码/注释风格权威（写代码前读）
 - [document/ai/COVERAGE.md](document/ai/COVERAGE.md) — 测试/正确性/差分标尺（覆盖率怎么算、怎么防退化，季级）
+- [document/ai/STRUCTURE-TASTE.md](document/ai/STRUCTURE-TASTE.md) — 结构与工艺标尺（职责/DRY/边界/机械护栏，季级）
+- [document/ai/PERFORMANCE.md](document/ai/PERFORMANCE.md) — 性能标尺（wall-clock 不动输出/4步闭环/Phase0 基建，季级）
 - [document/notes/](document/notes/) — 批级工作记录（`<date>-<topic>.md`）
 
 ## 始终遵守（每条便宜，违规代价大）

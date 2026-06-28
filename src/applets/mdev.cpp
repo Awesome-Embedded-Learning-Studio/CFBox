@@ -1,6 +1,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 
 #include <cstdio>
 #include <cstring>
@@ -33,13 +34,12 @@ struct SysDevice {
 
 // Read "<major>:<minor>" from <dir>/dev; absent or unparseable => nullopt.
 auto read_dev(const std::string& dir) -> std::optional<std::pair<int, int>> {
-    FILE* f = std::fopen((dir + "/dev").c_str(), "r");
+    auto f = cfbox::io::open_file(dir + "/dev", "r");
     if (!f)
-        return std::nullopt;
+        return std::nullopt;  // absent dev file is normal for many sysfs entries
     int maj = -1;
     int min = -1;
-    int n = std::fscanf(f, "%d:%d", &maj, &min);
-    std::fclose(f);
+    int n = std::fscanf(f->get(), "%d:%d", &maj, &min);
     if (n != 2 || maj < 0)
         return std::nullopt;
     return std::make_pair(maj, min);

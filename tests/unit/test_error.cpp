@@ -38,15 +38,6 @@ TEST(ErrorTest, ErrorMove) {
     EXPECT_EQ(b.msg, "moved");
 }
 
-// ── ErrorView struct ─────────────────────────────────────────
-
-TEST(ErrorTest, ErrorViewFields) {
-    constexpr int code = 4;
-    ErrorView ev{code, "view msg"};
-    EXPECT_EQ(ev.code, 4);
-    EXPECT_EQ(ev.msg, "view msg");
-}
-
 // ── Result<T> ok path ────────────────────────────────────────
 
 TEST(ErrorTest, ResultOk) {

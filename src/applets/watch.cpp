@@ -83,7 +83,14 @@ auto watch_main(int argc, char* argv[]) -> int {
     if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     int interval = 2;
-    if (auto v = parsed.get('n')) interval = std::stoi(std::string(*v));
+    if (auto v = parsed.get('n')) {
+        auto parsed_interval = cfbox::args::parse_int(*v);
+        if (!parsed_interval) {
+            CFBOX_ERR("watch", "%s", parsed_interval.error().msg.c_str());
+            return 2;
+        }
+        interval = *parsed_interval;
+    }
     if (interval < 1) interval = 1;
 
     const auto& pos = parsed.positional();

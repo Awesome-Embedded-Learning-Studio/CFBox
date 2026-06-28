@@ -8,6 +8,7 @@
 #include <cfbox/help.hpp>
 #include <cfbox/args.hpp>
 #include <cfbox/error.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 
@@ -46,26 +47,28 @@ auto path_to_key(std::string_view path) -> std::string {
 }
 
 auto read_sysctl_value(const std::string& path) -> std::string {
-    auto* f = std::fopen(path.c_str(), "r");
-    if (!f) return {};
-    char buf[4096];
-    if (!std::fgets(buf, sizeof(buf), f)) {
-        std::fclose(f);
-        return {};
+    // /proc/sys/* values are single-line; emulate the original fgets-first-line
+    // behavior via read_all (handles /proc 0-size fallback) then take up to the
+    // first newline, trimming trailing CR/LF. Open errors / empty reads map to
+    // the original empty-string "skip" result.
+    auto content = cfbox::io::read_all(path);
+    if (!content || content->empty()) return {};
+    auto end = content->find('\n');
+    auto first = (end == std::string::npos) ? *content : content->substr(0, end);
+    auto len = first.size();
+    while (len > 0 && (first[len - 1] == '\n' || first[len - 1] == '\r')) {
+        first[--len] = '\0';
     }
-    std::fclose(f);
-    auto len = std::strlen(buf);
-    while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r')) {
-        buf[--len] = '\0';
-    }
-    return buf;
+    return first;
 }
 
 auto write_sysctl_value(const std::string& path, std::string_view value) -> bool {
-    auto* f = std::fopen(path.c_str(), "w");
+    auto f = cfbox::io::open_file(path, "w");
     if (!f) return false;
-    std::fprintf(f, "%.*s\n", static_cast<int>(value.size()), value.data());
-    return std::fclose(f) == 0;
+    std::fprintf(f->get(), "%.*s\n", static_cast<int>(value.size()), value.data());
+    // Explicit close to capture the flush/write status (fclose==0) the original
+    // returned; RAII would otherwise close silently on destruction.
+    return std::fclose(f->release()) == 0;
 }
 
 auto show_key(std::string_view key, bool no_name) -> bool {
@@ -90,25 +93,26 @@ auto show_all(bool no_name) -> void {
 }
 
 auto load_file(const std::string& filepath, bool no_name) -> int {
-    auto* f = std::fopen(filepath.c_str(), "r");
+    auto f = cfbox::io::open_file(filepath, "r");
     if (!f) {
         CFBOX_ERR("sysctl", "cannot open %s", filepath.c_str());
         return 1;
     }
 
     int errors = 0;
-    char line[4096];
-    while (std::fgets(line, sizeof(line), f)) {
-        auto len = std::strlen(line);
-        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
-            line[--len] = '\0';
+    auto result = cfbox::io::for_each_line(f->get(), [&](const std::string& line) {
+        // for_each_line strips the trailing '\n'; also drop a trailing '\r'
+        // (CRLF) to match the original fgets-based trimming.
+        std::string trimmed = line;
+        while (!trimmed.empty() && (trimmed.back() == '\n' || trimmed.back() == '\r')) {
+            trimmed.pop_back();
         }
+        auto len = trimmed.size();
         // Skip comments and empty lines
-        if (len == 0 || line[0] == '#' || line[0] == ';') continue;
-        auto* eq = std::strchr(line, '=');
-        if (!eq) continue;
-        *eq = '\0';
-        std::string key(line);
+        if (len == 0 || trimmed[0] == '#' || trimmed[0] == ';') return;
+        auto* eq = std::strchr(trimmed.c_str(), '=');
+        if (!eq) return;
+        std::string key(trimmed.c_str(), eq);
         std::string val(eq + 1);
         // Trim whitespace
         while (!key.empty() && (key.back() == ' ' || key.back() == '\t')) key.pop_back();
@@ -121,8 +125,8 @@ auto load_file(const std::string& filepath, bool no_name) -> int {
         } else if (!no_name) {
             std::printf("%s = %s\n", key.c_str(), val.c_str());
         }
-    }
-    std::fclose(f);
+    });
+    (void)result; // line-level I/O errors leave the per-line error count as-is
     return errors > 0 ? 1 : 0;
 }
 

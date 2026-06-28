@@ -36,7 +36,14 @@ auto renice_main(int argc, char* argv[]) -> int {
     if (parsed.has_long("version")) { cfbox::help::print_version(HELP); return 0; }
 
     int increment = 1;
-    if (auto v = parsed.get('n')) increment = std::stoi(std::string(*v));
+    if (auto v = parsed.get('n')) {
+        auto parsed_inc = cfbox::args::parse_int(*v);
+        if (!parsed_inc) {
+            CFBOX_ERR("renice", "%s", parsed_inc.error().msg.c_str());
+            return 2;
+        }
+        increment = *parsed_inc;
+    }
 
     const auto& args = parsed.positional();
     if (args.empty()) {
@@ -46,7 +53,12 @@ auto renice_main(int argc, char* argv[]) -> int {
 
     int rc = 0;
     for (const auto& id_str : args) {
-        auto id = static_cast<id_t>(std::stoi(std::string(id_str)));
+        auto parsed_id = cfbox::args::parse_int(id_str);
+        if (!parsed_id) {
+            CFBOX_ERR("renice", "%s", parsed_id.error().msg.c_str());
+            return 2;
+        }
+        auto id = static_cast<id_t>(*parsed_id);
 
         int which = PRIO_PROCESS;
         if (parsed.has('g') || parsed.has_long("pgrp")) which = PRIO_PGRP;

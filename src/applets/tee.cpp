@@ -32,11 +32,11 @@ auto tee_main(int argc, char* argv[]) -> int {
 
     std::vector<cfbox::io::unique_file> files;
     for (auto p : pos) {
-        auto* f = std::fopen(std::string{p}.c_str(), append ? "ab" : "wb");
-        if (!f) {
-            CFBOX_ERR("tee", "%s: %s", std::string{p}.c_str(), std::strerror(errno));
+        auto fres = cfbox::io::open_file(p, append ? "ab" : "wb");
+        if (!fres) {
+            CFBOX_ERR("tee", "%s: %s", std::string{p}.c_str(), std::strerror(fres.error().code));
         } else {
-            files.emplace_back(f);
+            files.emplace_back(std::move(*fres));
         }
     }
 

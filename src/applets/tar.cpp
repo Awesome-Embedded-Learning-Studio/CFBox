@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdio>
 #include <ctime>
 #include <cstring>
@@ -116,42 +117,58 @@ auto tar_main(int argc, char* argv[]) -> int {
     if (create) {
         if (!dir.empty()) std::filesystem::current_path(dir);
 
-        std::string archive_data;
-        auto targets = pos.empty() ? std::vector<std::string_view>{"."} : pos;
+        // Stream the archive straight to its destination instead of buffering the
+        // whole thing in one string (which used to scale with total archive size).
+        std::FILE* out = stdout;
+        cfbox::io::unique_file outfile;
+        if (archive != "-") {
+            auto oh = cfbox::io::open_file(archive, "wb");
+            if (!oh) {
+                CFBOX_ERR("tar", "%s", oh.error().msg.c_str());
+                return 1;
+            }
+            outfile = std::move(*oh);
+            out = outfile.get();
+        }
 
+        auto targets = pos.empty() ? std::vector<std::string_view>{"."} : pos;
         std::vector<std::pair<std::string, std::filesystem::path>> files;
         for (auto t : targets) {
             collect_files(std::filesystem::path{t}, files);
         }
 
+        constexpr std::size_t kChunk = 65536;
+        std::vector<std::uint8_t> buf(kChunk);
+        char pad[512]{};
+
         for (auto& [relpath, fullpath] : files) {
             if (std::filesystem::is_directory(fullpath)) {
                 auto hdr = create_header(relpath, 0, '5');
-                archive_data.append(reinterpret_cast<const char*>(&hdr), 512);
+                std::fwrite(&hdr, 1, sizeof(hdr), out);
                 continue;
             }
-            auto data = cfbox::io::read_all(fullpath.string());
-            if (!data) {
-                CFBOX_ERR("tar", "%s: %s", relpath.c_str(), data.error().msg.c_str());
+            std::error_code ec;
+            auto sz = std::filesystem::file_size(fullpath, ec);
+            if (ec) {
+                CFBOX_ERR("tar", "%s: %s", relpath.c_str(), ec.message().c_str());
                 continue;
             }
-            auto hdr = create_header(relpath, data->size(), '0');
-            archive_data.append(reinterpret_cast<const char*>(&hdr), 512);
-            archive_data.append(*data);
-            auto rem = data->size() % 512;
-            if (rem > 0) archive_data.append(512 - rem, '\0');
-        }
-        archive_data.append(1024, '\0');
-
-        if (archive == "-") {
-            std::fwrite(archive_data.data(), 1, archive_data.size(), stdout);
-        } else {
-            auto wresult = cfbox::io::write_all(archive, archive_data);
-            if (!wresult) {
-                CFBOX_ERR("tar", "%s", wresult.error().msg.c_str());
-                return 1;
+            auto fh = cfbox::io::open_file(fullpath.string(), "rb");
+            if (!fh) {
+                CFBOX_ERR("tar", "%s: %s", relpath.c_str(), fh.error().msg.c_str());
+                continue;
             }
+            auto hdr = create_header(relpath, static_cast<unsigned long>(sz), '0');
+            std::fwrite(&hdr, 1, sizeof(hdr), out);
+            std::size_t n;
+            while ((n = std::fread(buf.data(), 1, kChunk, fh->get())) != 0) {
+                std::fwrite(buf.data(), 1, n, out);
+            }
+            auto rem = static_cast<std::size_t>(sz % 512);
+            if (rem > 0) std::fwrite(pad, 1, 512 - rem, out);
         }
+        std::fwrite(pad, 1, 512, out);  // two zero blocks mark end of archive
+        std::fwrite(pad, 1, 512, out);
         return 0;
     }
 

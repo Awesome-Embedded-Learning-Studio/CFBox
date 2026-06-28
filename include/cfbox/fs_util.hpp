@@ -5,6 +5,8 @@
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <grp.h>
+#include <pwd.h>
 #include <string>
 #include <string_view>
 #include <sys/stat.h>
@@ -257,6 +259,22 @@ inline auto lchown(std::string_view path, uid_t uid, gid_t gid) -> base::Result<
         return std::unexpected(base::Error{errno, std::strerror(errno)});
     }
     return {};
+}
+
+// Resolve uid/gid to a name via NSS; fall back to the numeric id when NSS cannot
+// resolve it (a statically linked cfbox on a minimal rootfs has no NSS libs, so
+// names silently fail — show the number instead of a blank field). Shared by
+// ls/stat/id/whoami so the fallback policy is consistent across applets.
+inline auto owner_name(uid_t uid) -> std::string {
+    if (auto* pw = ::getpwuid(uid))
+        return pw->pw_name;
+    return std::to_string(uid);
+}
+
+inline auto group_name(gid_t gid) -> std::string {
+    if (auto* gr = ::getgrgid(gid))
+        return gr->gr_name;
+    return std::to_string(gid);
 }
 
 // lstat — link-aware status (does NOT follow symlinks). Archive copy must read

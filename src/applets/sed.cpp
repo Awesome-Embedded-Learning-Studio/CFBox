@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -40,6 +41,7 @@ struct SedCommand {
     enum Action { Substitute, Delete, Print } action = Substitute;
     std::string pattern;
     std::string replacement;
+    std::unique_ptr<cfbox::util::scoped_regex> compiled_re;  // precompiled; null = invalid pattern
     bool global = false;      // g flag
     bool print_flag = false;  // p flag
     bool delete_flag = false; // d flag (for substitute context)
@@ -127,6 +129,15 @@ auto parse_substitute(std::string_view s) -> SedCommand {
     }
     cmd.pattern = pattern;
 
+    // Precompile the regex once per command instead of on every matching line
+    // (apply_substitute used to build a fresh scoped_regex each call). scoped_regex
+    // is non-movable, so hold it via unique_ptr; null means invalid pattern (no-op,
+    // matching the old behavior of returning false on compile failure).
+    cmd.compiled_re = std::make_unique<cfbox::util::scoped_regex>();
+    if (cmd.compiled_re->compile(cmd.pattern.c_str(), REG_EXTENDED) != 0) {
+        cmd.compiled_re.reset();
+    }
+
     // Extract replacement
     std::string replacement;
     for (std::size_t i = 0; i < s.size(); ++i) {
@@ -183,6 +194,7 @@ auto parse_command(std::string_view script) -> SedCommand {
         cmd.action = SedCommand::Substitute;
         cmd.pattern = sub.pattern;
         cmd.replacement = sub.replacement;
+        cmd.compiled_re = std::move(sub.compiled_re);  // precompiled regex (parse_substitute)
         cmd.global = sub.global;
         cmd.print_flag = sub.print_flag;
         cmd.delete_flag = sub.delete_flag;
@@ -227,8 +239,8 @@ auto address_matches(const Address& addr, std::size_t line, std::size_t total_li
 }
 
 auto apply_substitute(std::string& line, const SedCommand& cmd) -> bool {
-    cfbox::util::scoped_regex re;
-    if (re.compile(cmd.pattern.c_str(), REG_EXTENDED) != 0) return false;
+    if (!cmd.compiled_re) return false;  // invalid pattern (precompiled at parse time)
+    auto& re = *cmd.compiled_re;
 
     regmatch_t m;
     if (re.exec(line.c_str(), 1, &m, 0) != 0) return false;

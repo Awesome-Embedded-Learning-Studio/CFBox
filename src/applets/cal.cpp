@@ -90,7 +90,12 @@ auto cal_main(int argc, char* argv[]) -> int {
 
     const auto& pos = parsed.positional();
     if (pos.size() == 1) {
-        auto val = std::stoi(std::string(pos[0]));
+        auto val_result = cfbox::args::parse_int(pos[0]);
+        if (!val_result) {
+            CFBOX_ERR("cal", "%s", val_result.error().msg.c_str());
+            return 2;
+        }
+        auto val = *val_result;
         if (val >= 1 && val <= 12) {
             month = val;
         } else {
@@ -98,8 +103,18 @@ auto cal_main(int argc, char* argv[]) -> int {
             month = 1;
         }
     } else if (pos.size() >= 2) {
-        month = std::stoi(std::string(pos[0]));
-        year = std::stoi(std::string(pos[1]));
+        auto month_result = cfbox::args::parse_int(pos[0]);
+        if (!month_result) {
+            CFBOX_ERR("cal", "%s", month_result.error().msg.c_str());
+            return 2;
+        }
+        month = *month_result;
+        auto year_result = cfbox::args::parse_int(pos[1]);
+        if (!year_result) {
+            CFBOX_ERR("cal", "%s", year_result.error().msg.c_str());
+            return 2;
+        }
+        year = *year_result;
     }
 
     bool three = parsed.has('3') || parsed.has_long("three");

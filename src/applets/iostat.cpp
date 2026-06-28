@@ -79,7 +79,14 @@ auto iostat_main(int argc, char* argv[]) -> int {
 
     int count = 1;
     double delay = 1.0;
-    if (auto v = parsed.get('c')) count = std::stoi(std::string(*v));
+    if (auto v = parsed.get('c')) {
+        auto parsed_count = cfbox::args::parse_int(std::string(*v));
+        if (!parsed_count) {
+            CFBOX_ERR("iostat", "%s", parsed_count.error().msg.c_str());
+            return 2;
+        }
+        count = *parsed_count;
+    }
     if (auto v = parsed.get('d')) delay = std::stod(std::string(*v));
 
     auto first = cfbox::proc::read_diskstats();

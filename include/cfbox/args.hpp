@@ -1,10 +1,16 @@
 #pragma once
 
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
 #include <initializer_list>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <cfbox/error.hpp>
 
 namespace cfbox::args {
 
@@ -154,6 +160,23 @@ inline auto parse(int argc, char* argv[],
     }
 
     return result;
+}
+
+// Parse s as a base-10 int with no throw (the project is -fno-exceptions, so std::stoi
+// would std::terminate on bad input). Rejects empty / non-numeric / trailing junk /
+// out-of-int-range; callers report via CFBOX_ERR on the unexpected path.
+// Uses strtol (<cstdlib>) rather than from_chars (<charconv>): args.hpp is included
+// by every applet, and <charconv> is a notoriously heavy header that blew up
+// per-TU compile memory enough to OOM the parallel cross-compile builds.
+[[nodiscard]] inline auto parse_int(std::string_view s) -> base::Result<int> {
+    std::string tmp{s};
+    char* end = nullptr;
+    errno = 0;
+    long v = std::strtol(tmp.c_str(), &end, 10);
+    if (errno != 0 || end == tmp.c_str() || *end != '\0' || v < INT_MIN || v > INT_MAX) {
+        return std::unexpected(base::Error{EINVAL, "not a valid integer: '" + std::string{s} + '\''});
+    }
+    return static_cast<int>(v);
 }
 
 } // namespace cfbox::args

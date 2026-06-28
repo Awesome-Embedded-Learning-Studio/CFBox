@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <vector>
 #include <cfbox/error.hpp>
+#include <cfbox/io.hpp>
 
 namespace cfbox::sh {
 
@@ -213,20 +214,14 @@ static int builtin_source(std::vector<std::string>& args, ShellState& state) {
         return 2;
     }
 
-    auto* fp = std::fopen(args[1].c_str(), "r");
-    if (!fp) {
-        CFBOX_ERR("sh", "%s: %s", args[1].c_str(), std::strerror(errno));
+    auto script_result = cfbox::io::read_all(args[1]);
+    if (!script_result) {
+        CFBOX_ERR("sh", "%s: %s", args[1].c_str(),
+                  std::strerror(script_result.error().code));
         return 1;
     }
 
-    std::string script;
-    char buf[4096];
-    while (auto n = std::fread(buf, 1, sizeof(buf), fp)) {
-        script.append(buf, n);
-    }
-    std::fclose(fp);
-
-    Lexer lexer(script);
+    Lexer lexer(*script_result);
     Parser parser(lexer);
     auto ast = parser.parse_program();
     if (ast) return execute(*ast, state);

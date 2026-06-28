@@ -78,21 +78,6 @@ auto format_time(std::filesystem::file_time_type ftime) -> std::string {
     return buf;
 }
 
-// Resolve uid/gid to a name; fall back to the numeric id when NSS cannot
-// resolve it (a statically linked cfbox on a minimal rootfs has no NSS libs,
-// so names silently fail — show the number instead of a blank field).
-auto owner_of(uid_t uid) -> std::string {
-    if (auto* pw = getpwuid(uid))
-        return pw->pw_name;
-    return std::to_string(uid);
-}
-
-auto group_of(gid_t gid) -> std::string {
-    if (auto* gr = getgrgid(gid))
-        return gr->gr_name;
-    return std::to_string(gid);
-}
-
 enum class ColorMode { Never, Auto, Always };
 
 struct LsOptions {
@@ -181,8 +166,8 @@ auto print_entry(const std::string& path, const LsOptions& opts, bool use_color)
     std::string group = "?";
     struct stat lst {};
     if (::lstat(path.c_str(), &lst) == 0) {
-        owner = owner_of(lst.st_uid);
-        group = group_of(lst.st_gid);
+        owner = cfbox::fs::owner_name(lst.st_uid);
+        group = cfbox::fs::group_name(lst.st_gid);
     }
 
     if (type == std::filesystem::file_type::symlink) {

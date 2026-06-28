@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -131,31 +132,48 @@ inline auto write_all(std::string_view path, std::string_view data) -> base::Res
 }
 
 template <typename Fn> auto for_each_line(std::FILE* f, Fn&& fn) -> base::Result<void> {
-    std::string line;
-    line.reserve(256);
-    int ch;
-    while ((ch = std::fgetc(f)) != EOF) {
-        if (ch == '\n') {
-            if constexpr (std::is_invocable_r_v<bool, Fn, const std::string&>) {
-                if (!fn(line))
-                    return {};
-            } else {
-                fn(line);
-            }
-            line.clear();
+    // Deliver a complete line; returns false to stop early (only when fn returns bool).
+    auto deliver = [&fn](const std::string& line) -> bool {
+        if constexpr (std::is_invocable_r_v<bool, Fn, const std::string&>) {
+            return fn(line);
         } else {
-            line += static_cast<char>(ch);
+            fn(line);
+            return true;
+        }
+    };
+
+    // Block reads + memchr for newlines instead of fgetc-per-byte. Same line
+    // semantics (split on '\n', a trailing line without '\n' is still delivered,
+    // ferror checked, bool early-return honored); the buffer is heap-allocated so
+    // the stack stays tiny even with a large chunk.
+    constexpr std::size_t kChunk = 65536;
+    std::vector<char> buf(kChunk);
+    std::string pending;  // partial line carried across block boundaries
+    std::size_t pos = 0;
+    std::size_t avail = 0;
+
+    for (;;) {
+        if (pos == avail) {
+            avail = std::fread(buf.data(), 1, kChunk, f);
+            pos = 0;
+            if (avail == 0) break;
+        }
+        if (auto* nl = static_cast<char*>(std::memchr(buf.data() + pos, '\n', avail - pos))) {
+            std::string line;
+            if (!pending.empty()) line = std::move(pending);
+            line.append(buf.data() + pos, static_cast<std::size_t>(nl - (buf.data() + pos)));
+            pos = static_cast<std::size_t>(nl - buf.data()) + 1;
+            if (!deliver(line)) return {};
+        } else {
+            pending.append(buf.data() + pos, avail - pos);
+            pos = avail;
         }
     }
     if (std::ferror(f)) {
         return std::unexpected(base::Error{errno, "read error"});
     }
-    if (!line.empty()) {
-        if constexpr (std::is_invocable_r_v<bool, Fn, const std::string&>) {
-            fn(line);
-        } else {
-            fn(line);
-        }
+    if (!pending.empty()) {
+        deliver(pending);  // trailing line without newline (bool ignored, as before)
     }
     return {};
 }

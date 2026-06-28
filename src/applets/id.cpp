@@ -1,11 +1,10 @@
 #include <cstdio>
-#include <grp.h>
-#include <pwd.h>
 #include <string>
 #include <unistd.h>
 #include <vector>
 
 #include <cfbox/args.hpp>
+#include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
 
 namespace {
@@ -44,24 +43,14 @@ auto id_main(int argc, char* argv[]) -> int {
     uid_t uid = opt_r ? getuid() : geteuid();
     gid_t gid = opt_r ? getgid() : getegid();
 
-    auto get_username = [](uid_t id) -> std::string {
-        auto* pw = getpwuid(id);
-        return pw ? std::string{pw->pw_name} : std::to_string(static_cast<unsigned>(id));
-    };
-
-    auto get_groupname = [](gid_t id) -> std::string {
-        auto* gr = getgrgid(id);
-        return gr ? std::string{gr->gr_name} : std::to_string(static_cast<unsigned>(id));
-    };
-
     if (opt_u) {
-        if (opt_n) std::puts(get_username(uid).c_str());
+        if (opt_n) std::puts(cfbox::fs::owner_name(uid).c_str());
         else std::printf("%u\n", static_cast<unsigned>(uid));
         return 0;
     }
 
     if (opt_g) {
-        if (opt_n) std::puts(get_groupname(gid).c_str());
+        if (opt_n) std::puts(cfbox::fs::group_name(gid).c_str());
         else std::printf("%u\n", static_cast<unsigned>(gid));
         return 0;
     }
@@ -79,7 +68,7 @@ auto id_main(int argc, char* argv[]) -> int {
             if (!first) std::fputc(' ', stdout);
             first = false;
             if (opt_n) {
-                std::fputs(get_groupname(g).c_str(), stdout);
+                std::fputs(cfbox::fs::group_name(g).c_str(), stdout);
             } else {
                 std::printf("%u", static_cast<unsigned>(g));
             }
@@ -95,8 +84,8 @@ auto id_main(int argc, char* argv[]) -> int {
 
     // Default: print full format
     std::printf("uid=%u(%s) gid=%u(%s)",
-                static_cast<unsigned>(uid), get_username(uid).c_str(),
-                static_cast<unsigned>(gid), get_groupname(gid).c_str());
+                static_cast<unsigned>(uid), cfbox::fs::owner_name(uid).c_str(),
+                static_cast<unsigned>(gid), cfbox::fs::group_name(gid).c_str());
 
     std::vector<gid_t> groups;
     int ngroups = getgroups(0, nullptr);
@@ -109,7 +98,7 @@ auto id_main(int argc, char* argv[]) -> int {
         for (auto g : groups) {
             if (!first) std::fputc(',', stdout);
             first = false;
-            std::printf("%u(%s)", static_cast<unsigned>(g), get_groupname(g).c_str());
+            std::printf("%u(%s)", static_cast<unsigned>(g), cfbox::fs::group_name(g).c_str());
         }
     }
     std::fputc('\n', stdout);
