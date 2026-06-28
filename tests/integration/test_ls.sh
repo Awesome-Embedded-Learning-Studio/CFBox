@@ -88,5 +88,35 @@ else
     ((++fail))
 fi
 
+# ls -R recursive into nested dirs
+mkdir -p "$tmpdir/recur/sub/nested"
+echo "top" > "$tmpdir/recur/top.txt"
+echo "deep" > "$tmpdir/recur/sub/nested/deep.txt"
+actual=$("$CFBOX" ls -R "$tmpdir/recur")
+if [[ "$actual" == *"top.txt"* ]] && [[ "$actual" == *"deep.txt"* ]] && [[ "$actual" == *"sub"* ]]; then
+    ((++pass))
+else
+    echo "FAIL [ls -R]: got $(printf '%q' "$actual")"
+    ((++fail))
+fi
+
+# ls --color=always emits ANSI even when piped (not a tty)
+actual=$("$CFBOX" ls --color=always "$tmpdir/lsdir")
+if [[ "$actual" == *$'\033'* ]]; then
+    ((++pass))
+else
+    echo "FAIL [ls --color=always should emit ANSI]"
+    ((++fail))
+fi
+
+# ls --color=auto piped (not a tty) -> no ANSI
+actual=$("$CFBOX" ls --color=auto "$tmpdir/lsdir")
+if [[ "$actual" != *$'\033'* ]]; then
+    ((++pass))
+else
+    echo "FAIL [ls --color=auto piped should have no ANSI]"
+    ((++fail))
+fi
+
 echo "ls: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]
