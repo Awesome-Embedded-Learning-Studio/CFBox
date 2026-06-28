@@ -2,18 +2,12 @@
 #include <cstdio>
 #include <expected>
 #include <string>
-#include <string_view>
 
 namespace cfbox::base {
 
 struct Error {
     int code;
     std::string msg;
-};
-
-struct ErrorView {
-    int code;
-    std::string_view msg;
 };
 
 template <typename T> using Result = std::expected<T, Error>;

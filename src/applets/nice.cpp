@@ -30,7 +30,12 @@ auto nice_main(int argc, char* argv[]) -> int {
 
     int adjustment = 10;
     if (auto n = parsed.get_any('n', "adjustment")) {
-        adjustment = std::stoi(std::string{*n});
+        auto parsed_adj = cfbox::args::parse_int(*n);
+        if (!parsed_adj) {
+            CFBOX_ERR("nice", "%s", parsed_adj.error().msg.c_str());
+            return 2;
+        }
+        adjustment = *parsed_adj;
     }
 
     const auto& pos = parsed.positional();

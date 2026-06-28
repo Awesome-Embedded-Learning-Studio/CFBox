@@ -1,6 +1,8 @@
+#include <charconv>
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <system_error>
 
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
@@ -31,6 +33,19 @@ static auto next_digit_suffix(int n) -> std::string {
     std::snprintf(buf, sizeof(buf), "%02d", n);
     return buf;
 }
+
+// Parse s as base-10 long with no throw. -l/-b historically went through std::stol
+// (long range), so we keep long semantics here rather than cfbox::args::parse_int,
+// which is int-bounded and would reject values > INT_MAX (e.g. split -b on multi-GB
+// inputs). Matches parse_int's error shape so CFBOX_ERR output stays identical.
+static auto parse_long(std::string_view s) -> cfbox::base::Result<long> {
+    long v = 0;
+    auto res = std::from_chars(s.data(), s.data() + s.size(), v);
+    if (res.ec != std::errc{} || res.ptr != s.data() + s.size()) {
+        return std::unexpected(cfbox::base::Error{EINVAL, "not a valid integer: '" + std::string{s} + '\''});
+    }
+    return v;
+}
 } // namespace
 
 auto split_main(int argc, char* argv[]) -> int {
@@ -46,10 +61,20 @@ auto split_main(int argc, char* argv[]) -> int {
     long lines = 1000;
     long bytes = 0;
     if (auto l = parsed.get_any('l', "lines")) {
-        lines = std::stol(std::string{*l});
+        auto parsed_lines = parse_long(*l);
+        if (!parsed_lines) {
+            CFBOX_ERR("split", "%s", parsed_lines.error().msg.c_str());
+            return 2;
+        }
+        lines = *parsed_lines;
     }
     if (auto b = parsed.get_any('b', "bytes")) {
-        bytes = std::stol(std::string{*b});
+        auto parsed_bytes = parse_long(*b);
+        if (!parsed_bytes) {
+            CFBOX_ERR("split", "%s", parsed_bytes.error().msg.c_str());
+            return 2;
+        }
+        bytes = *parsed_bytes;
     }
     bool numeric = parsed.has('d');
 

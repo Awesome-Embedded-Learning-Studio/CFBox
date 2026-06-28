@@ -7,6 +7,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/error.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 
@@ -50,14 +51,13 @@ auto rev_main(int argc, char* argv[]) -> int {
         if (fn == "-") {
             process_stream(stdin);
         } else {
-            auto* f = std::fopen(fn.c_str(), "r");
-            if (!f) {
+            auto opened = cfbox::io::open_file(fn, "r");
+            if (!opened) {
                 CFBOX_ERR("rev", "cannot open %s", fn.c_str());
                 rc = 1;
                 continue;
             }
-            process_stream(f);
-            std::fclose(f);
+            process_stream(opened->get());
         }
     }
     return rc;

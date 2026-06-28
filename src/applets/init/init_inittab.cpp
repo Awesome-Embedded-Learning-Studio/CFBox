@@ -1,5 +1,7 @@
 #include "init.hpp"
 
+#include <cfbox/io.hpp>
+
 namespace cfbox::init {
 
 auto parse_inittab_line(std::string_view line) -> InittabEntry {
@@ -31,13 +33,12 @@ auto parse_inittab_line(std::string_view line) -> InittabEntry {
 
 auto parse_inittab(const std::string& path) -> std::vector<InittabEntry> {
     std::vector<InittabEntry> entries;
-    FILE* f = std::fopen(path.c_str(), "r");
-    if (!f) return entries;
 
-    char buf[1024];
-    while (std::fgets(buf, sizeof(buf), f)) {
-        std::string_view line(buf);
-        // Remove newline
+    // Stream the inittab line by line via RAII-backed io; an open failure matches
+    // the original silent fallback (empty result). for_each_line strips the
+    // trailing '\n'; we still trim a stray '\r' before parsing.
+    auto result = cfbox::io::for_each_line(path, [&](const std::string& raw) {
+        std::string_view line(raw);
         while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
             line = line.substr(0, line.size() - 1);
 
@@ -45,9 +46,9 @@ auto parse_inittab(const std::string& path) -> std::vector<InittabEntry> {
         if (!entry.action.empty() && !entry.process.empty()) {
             entries.push_back(std::move(entry));
         }
-    }
+    });
+    (void)result;
 
-    std::fclose(f);
     return entries;
 }
 

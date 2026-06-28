@@ -1,6 +1,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 
 #include <cstdio>
 #include <cstring>
@@ -44,12 +45,14 @@ auto swapoff_main(int argc, char* argv[]) -> int {
     }
 
     if (parsed.has('a')) {
-        FILE* f = std::fopen("/proc/swaps", "r");
-        if (!f)
-            return 0; // no swap configured — nothing to do
+        // open_file via RAII unique_file (auto-fclose); open failure stays silent
+        // (no swap configured — nothing to do), matching the prior fopen behavior.
+        auto opened = cfbox::io::open_file("/proc/swaps", "r");
+        if (!opened)
+            return 0;
+        FILE* f = opened.value().get();
         char line[512];
         if (!std::fgets(line, sizeof(line), f)) { // skip header; empty swaps file is fine
-            std::fclose(f);
             return 0;
         }
         int rc = 0;
@@ -62,7 +65,6 @@ auto swapoff_main(int argc, char* argv[]) -> int {
                 rc = 1;
             }
         }
-        std::fclose(f);
         return rc;
     }
 

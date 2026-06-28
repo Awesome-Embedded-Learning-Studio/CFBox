@@ -34,7 +34,12 @@ auto shuf_main(int argc, char* argv[]) -> int {
 
     int max_count = -1;
     if (auto n = parsed.get_any('n', "head-count")) {
-        max_count = std::stoi(std::string{*n});
+        auto parsed_count = cfbox::args::parse_int(*n);
+        if (!parsed_count) {
+            CFBOX_ERR("shuf", "%s", parsed_count.error().msg.c_str());
+            return 2;
+        }
+        max_count = *parsed_count;
     }
     bool echo_mode = parsed.has('e');
 

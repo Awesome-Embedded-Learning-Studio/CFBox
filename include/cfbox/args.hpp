@@ -1,10 +1,15 @@
 #pragma once
 
+#include <cerrno>
+#include <charconv>
 #include <initializer_list>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <cfbox/error.hpp>
 
 namespace cfbox::args {
 
@@ -154,6 +159,18 @@ inline auto parse(int argc, char* argv[],
     }
 
     return result;
+}
+
+// Parse s as a base-10 int with no throw (the project is -fno-exceptions, so std::stoi
+// would std::terminate on bad input). Rejects empty / non-numeric / trailing junk /
+// out-of-int-range; callers report via CFBOX_ERR on the unexpected path.
+[[nodiscard]] inline auto parse_int(std::string_view s) -> base::Result<int> {
+    int v = 0;
+    auto res = std::from_chars(s.data(), s.data() + s.size(), v);
+    if (res.ec != std::errc{} || res.ptr != s.data() + s.size()) {
+        return std::unexpected(base::Error{EINVAL, "not a valid integer: '" + std::string{s} + '\''});
+    }
+    return v;
 }
 
 } // namespace cfbox::args

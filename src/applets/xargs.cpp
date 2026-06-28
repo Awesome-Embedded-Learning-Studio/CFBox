@@ -40,7 +40,12 @@ auto xargs_main(int argc, char* argv[]) -> int {
 
     int max_args = 0;
     if (auto n = parsed.get_any('n', "max-args")) {
-        max_args = std::stoi(std::string{*n});
+        auto parsed_n = cfbox::args::parse_int(*n);
+        if (!parsed_n) {
+            CFBOX_ERR("xargs", "%s", parsed_n.error().msg.c_str());
+            return 2;
+        }
+        max_args = *parsed_n;
     }
 
     std::string replace_str;

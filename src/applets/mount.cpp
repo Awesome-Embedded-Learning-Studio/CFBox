@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 
@@ -87,12 +88,12 @@ auto parse_mount_options(std::string_view opts) -> MountOpts {
 // fields beyond options (dump/pass) are ignored.
 auto parse_fstab(const std::string& path) -> std::vector<FstabEntry> {
     std::vector<FstabEntry> entries;
-    FILE* f = std::fopen(path.c_str(), "r");
-    if (!f)
+    auto fh = cfbox::io::open_file(path, "r");
+    if (!fh)
         return entries;
 
     char buf[512];
-    while (std::fgets(buf, sizeof(buf), f)) {
+    while (std::fgets(buf, sizeof(buf), fh->get())) {
         std::string_view line(buf);
         while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
             line.remove_suffix(1);
@@ -135,7 +136,6 @@ auto parse_fstab(const std::string& path) -> std::vector<FstabEntry> {
             entries.push_back(std::move(e));
         }
     }
-    std::fclose(f);
     return entries;
 }
 

@@ -8,6 +8,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
+#include <cfbox/io.hpp>
 #include <cfbox/terminal.hpp>
 #include <cfbox/tui.hpp>
 
@@ -51,18 +52,19 @@ auto more_main(int argc, char* argv[]) -> int {
     const auto& pos = parsed.positional();
     std::string filename = pos.empty() ? "" : std::string(pos[0]);
 
-    std::FILE* f = stdin;
+    std::vector<std::string> lines;
     if (!filename.empty() && filename != "-") {
-        f = std::fopen(filename.c_str(), "r");
-        if (!f) {
-            CFBOX_ERR("more", "cannot open %s", filename.c_str());
+        auto opened = cfbox::io::open_file(filename, "r");
+        if (!opened) {
+            CFBOX_ERR("more", "%s", opened.error().msg.c_str());
             return 1;
         }
+        // RAII unique_file keeps the FILE* alive across read_lines(), then
+        // auto-closes on scope exit (replaces the old manual fclose).
+        lines = read_lines(opened.value().get());
+    } else {
+        lines = read_lines(stdin);
     }
-
-    auto lines = read_lines(f);
-    if (f != stdin)
-        std::fclose(f);
 
     if (lines.empty())
         return 0;

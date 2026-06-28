@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <cfbox/applets.hpp>
+#include <cfbox/io.hpp>
 
 namespace cfbox::init {
 
@@ -85,8 +86,8 @@ auto init_main(int argc, char* argv[]) -> int {
     cfbox::init::InitState state;
     state.is_pid1 = (getpid() == 1);
 
-    // Check if /etc/inittab exists
-    FILE* inittab = std::fopen("/etc/inittab", "r");
+    // Check if /etc/inittab exists (open_file probes readability; RAII closes on drop)
+    auto inittab = cfbox::io::open_file("/etc/inittab", "r");
     if (!inittab) {
         // Fallback: QEMU smoke test mode (preserves CI compatibility)
         if (state.is_pid1) {
@@ -102,7 +103,6 @@ auto init_main(int argc, char* argv[]) -> int {
         }
         return 0;
     }
-    std::fclose(inittab);
 
     // Full init mode
     state.entries = cfbox::init::parse_inittab("/etc/inittab");

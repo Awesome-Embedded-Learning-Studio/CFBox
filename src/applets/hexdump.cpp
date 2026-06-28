@@ -9,6 +9,7 @@
 #include <cfbox/args.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/error.hpp>
+#include <cfbox/io.hpp>
 
 namespace {
 
@@ -65,8 +66,22 @@ auto hexdump_main(int argc, char* argv[]) -> int {
     bool canonical = parsed.has('C') || parsed.has_long("canonical");
     std::size_t max_bytes = 0;
     std::uint64_t skip_bytes = 0;
-    if (auto v = parsed.get('n')) max_bytes = static_cast<std::size_t>(std::stoull(std::string(*v)));
-    if (auto v = parsed.get('s')) skip_bytes = std::stoull(std::string(*v));
+    if (auto v = parsed.get('n')) {
+        auto parsed_n = cfbox::args::parse_int(*v);
+        if (!parsed_n) {
+            CFBOX_ERR("hexdump", "%s", parsed_n.error().msg.c_str());
+            return 2;
+        }
+        max_bytes = static_cast<std::size_t>(*parsed_n);
+    }
+    if (auto v = parsed.get('s')) {
+        auto parsed_s = cfbox::args::parse_int(*v);
+        if (!parsed_s) {
+            CFBOX_ERR("hexdump", "%s", parsed_s.error().msg.c_str());
+            return 2;
+        }
+        skip_bytes = static_cast<std::uint64_t>(*parsed_s);
+    }
 
     const auto& pos = parsed.positional();
     std::string filename = pos.empty() ? "" : std::string(pos[0]);
@@ -114,12 +129,11 @@ auto hexdump_main(int argc, char* argv[]) -> int {
         return do_dump(stdin);
     }
 
-    std::FILE* f = std::fopen(filename.c_str(), "rb");
-    if (!f) {
+    auto file_result = cfbox::io::open_file(filename, "rb");
+    if (!file_result) {
         CFBOX_ERR("hexdump", "cannot open %s", filename.c_str());
         return 1;
     }
-    auto rc = do_dump(f);
-    std::fclose(f);
-    return rc;
+    auto f = std::move(*file_result);
+    return do_dump(f.get());
 }

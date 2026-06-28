@@ -3,11 +3,10 @@
 #include <string>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
-#include <pwd.h>
-#include <grp.h>
 #include <ctime>
 
 #include <cfbox/args.hpp>
+#include <cfbox/fs_util.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/error.hpp>
 
@@ -119,13 +118,11 @@ auto stat_main(int argc, char* argv[]) -> int {
                         case 'f': std::printf("%lu", static_cast<unsigned long>(st.st_blocks * 512)); break;
                         case 'F': std::fputs(file_type_string(st.st_mode), stdout); break;
                         case 'U': {
-                            auto* pw = getpwuid(st.st_uid);
-                            std::fputs(pw ? pw->pw_name : std::to_string(st.st_uid).c_str(), stdout);
+                            std::fputs(cfbox::fs::owner_name(st.st_uid).c_str(), stdout);
                             break;
                         }
                         case 'G': {
-                            auto* gr = getgrgid(st.st_gid);
-                            std::fputs(gr ? gr->gr_name : std::to_string(st.st_gid).c_str(), stdout);
+                            std::fputs(cfbox::fs::group_name(st.st_gid).c_str(), stdout);
                             break;
                         }
                         case 'a': std::printf("%o", st.st_mode & 07777); break;
@@ -152,13 +149,11 @@ auto stat_main(int argc, char* argv[]) -> int {
                         static_cast<unsigned long>(st.st_blocks),
                         static_cast<unsigned long>(st.st_blksize),
                         file_type_string(st.st_mode));
-            auto* pw = getpwuid(st.st_uid);
-            auto* gr = getgrgid(st.st_gid);
             std::printf("Access: (%04o/%s)  Uid: (%5u/%-8s)   Gid: (%5u/%-8s)\n",
                         st.st_mode & 07777u,
                         format_perms(st.st_mode).c_str(),
-                        st.st_uid, pw ? pw->pw_name : "",
-                        st.st_gid, gr ? gr->gr_name : "");
+                        st.st_uid, cfbox::fs::owner_name(st.st_uid).c_str(),
+                        st.st_gid, cfbox::fs::group_name(st.st_gid).c_str());
 #if defined(__linux__)
             std::printf("Modify: %s\n", format_time(st.st_mtim).c_str());
             std::printf("Change: %s\n", format_time(st.st_ctim).c_str());

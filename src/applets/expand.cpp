@@ -27,7 +27,12 @@ auto expand_main(int argc, char* argv[]) -> int {
 
     int tab_stop = 8;
     if (auto t = parsed.get_any('t', "tabs")) {
-        tab_stop = std::stoi(std::string{*t});
+        auto parsed_tabs = cfbox::args::parse_int(*t);
+        if (!parsed_tabs) {
+            CFBOX_ERR("expand", "%s", parsed_tabs.error().msg.c_str());
+            return 2;
+        }
+        tab_stop = *parsed_tabs;
         if (tab_stop <= 0) {
             CFBOX_ERR("expand", "invalid tab stop: %d", tab_stop);
             return 1;

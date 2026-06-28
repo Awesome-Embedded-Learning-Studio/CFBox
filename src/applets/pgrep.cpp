@@ -58,11 +58,27 @@ auto pgrep_main(int argc, char* argv[]) -> int {
     bool list_names = parsed.has('l') || parsed.has_long("list");
     bool exact = parsed.has('x') || parsed.has_long("exact");
 
+    const char* cmd = is_pkill ? "pkill" : "pgrep";
+
     pid_t filter_ppid = -1;
-    if (auto v = parsed.get('P')) filter_ppid = static_cast<pid_t>(std::stoi(std::string(*v)));
+    if (auto v = parsed.get('P')) {
+        auto ppid = cfbox::args::parse_int(*v);
+        if (!ppid) {
+            CFBOX_ERR_V(cmd, "%s", ppid.error().msg.c_str());
+            return 2;
+        }
+        filter_ppid = static_cast<pid_t>(*ppid);
+    }
 
     uid_t filter_uid = static_cast<uid_t>(-1);
-    if (auto v = parsed.get('u')) filter_uid = static_cast<uid_t>(std::stoi(std::string(*v)));
+    if (auto v = parsed.get('u')) {
+        auto uid = cfbox::args::parse_int(*v);
+        if (!uid) {
+            CFBOX_ERR_V(cmd, "%s", uid.error().msg.c_str());
+            return 2;
+        }
+        filter_uid = static_cast<uid_t>(*uid);
+    }
 
     int sig = SIGTERM;
     if (auto v = parsed.get('s')) {
@@ -74,19 +90,26 @@ auto pgrep_main(int argc, char* argv[]) -> int {
         else if (sname == "TERM") sig = SIGTERM;
         else if (sname == "USR1") sig = SIGUSR1;
         else if (sname == "USR2") sig = SIGUSR2;
-        else sig = std::stoi(std::string(*v));
+        else {
+            auto num = cfbox::args::parse_int(*v);
+            if (!num) {
+                CFBOX_ERR_V(cmd, "%s", num.error().msg.c_str());
+                return 2;
+            }
+            sig = *num;
+        }
     }
 
     const auto& pos = parsed.positional();
     if (pos.empty()) {
-        CFBOX_ERR_V(is_pkill ? "pkill" : "pgrep", "no pattern specified");
+        CFBOX_ERR_V(cmd, "no pattern specified");
         return 1;
     }
     const auto& pattern = pos[0];
 
     auto result = cfbox::proc::read_all_processes();
     if (!result) {
-        CFBOX_ERR_V(is_pkill ? "pkill" : "pgrep", "%s", result.error().msg.c_str());
+        CFBOX_ERR_V(cmd, "%s", result.error().msg.c_str());
         return 1;
     }
 

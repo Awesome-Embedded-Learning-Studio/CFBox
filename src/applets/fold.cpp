@@ -29,7 +29,12 @@ auto fold_main(int argc, char* argv[]) -> int {
 
     int width = 80;
     if (auto w = parsed.get_any('w', "width")) {
-        width = std::stoi(std::string{*w});
+        auto parsed_width = cfbox::args::parse_int(*w);
+        if (!parsed_width) {
+            CFBOX_ERR("fold", "%s", parsed_width.error().msg.c_str());
+            return 2;
+        }
+        width = *parsed_width;
         if (width <= 0) {
             CFBOX_ERR("fold", "invalid width: %d", width);
             return 1;
