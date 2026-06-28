@@ -3,7 +3,7 @@
 > Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)。
 > **Phase 1.5 代码质量审查 ✅ 完成**（体积 -14%、消 iostream/stoi、统一错误宏、fs 封装扩展，379 测试全绿）。
 > **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。基线 399 测试 / 418 KB / 123 applet。
-> 焦点 → Phase 2 批5c `sh` 深化续：here-doc + read增强/break N/高级`${}`/trap（算术/case/函数已完成）。
+> 焦点 → Phase 2 批5c `sh` 深化尾：trap（信号处理，下回合 fresh context）；算术/case/函数/here-doc/高级`${}`/break N/read 增强已全收。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -25,7 +25,7 @@
 | 批4 | `ls -R` 递归 + `--color`（LS_COLORS 感知、递归缩进） | ✅ | 6dfe329 | 424/0 |
 | 批5a | `grep -A/-B/-C` 上下文（ring 向前 + after_pending 向后 + 组间 `--`） | ✅ | b6920c3 | 431/0 |
 | 批5b | `find` 布尔表达式（AST + -a/-o/-not/!/括号 + 递归下降） | ✅ | 3e29feb | 436/0 |
-| 批5c | `sh` 深化 — ✅算术 `$((expr))`/case/函数+return+local（40d48dc·181eaa9·bfcc71e）；⏳here-doc/read增强/break N/高级`${}`/trap | 🔄 | — | 436/41 |
+| 批5c | `sh` 深化 — ✅算术/case/函数+return+local/here-doc/高级`${}`/break N/read增强（40d48dc·181eaa9·bfcc71e·e07de18·f23c2f1·4e5814f·33bc74f）；⏳trap | 🔄 | — | 436/55 |
 
 > 各批细节（触及文件、Result 签名草案、完成门、gotcha）由 `/next <批>` 现场产出脚手架，确认后写入本表 commit/测试列。
 
