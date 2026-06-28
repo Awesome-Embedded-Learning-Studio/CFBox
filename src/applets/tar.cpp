@@ -164,7 +164,7 @@ auto tar_main(int argc, char* argv[]) -> int {
             while ((n = std::fread(buf.data(), 1, kChunk, fh->get())) != 0) {
                 std::fwrite(buf.data(), 1, n, out);
             }
-            auto rem = sz % 512;
+            auto rem = static_cast<std::size_t>(sz % 512);
             if (rem > 0) std::fwrite(pad, 1, 512 - rem, out);
         }
         std::fwrite(pad, 1, 512, out);  // two zero blocks mark end of archive
