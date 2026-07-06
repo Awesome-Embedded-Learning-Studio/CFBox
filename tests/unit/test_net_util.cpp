@@ -110,3 +110,18 @@ TEST(NetUtilTest, FormatRouteTableHasHeader) {
     EXPECT_NE(s.find("UG"), std::string::npos);
     EXPECT_NE(s.find("192.168.1.1"), std::string::npos);
 }
+
+TEST(NetUtilParseIpv4Test, Valid) {
+    EXPECT_TRUE(cfbox::net::parse_ipv4("127.0.0.1").has_value());
+    EXPECT_TRUE(cfbox::net::parse_ipv4("10.0.0.1").has_value());
+    EXPECT_TRUE(cfbox::net::parse_ipv4("255.255.255.255").has_value());
+    EXPECT_TRUE(cfbox::net::parse_ipv4("0.0.0.0").has_value());
+}
+
+TEST(NetUtilParseIpv4Test, Invalid) {
+    EXPECT_FALSE(cfbox::net::parse_ipv4("").has_value());
+    EXPECT_FALSE(cfbox::net::parse_ipv4("256.0.0.1").has_value());
+    EXPECT_FALSE(cfbox::net::parse_ipv4("1.2.3").has_value());
+    EXPECT_FALSE(cfbox::net::parse_ipv4("not-an-ip").has_value());
+    EXPECT_FALSE(cfbox::net::parse_ipv4("127.0.0.1.5").has_value());
+}
