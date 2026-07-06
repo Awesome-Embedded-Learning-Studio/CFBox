@@ -3,7 +3,7 @@
 > Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)；结构标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)，性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)。
 > **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。
 > ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）+ ✅ **结构与性能标尺横切批**（PR#17/#18）—— STRUCTURE-TASTE + banned-pattern/layering gate、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化 + google-benchmark 脚手架。当前基线 **436 GTest / 439 KB size-opt / 123 applet**。
-> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅、批4（`netstat` 只读 + `split_fields` 抽取）✅、批5（`ifconfig` 写操作 SIOCSIF*）✅、批6（`icmp.hpp` + `ping`）✅ —— 当前基线 **475 GTest / 479 KB / 129 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
+> ✅ **Phase 3 网络最小闭环完成**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅、批4（`netstat` 只读 + `split_fields` 抽取）✅、批5（`ifconfig` 写操作 SIOCSIF*）✅、批6（`icmp.hpp` + `ping`）✅、批7（`traceroute` UDP 探测 + ICMP 收包）✅ —— 最终基线 **479 GTest / 479 KB / 130 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -56,7 +56,7 @@
 
 > 批级记录见 [notes/2026-07-06-structure-performance.md](../notes/2026-07-06-structure-performance.md)。两批均未增删 applet，GTest 基线沿用 Phase 2 末 436；size-opt 体积 v0.3.0 的 418 KB → 439 KB（+21 KB，主因 io/tar 流式缓冲与 benchmark 链接产物，仍在 ≤ 550 KB 预算内）。
 
-## 🔄 Phase 3（网络最小闭环）— 进行中
+## ✅ Phase 3（网络最小闭环）— 已完成
 
 > 目标：socket/http/net_util/icmp 基础设施 + ip/ifconfig/route/netstat/ping/traceroute/nslookup/wget/nc/tftp + hostname 深化（11 applet）。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。每批≈一 commit + 完成门。
 
@@ -68,8 +68,9 @@
 | 批4（Wave 1c） | `net_util.hpp` 抽公共 `split_fields`（`read_routes` 改用，DRY）+ `read_tcp/udp_sockets`（解析 /proc/net/tcp\|udp `hexIP:hexPort` + state code + tx:rx queues）+ `read_unix_sockets`（/proc/net/unix）+ `parse_inet_sockets` 纯函数化（喂假数据可单测）+ `format_netstat_inet/unix`（BusyBox 风格，LISTEN 过滤/-a）+ `netstat` applet（`-t/-u/-x/-a/-n`） | ✅ | (本批) | 462/3 |
 | 批5（Wave 1c） | `net_util.hpp` 写 ioctl：抽 `ctl_socket`/`parse_ipv4`/`detail::ifreq_with_addr`（memcpy 写 sockaddr 解 cast-align）/`detail::ioctl_error`（msg 含 strerror）+ `set_ipv4_addr`/`set_netmask`/`set_broadcast`/`set_mtu`/`set_if_up`（read-modify-write IFF_UP）+ `ifconfig` 写 codepath（`IFACE ADDR [netmask NM] [broadcast BC] [mtu N] [up\|down]`，EPERM 不静默） | ✅ | (本批) | 464/5 |
 | 批6（Wave 2） | `include/cfbox/icmp.hpp` 新基础设施（`checksum` RFC1071 纯函数 + `build_echo_request` + `parse_icmp` 剥 IP 头按 IHL + `open_raw` SOCK_RAW IPPROTO_ICMP + `recv_icmp` match_id 过滤/monotonic deadline + `now_us`）+ `ping` applet（`-c/-i/-W/-s/-q/-n`，SIGINT RAII 打 summary，EPERM exit 2 区分 resolve 失败 exit 1） | ✅ | (本批) | 475/3 |
+| 批7（Wave 2） | `traceroute` applet（UDP 探测 `setsockopt(IP_TTL)` 递增 + 每探 bump 目标端口避 conntrack + 复用 `icmp::open_raw`/`recv_icmp`(match_id=0) 收包 + `icmp::classify_reply` 判 time-exceeded/port-unreach）+ `net_util` 抽 `resolve_ipv4`/`name_of`（ping/traceroute 共享，ping.cpp 重构去重） | ✅ | (本批) | 479/3 |
 
-> 下一批：批7 Wave 2 `traceroute`（UDP 高端口探测 + 递增 TTL + 复用 `icmp::open_raw`/`recv_icmp` 收 time-exceeded/port-unreachable）—— Phase 3 网络最小闭环收口。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md) / [notes/2026-07-06-phase3-ip-route-hostname.md](../notes/2026-07-06-phase3-ip-route-hostname.md) / [notes/2026-07-06-phase3-netstat.md](../notes/2026-07-06-phase3-netstat.md) / [notes/2026-07-06-phase3-ifconfig-write.md](../notes/2026-07-06-phase3-ifconfig-write.md) / [notes/2026-07-06-phase3-icmp-ping.md](../notes/2026-07-06-phase3-icmp-ping.md)。
+> **Phase 3 收口**：11 applet 全到位（socket/nc/ifconfig/ip/route/hostname/netstat + ifconfig 写 + ping/traceroute），3 基础设施（socket.hpp/net_util.hpp/icmp.hpp）。下一焦点待定（候选：route add/del、hostname NAME、netstat -r/-i、IPv6、或转 Phase 4 用户/文件权限）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md) / [notes/2026-07-06-phase3-ip-route-hostname.md](../notes/2026-07-06-phase3-ip-route-hostname.md) / [notes/2026-07-06-phase3-netstat.md](../notes/2026-07-06-phase3-netstat.md) / [notes/2026-07-06-phase3-ifconfig-write.md](../notes/2026-07-06-phase3-ifconfig-write.md) / [notes/2026-07-06-phase3-icmp-ping.md](../notes/2026-07-06-phase3-icmp-ping.md) / [notes/2026-07-06-phase3-traceroute.md](../notes/2026-07-06-phase3-traceroute.md)。
 
 ## OPEN GOTCHAS（跨批陷阱，改前必看）
 

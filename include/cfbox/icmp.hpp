@@ -110,6 +110,19 @@ struct ParsedIcmp {
     return io::unique_fd{fd};
 }
 
+// Classify a received ICMP for traceroute: TIME_EXCEEDED → intermediate hop
+// (TTL hit 0 at a router), DEST_UNREACH+PORT_UNREACH → reached destination
+// (our UDP high port has no listener), anything else → "other" (logged but
+// treated as a response from that hop). Pure — unit-testable without sockets.
+enum class reply_class { intermediate, reached, other };
+inline auto classify_reply(std::uint8_t type, std::uint8_t code) -> reply_class {
+    if (type == ICMP_TIME_EXCEEDED)
+        return reply_class::intermediate;
+    if (type == ICMP_DEST_UNREACH && code == ICMP_PORT_UNREACH)
+        return reply_class::reached;
+    return reply_class::other;
+}
+
 struct RecvResult {
     sockaddr_storage from;
     ParsedIcmp msg;

@@ -108,3 +108,22 @@ TEST(IcmpParseTest, BadIhl) {
     auto m = cfbox::icmp::parse_icmp({pkt, 28});
     EXPECT_FALSE(m.has_value());
 }
+
+TEST(IcmpClassifyReplyTest, TimeExceededIsIntermediate) {
+    EXPECT_EQ(cfbox::icmp::classify_reply(ICMP_TIME_EXCEEDED, 0),
+              cfbox::icmp::reply_class::intermediate);
+}
+
+TEST(IcmpClassifyReplyTest, PortUnreachableIsReached) {
+    EXPECT_EQ(cfbox::icmp::classify_reply(ICMP_DEST_UNREACH, ICMP_PORT_UNREACH),
+              cfbox::icmp::reply_class::reached);
+}
+
+TEST(IcmpClassifyReplyTest, OtherDestUnreachIsOther) {
+    EXPECT_EQ(cfbox::icmp::classify_reply(ICMP_DEST_UNREACH, 1), // net-unreachable
+              cfbox::icmp::reply_class::other);
+}
+
+TEST(IcmpClassifyReplyTest, EchoReplyIsOther) {
+    EXPECT_EQ(cfbox::icmp::classify_reply(ICMP_ECHOREPLY, 0), cfbox::icmp::reply_class::other);
+}

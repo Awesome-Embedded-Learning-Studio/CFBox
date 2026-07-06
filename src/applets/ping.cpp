@@ -22,6 +22,7 @@
 #include <cfbox/error.hpp>
 #include <cfbox/help.hpp>
 #include <cfbox/icmp.hpp>
+#include <cfbox/net_util.hpp>
 
 namespace {
 
@@ -58,36 +59,6 @@ struct sigint_guard {
             ::sigaction(SIGINT, &old_act, nullptr);
     }
 };
-
-[[nodiscard]] auto resolve_ipv4(std::string_view host, sockaddr_storage& out) -> bool {
-    char buf[256];
-    if (host.size() >= sizeof(buf))
-        return false;
-    std::memcpy(buf, host.data(), host.size());
-    buf[host.size()] = '\0';
-    addrinfo hints{};
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_RAW;
-    hints.ai_protocol = IPPROTO_ICMP;
-    addrinfo* res = nullptr;
-    if (::getaddrinfo(buf, nullptr, &hints, &res) != 0)
-        return false;
-    bool ok = res && res->ai_addrlen <= sizeof(out);
-    if (ok)
-        std::memcpy(&out, res->ai_addr, res->ai_addrlen);
-    if (res)
-        ::freeaddrinfo(res);
-    return ok;
-}
-
-auto name_of(const sockaddr_storage& ss, bool numeric) -> std::string {
-    char host[NI_MAXHOST];
-    int flags = numeric ? NI_NUMERICHOST : 0;
-    if (::getnameinfo(reinterpret_cast<const sockaddr*>(&ss), sizeof(ss), host, sizeof(host),
-                      nullptr, 0, flags) == 0)
-        return host;
-    return "?";
-}
 
 } // namespace
 
@@ -158,7 +129,7 @@ auto ping_main(int argc, char* argv[]) -> int {
     const bool numeric = parsed.has('n');
 
     sockaddr_storage dst{};
-    if (!resolve_ipv4(host, dst)) {
+    if (!net::resolve_ipv4(host, dst)) {
         CFBOX_ERR("ping", "cannot resolve '%s'", host.c_str());
         return 1;
     }
@@ -169,7 +140,7 @@ auto ping_main(int argc, char* argv[]) -> int {
         return 2;
     }
 
-    const std::string dst_name = name_of(dst, numeric);
+    const std::string dst_name = net::name_of(dst, numeric);
     sockaddr_in din{};
     std::memcpy(&din, &dst, sizeof(din)); // sockaddr_in memcpy (cast-align safe)
     char addr_buf[INET_ADDRSTRLEN];

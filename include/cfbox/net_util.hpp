@@ -8,6 +8,7 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -100,6 +101,39 @@ inline auto split_fields(std::string_view line) -> std::vector<std::string> {
     if (!cur.empty())
         out.push_back(std::move(cur));
     return out;
+}
+
+// Resolve a host to an IPv4 sockaddr_storage (AF_INET only — ping/traceroute
+// are IPv4 in this cut). Returns false on resolution failure. Shared by ping,
+// traceroute, and any future host→addr applet.
+[[nodiscard]] inline auto resolve_ipv4(std::string_view host, sockaddr_storage& out) -> bool {
+    char buf[256];
+    if (host.size() >= sizeof(buf))
+        return false;
+    std::memcpy(buf, host.data(), host.size());
+    buf[host.size()] = '\0';
+    addrinfo hints{};
+    hints.ai_family = AF_INET;
+    addrinfo* res = nullptr;
+    if (::getaddrinfo(buf, nullptr, &hints, &res) != 0)
+        return false;
+    bool ok = res && res->ai_addrlen <= sizeof(out);
+    if (ok)
+        std::memcpy(&out, res->ai_addr, res->ai_addrlen); // sockaddr_in via memcpy
+    if (res)
+        ::freeaddrinfo(res);
+    return ok;
+}
+
+// Reverse-DNS (or numeric with `numeric=true`) of a sockaddr. Falls back to a
+// "?" literal if getnameinfo fails — callers can use NI_NUMERICHOST for -n.
+inline auto name_of(const sockaddr_storage& ss, bool numeric) -> std::string {
+    char host[NI_MAXHOST];
+    int flags = numeric ? NI_NUMERICHOST : 0;
+    if (::getnameinfo(reinterpret_cast<const sockaddr*>(&ss), sizeof(ss), host, sizeof(host),
+                      nullptr, 0, flags) == 0)
+        return host;
+    return "?";
 }
 
 // Read all interfaces: /proc/net/dev for counters + ioctl for the rest.
