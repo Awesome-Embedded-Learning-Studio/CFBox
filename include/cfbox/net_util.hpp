@@ -18,8 +18,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <cfbox/error.hpp>
@@ -77,6 +79,27 @@ inline auto ipv4_from_ioctl(const sockaddr* sa) -> std::string {
     if (::inet_ntop(AF_INET, &in.sin_addr, buf, sizeof(buf)))
         return buf;
     return {};
+}
+
+// Split a line into whitespace-delimited fields (space or tab). Empty fields are
+// skipped. Shared by /proc/net/route and /proc/net/{tcp,udp,unix} parsing — kept
+// here so every /proc parser uses the same tokenization.
+inline auto split_fields(std::string_view line) -> std::vector<std::string> {
+    std::vector<std::string> out;
+    std::string cur;
+    for (char c : line) {
+        if (c == '\t' || c == ' ') {
+            if (!cur.empty()) {
+                out.push_back(std::move(cur));
+                cur.clear();
+            }
+        } else {
+            cur += c;
+        }
+    }
+    if (!cur.empty())
+        out.push_back(std::move(cur));
+    return out;
 }
 
 // Read all interfaces: /proc/net/dev for counters + ioctl for the rest.
@@ -281,20 +304,7 @@ inline auto prefix_len(const std::string& mask) -> int {
         if (line.empty())
             continue;
         // tab-separated: Iface Dest GW Flags RefCnt Use Metric Mask MTU Window IRTT
-        std::vector<std::string> f;
-        std::string cur;
-        for (char c : line) {
-            if (c == '\t' || c == ' ') {
-                if (!cur.empty()) {
-                    f.push_back(cur);
-                    cur.clear();
-                }
-            } else {
-                cur += c;
-            }
-        }
-        if (!cur.empty())
-            f.push_back(cur);
+        auto f = split_fields(line);
         if (f.size() < 8)
             continue;
 
@@ -333,6 +343,205 @@ inline auto format_route_table(const std::vector<RouteEntry>& routes) -> std::st
         std::snprintf(buf, sizeof(buf), "%-16s%-16s%-16s%-6s%-7d%-6d%-8d%s\n",
                       r.destination.c_str(), r.gateway.c_str(), r.genmask.c_str(), fl.c_str(),
                       r.metric, 0, 0, r.iface.c_str());
+        out += buf;
+    }
+    return out;
+}
+
+// ---- socket tables (/proc/net/tcp /proc/net/udp /proc/net/unix) ----
+
+struct SocketEntry {
+    std::string proto;        // "tcp" / "udp"
+    std::string local_addr;   // dotted
+    std::uint16_t local_port = 0;
+    std::string remote_addr;  // dotted
+    std::uint16_t remote_port = 0;
+    int state = 0;            // raw st code from /proc/net/tcp
+    std::uint64_t tx_queue = 0;
+    std::uint64_t rx_queue = 0;
+};
+
+// /proc/net/tcp state code → BusyBox name. 0A=LISTEN, 01=ESTABLISHED, ...
+inline auto tcp_state_name(int state) -> const char* {
+    switch (state) {
+        case 0x01: return "ESTABLISHED";
+        case 0x02: return "SYN_SENT";
+        case 0x03: return "SYN_RECV";
+        case 0x04: return "FIN_WAIT1";
+        case 0x05: return "FIN_WAIT2";
+        case 0x06: return "TIME_WAIT";
+        case 0x07: return "CLOSE";
+        case 0x08: return "CLOSE_WAIT";
+        case 0x09: return "LAST_ACK";
+        case 0x0A: return "LISTEN";
+        case 0x0B: return "CLOSING";
+        default: return "UNKNOWN";
+    }
+}
+
+// Parse "0100007F:0050" (host-endian hex ip : hex port) → dotted addr + port.
+inline auto parse_ipv4_port(std::string_view s) -> std::pair<std::string, std::uint16_t> {
+    auto colon = s.find(':');
+    if (colon == std::string_view::npos)
+        return {};
+    std::string addr = hex_to_ipv4(s.substr(0, colon));
+    auto port = static_cast<std::uint16_t>(
+        std::strtoul(std::string{s.substr(colon + 1)}.c_str(), nullptr, 16));
+    return {std::move(addr), port};
+}
+
+// Parse one /proc/net/tcp|udp data line. nullopt on header/blank lines.
+inline auto parse_inet_line(std::string_view line, std::string_view proto)
+    -> std::optional<SocketEntry> {
+    auto f = split_fields(line);
+    if (f.size() < 4)
+        return std::nullopt;
+    // Data rows: "N: hexIP:hexPort hexIP:hexPort ST ...". Reject rows whose
+    // address fields lack a ':' — that covers the header line ("local_address").
+    if (f[1].find(':') == std::string::npos || f[2].find(':') == std::string::npos)
+        return std::nullopt;
+    // f[0]="N:" sl  f[1]=local  f[2]=remote  f[3]=st  f[4]=txq:rxq queues
+    SocketEntry e;
+    e.proto = std::string{proto};
+    auto [la, lp] = parse_ipv4_port(f[1]);
+    e.local_addr = std::move(la);
+    e.local_port = lp;
+    auto [ra, rp] = parse_ipv4_port(f[2]);
+    e.remote_addr = std::move(ra);
+    e.remote_port = rp;
+    e.state = static_cast<int>(std::strtoul(f[3].c_str(), nullptr, 16));
+    if (f.size() > 4) {
+        auto c = f[4].find(':');
+        if (c != std::string::npos) {
+            e.tx_queue = std::strtoull(f[4].substr(0, c).c_str(), nullptr, 16);
+            e.rx_queue = std::strtoull(f[4].substr(c + 1).c_str(), nullptr, 16);
+        }
+    }
+    return e;
+}
+
+// Parse a full /proc/net/tcp|udp dump (skipping its header line).
+inline auto parse_inet_sockets(std::string_view content, std::string_view proto)
+    -> std::vector<SocketEntry> {
+    auto lines = io::split_lines(content);
+    std::vector<SocketEntry> out;
+    for (std::size_t i = 1; i < lines.size(); ++i) {
+        if (auto e = parse_inet_line(lines[i], proto))
+            out.push_back(*e);
+    }
+    return out;
+}
+
+[[nodiscard]] inline auto read_tcp_sockets() -> base::Result<std::vector<SocketEntry>> {
+    CFBOX_TRY(content, io::read_all("/proc/net/tcp"));
+    return parse_inet_sockets(*content, "tcp");
+}
+
+[[nodiscard]] inline auto read_udp_sockets() -> base::Result<std::vector<SocketEntry>> {
+    CFBOX_TRY(content, io::read_all("/proc/net/udp"));
+    return parse_inet_sockets(*content, "udp");
+}
+
+// Format inet sockets in BusyBox netstat style. `servers` true → include LISTEN
+// (==-a). Remote port 0 prints as "*" (BusyBox convention). UDP has no State.
+inline auto format_netstat_inet(const std::vector<SocketEntry>& socks, bool servers)
+    -> std::string {
+    std::string out = servers ? "Active Internet connections (servers and established)\n"
+                              : "Active Internet connections (w/o servers)\n";
+    char buf[200];
+    std::snprintf(buf, sizeof(buf), "%-5s %-6s %-6s %-23s %-23s %s\n", "Proto", "Recv-Q",
+                  "Send-Q", "Local Address", "Foreign Address", "State");
+    out += buf;
+    auto port_str = [](std::uint16_t p) -> std::string {
+        return p == 0 ? "*" : std::to_string(p);
+    };
+    for (const auto& e : socks) {
+        if (!servers && e.state == 0x0A) // skip LISTEN unless -a
+            continue;
+        std::string local = e.local_addr + ':' + port_str(e.local_port);
+        std::string remote = e.remote_addr + ':' + port_str(e.remote_port);
+        const char* state = e.proto == "tcp" ? tcp_state_name(e.state) : "";
+        std::snprintf(buf, sizeof(buf), "%-5s %-6llu %-6llu %-23s %-23s %s\n", e.proto.c_str(),
+                      static_cast<unsigned long long>(e.rx_queue),
+                      static_cast<unsigned long long>(e.tx_queue), local.c_str(),
+                      remote.c_str(), state);
+        out += buf;
+    }
+    return out;
+}
+
+// ---- unix domain sockets (/proc/net/unix) ----
+
+struct UnixSocketEntry {
+    int refcount = 0;
+    int flags = 0;
+    int type = 0;  // SOCK_STREAM=1 SOCK_DGRAM=2 SOCK_SEQPACKET=5
+    int state = 0; // 01=LISTENING 03=CONNECTED 07=CLOSED
+    std::uint64_t inode = 0;
+    std::string path;
+};
+
+inline auto unix_type_name(int t) -> const char* {
+    switch (t) {
+        case 1: return "STREAM";
+        case 2: return "DGRAM";
+        case 5: return "SEQPACKET";
+        default: return "";
+    }
+}
+
+inline auto unix_state_name(int s) -> const char* {
+    switch (s) {
+        case 0x01: return "LISTENING";
+        case 0x02: return "CONNECTING";
+        case 0x03: return "CONNECTED";
+        case 0x07: return "CLOSED";
+        default: return "";
+    }
+}
+
+inline auto parse_unix_line(std::string_view line) -> std::optional<UnixSocketEntry> {
+    auto f = split_fields(line);
+    // Num: RefCount Protocol Flags Type St Inode Path?
+    if (f.size() < 7)
+        return std::nullopt;
+    UnixSocketEntry e;
+    e.refcount = static_cast<int>(std::strtoul(f[1].c_str(), nullptr, 16));
+    e.flags = static_cast<int>(std::strtoul(f[3].c_str(), nullptr, 16));
+    e.type = static_cast<int>(std::strtoul(f[4].c_str(), nullptr, 16));
+    e.state = static_cast<int>(std::strtoul(f[5].c_str(), nullptr, 16));
+    e.inode = std::strtoull(f[6].c_str(), nullptr, 10);
+    if (f.size() > 7)
+        e.path = f[7];
+    return e;
+}
+
+inline auto parse_unix_sockets(std::string_view content) -> std::vector<UnixSocketEntry> {
+    auto lines = io::split_lines(content);
+    std::vector<UnixSocketEntry> out;
+    for (std::size_t i = 1; i < lines.size(); ++i) {
+        if (auto e = parse_unix_line(lines[i]))
+            out.push_back(*e);
+    }
+    return out;
+}
+
+[[nodiscard]] inline auto read_unix_sockets() -> base::Result<std::vector<UnixSocketEntry>> {
+    CFBOX_TRY(content, io::read_all("/proc/net/unix"));
+    return parse_unix_sockets(*content);
+}
+
+inline auto format_netstat_unix(const std::vector<UnixSocketEntry>& socks) -> std::string {
+    std::string out = "Active UNIX domain sockets (w/o servers)\n";
+    char buf[200];
+    std::snprintf(buf, sizeof(buf), "%-5s %-6s %-11s %-10s %-13s %-8s %s\n", "Proto", "RefCnt",
+                  "Flags", "Type", "State", "I-Node", "Path");
+    out += buf;
+    for (const auto& e : socks) {
+        std::snprintf(buf, sizeof(buf), "%-5s %-6d %-11s %-10s %-13s %-8llu %s\n", "unix",
+                      e.refcount, (e.flags & 0x10000) ? "[ ACC ]" : "", unix_type_name(e.type),
+                      unix_state_name(e.state), static_cast<unsigned long long>(e.inode),
+                      e.path.c_str());
         out += buf;
     }
     return out;

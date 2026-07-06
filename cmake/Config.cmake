@@ -29,7 +29,7 @@ set(CFBOX_APPLETS
     dmesg hexdump more rev cal renice
     clear which mount mountpoint mdev chmod chown chgrp
     umount swapoff reboot
-    nc ifconfig ip route
+    nc ifconfig ip route netstat
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)
