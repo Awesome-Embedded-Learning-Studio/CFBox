@@ -16,6 +16,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -232,6 +233,108 @@ inline auto format_ifconfig(const InterfaceInfo& it) -> std::string {
     out += indent + "RX bytes:" + std::to_string(it.rx_bytes) + " (" + human(it.rx_bytes) + ")  ";
     out += "TX bytes:" + std::to_string(it.tx_bytes) + " (" + human(it.tx_bytes) + ")\n";
 
+    return out;
+}
+
+// ---- routing table (/proc/net/route) ----
+
+struct RouteEntry {
+    std::string destination; // dotted, "0.0.0.0" for default
+    std::string gateway;     // dotted, "0.0.0.0" if none (on-link)
+    std::string genmask;     // dotted
+    std::string iface;
+    int flags = 0; // raw RTF_* bits
+    int metric = 0;
+};
+
+// /proc/net/route prints addresses as host-endian hex; assign straight into
+// in_addr.s_addr (the targets we ship are little-endian).
+inline auto hex_to_ipv4(std::string_view hex) -> std::string {
+    std::uint32_t v =
+        static_cast<std::uint32_t>(std::strtoul(std::string{hex}.c_str(), nullptr, 16));
+    in_addr a;
+    a.s_addr = v;
+    char buf[INET_ADDRSTRLEN];
+    return ::inet_ntop(AF_INET, &a, buf, sizeof(buf)) ? buf : std::string{};
+}
+
+// Bit width of a contiguous-ones netmask (255.255.255.0 -> 24).
+inline auto prefix_len(const std::string& mask) -> int {
+    in_addr a;
+    if (::inet_pton(AF_INET, mask.c_str(), &a) != 1)
+        return 0;
+    std::uint32_t v = ntohl(a.s_addr);
+    int n = 0;
+    while (v & 0x80000000u) {
+        ++n;
+        v <<= 1;
+    }
+    return n;
+}
+
+[[nodiscard]] inline auto read_routes() -> base::Result<std::vector<RouteEntry>> {
+    CFBOX_TRY(content, io::read_all("/proc/net/route"));
+    auto lines = io::split_lines(*content);
+    std::vector<RouteEntry> out;
+    for (std::size_t i = 1; i < lines.size(); ++i) { // skip header line
+        const auto& line = lines[i];
+        if (line.empty())
+            continue;
+        // tab-separated: Iface Dest GW Flags RefCnt Use Metric Mask MTU Window IRTT
+        std::vector<std::string> f;
+        std::string cur;
+        for (char c : line) {
+            if (c == '\t' || c == ' ') {
+                if (!cur.empty()) {
+                    f.push_back(cur);
+                    cur.clear();
+                }
+            } else {
+                cur += c;
+            }
+        }
+        if (!cur.empty())
+            f.push_back(cur);
+        if (f.size() < 8)
+            continue;
+
+        RouteEntry r;
+        r.iface = f[0];
+        r.destination = hex_to_ipv4(f[1]);
+        r.gateway = (f[2] == "00000000") ? "0.0.0.0" : hex_to_ipv4(f[2]);
+        r.flags = static_cast<int>(std::strtoul(f[3].c_str(), nullptr, 16));
+        r.metric = static_cast<int>(std::strtoul(f[6].c_str(), nullptr, 10));
+        r.genmask = hex_to_ipv4(f[7]);
+        out.push_back(std::move(r));
+    }
+    return out;
+}
+
+inline auto format_route_table(const std::vector<RouteEntry>& routes) -> std::string {
+    std::string out = "Kernel IP routing table\n";
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "%-16s%-16s%-16s%-6s%-7s%-6s%-8s%s\n", "Destination", "Gateway",
+                  "Genmask", "Flags", "Metric", "Ref", "Use", "Iface");
+    out += buf;
+    for (const auto& r : routes) {
+        std::string fl;
+        if (r.flags & 0x1)
+            fl += 'U'; // RTF_UP
+        if (r.flags & 0x2)
+            fl += 'G'; // RTF_GATEWAY
+        if (r.flags & 0x4)
+            fl += 'H'; // RTF_HOST
+        if (r.flags & 0x8)
+            fl += 'R'; // RTF_REINSTATE
+        if (r.flags & 0x10)
+            fl += 'D'; // RTF_DYNAMIC
+        if (r.flags & 0x20)
+            fl += 'M'; // RTF_MODIFIED
+        std::snprintf(buf, sizeof(buf), "%-16s%-16s%-16s%-6s%-7d%-6d%-8d%s\n",
+                      r.destination.c_str(), r.gateway.c_str(), r.genmask.c_str(), fl.c_str(),
+                      r.metric, 0, 0, r.iface.c_str());
+        out += buf;
+    }
     return out;
 }
 

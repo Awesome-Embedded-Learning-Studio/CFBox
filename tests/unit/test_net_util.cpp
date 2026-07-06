@@ -81,3 +81,32 @@ TEST(NetUtilTest, FormatIfconfigEthernet) {
     EXPECT_NE(s.find("BROADCAST"), std::string::npos);
     EXPECT_EQ(s.find("LOOPBACK"), std::string::npos); // ethernet line must not say LOOPBACK
 }
+
+TEST(NetUtilTest, HexToIpv4RoundTrip) {
+    // /proc/net/route stores 192.168.2.1 as host-endian hex 0102A8C0
+    EXPECT_EQ(cfbox::net::hex_to_ipv4("0102A8C0"), "192.168.2.1");
+    EXPECT_EQ(cfbox::net::hex_to_ipv4("00000000"), "0.0.0.0");
+    // 255.255.255.0 = bytes FF FF FF 00 → little-endian hex 00FFFFFF
+    EXPECT_EQ(cfbox::net::hex_to_ipv4("00FFFFFF"), "255.255.255.0");
+}
+
+TEST(NetUtilTest, PrefixLen) {
+    EXPECT_EQ(cfbox::net::prefix_len("255.0.0.0"), 8);
+    EXPECT_EQ(cfbox::net::prefix_len("255.255.255.0"), 24);
+    EXPECT_EQ(cfbox::net::prefix_len("255.255.255.255"), 32);
+    EXPECT_EQ(cfbox::net::prefix_len("0.0.0.0"), 0);
+}
+
+TEST(NetUtilTest, FormatRouteTableHasHeader) {
+    std::vector<cfbox::net::RouteEntry> r(1);
+    r[0].destination = "0.0.0.0";
+    r[0].gateway = "192.168.1.1";
+    r[0].genmask = "0.0.0.0";
+    r[0].iface = "eth0";
+    r[0].flags = 0x3; // UP | GATEWAY
+    r[0].metric = 0;
+    auto s = cfbox::net::format_route_table(r);
+    EXPECT_NE(s.find("Kernel IP routing table"), std::string::npos);
+    EXPECT_NE(s.find("UG"), std::string::npos);
+    EXPECT_NE(s.find("192.168.1.1"), std::string::npos);
+}
