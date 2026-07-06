@@ -11,7 +11,7 @@
 | Phase 1 | ✅ | [核心系统](../todo/phases/phase-1-core-system.md) | P0 系统命令（chmod/chown/dd/mount/stty 等 24 个新 applet） |
 | Phase 1.5 | ✅ | [代码质量审查](../todo/phases/phase-1.5-code-quality-review.md) | 错误处理一致性、风格、测试覆盖、体积检查（A-G 扫描全过） |
 | **Phase 2** | ✅ | [核心深化（同 Phase 1 文档 Part 3）](../todo/phases/phase-1-core-system.md) | tail -f、cp -a、test POSIX、ls -R/--color、grep -A/-B/-C、find 布尔、sh 深化（全完成） |
-| Phase 3 | ⏳ | [网络最小闭环](../todo/phases/phase-2-network.md) | 基础网络配置、诊断、下载、连接调试 |
+| Phase 3 | ✅ | [网络最小闭环](../todo/phases/phase-2-network.md) | socket/net_util/icmp 基础设施 + nc/ifconfig/ip/route/hostname/netstat + ifconfig 写 + ping/traceroute（11 applet） |
 | Phase 4 | ⏳ | [生产质量门禁深化](../todo/phases/phase-3-quality.md) | fuzzing、benchmark、POSIX 子集、release 工程 |
 | Phase 5 | ⏳ | [多用户与嵌入式运行时](../todo/phases/phase-4-multiuser.md) | login/getty/syslog/mdev/storage |
 | Phase 6 | ⏳ | [长尾完备性](../todo/phases/phase-5-longtail.md) | vi、额外压缩格式、硬件工具、长尾 applet |
@@ -22,8 +22,8 @@
 - 兼容性裁决见 [compatibility-policy.md](../todo/compatibility-policy.md)；v1.0 验收边界见 [v1-production-criteria.md](../todo/v1-production-criteria.md)。
 
 ## 当前焦点
-**Phase 2 核心命令深化 ✅ 全部完成**（2026-06-28）+ **结构与性能标尺横切批 ✅ 完成**（2026-07，PR#17 / PR#18）。批2-5c：`cp -a`、`test` POSIX、`ls -R`/`--color`、`grep -A/-B/-C`、`find` 布尔、`sh` 全收（算术/case/函数/here-doc/高级`${}`/break N/read/trap）；横切批落 STRUCTURE-TASTE + banned-pattern/layering gate（CI 守护）、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化（line reader ~7x、tar O(1)、sed 预编译 ~4x）+ google-benchmark 脚手架。基线 **436 GTest + 57 集成（sh）/ 439 KB** size-opt（v0.3.0 基线 399/418）。批级记录见 [PLAN.md](PLAN.md) 与 [notes/](../notes/)。
-> **下一站**：Phase 3 网络最小闭环（基础网络配置/诊断/下载）。
+**Phase 3 网络最小闭环 ✅ 全部完成**（2026-07，PR 待合）：`socket.hpp`/`net_util.hpp`/`icmp.hpp` 三基础设施 + 批1-7 全 ✅ —— `nc`、`ifconfig`（读+写）、`ip addr show`、`route -n`、`hostname -i/-f/-d`、`netstat`、`ping`、`traceroute`（11 applet）。基线 **479 GTest / 479 KB / 130 applet** size-opt。之前：Phase 2 核心深化 + 结构/性能标尺横切（PR#17/#18）。批级记录见 [PLAN.md](PLAN.md) 与 [notes/](../notes/)。
+> **下一站**：Phase 4 生产质量门禁深化（fuzzing/benchmark/POSIX 子集/release 工程），或 Phase 3 增量（route add/del、hostname NAME、netstat -r/-i、IPv6 ping/traceroute）。
 
 ## 当前焦点之后下一个可启动的
-**Phase 3 网络最小闭环**（基础网络配置/诊断/下载）——Phase 2 核心命令深度到位后启动。更远：Phase 4 质量门禁（fuzzing/release 工程）→ Phase 5 多用户 → Phase 6 长尾。
+**Phase 4 生产质量门禁深化**（fuzzing/benchmark/POSIX 子集/release 工程）——Phase 3 网络闭环完成后启动。或先补 Phase 3 增量（route add/del、hostname NAME、netstat -r/-i、IPv6）。更远：Phase 5 多用户 → Phase 6 长尾。
