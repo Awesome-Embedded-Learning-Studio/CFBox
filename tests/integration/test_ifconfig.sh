@@ -41,5 +41,29 @@ else
     ((++fail))
 fi
 
+# write path: needs CAP_NET_ADMIN. Two branches — non-root must report EPERM
+# (never silently succeed), root round-trips MTU on loopback (safe + reversible).
+if [ "$(id -u)" -ne 0 ]; then
+    out=$("$CFBOX" ifconfig lo 127.0.0.1 2>&1) || true
+    if echo "$out" | grep -qi "Operation not permitted\|Permission denied"; then
+        ((++pass))
+    else
+        echo "FAIL [ifconfig write non-root]: expected EPERM, got: $out"
+        ((++fail))
+    fi
+else
+    orig=$("$CFBOX" ifconfig lo 2>&1 | grep -o 'MTU:[0-9]*' | head -1)
+    "$CFBOX" ifconfig lo mtu 1280 2>&1 || true
+    out=$("$CFBOX" ifconfig lo 2>&1) || true
+    if echo "$out" | grep -q "MTU:1280"; then
+        ((++pass))
+    else
+        echo "FAIL [ifconfig write root]: MTU not applied — $(echo "$out" | head -1)"
+        ((++fail))
+    fi
+    # restore original MTU
+    [ -n "$orig" ] && "$CFBOX" ifconfig lo mtu "${orig#MTU:}" 2>/dev/null || true
+fi
+
 echo "ifconfig: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

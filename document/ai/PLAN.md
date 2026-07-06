@@ -3,7 +3,7 @@
 > Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)；结构标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)，性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)。
 > **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。
 > ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）+ ✅ **结构与性能标尺横切批**（PR#17/#18）—— STRUCTURE-TASTE + banned-pattern/layering gate、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化 + google-benchmark 脚手架。当前基线 **436 GTest / 439 KB size-opt / 123 applet**。
-> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅、批4（`netstat` 只读 + `split_fields` 抽取）✅ —— 当前基线 **462 GTest / 467 KB / 128 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
+> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅、批4（`netstat` 只读 + `split_fields` 抽取）✅、批5（`ifconfig` 写操作 SIOCSIF*）✅ —— 当前基线 **464 GTest / 471 KB / 128 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -66,8 +66,9 @@
 | 批2（Wave 1a） | `include/cfbox/net_util.hpp` 基础设施（`read_interfaces` 解析 /proc/net/dev + ioctl SIOCGIF* 取 flags/mtu/hwaddr/ipv4；`format_ifconfig` BusyBox 多行格式；`ipv4_from_ioctl` memcpy 解 cast-align）+ `ifconfig` applet（`-a`/`IFACE` 只读显示） | ✅ | f4279d6 | 446/1 |
 | 批3（Wave 1b） | `net_util.hpp` 扩展（`read_routes` 解析 /proc/net/route tab-hex + `format_route_table` BusyBox route -n + `hex_to_ipv4`/`prefix_len`）+ `ip addr show`（iproute2 风格 index/flags/mtu/link/inet）+ `route -n`（显示）+ `hostname` 深化（`-i`/`-f`/`-d` getaddrinfo + memcpy 解 cast-align） | ✅ | f0ff0db | 452/2 |
 | 批4（Wave 1c） | `net_util.hpp` 抽公共 `split_fields`（`read_routes` 改用，DRY）+ `read_tcp/udp_sockets`（解析 /proc/net/tcp\|udp `hexIP:hexPort` + state code + tx:rx queues）+ `read_unix_sockets`（/proc/net/unix）+ `parse_inet_sockets` 纯函数化（喂假数据可单测）+ `format_netstat_inet/unix`（BusyBox 风格，LISTEN 过滤/-a）+ `netstat` applet（`-t/-u/-x/-a/-n`） | ✅ | (本批) | 462/3 |
+| 批5（Wave 1c） | `net_util.hpp` 写 ioctl：抽 `ctl_socket`/`parse_ipv4`/`detail::ifreq_with_addr`（memcpy 写 sockaddr 解 cast-align）/`detail::ioctl_error`（msg 含 strerror）+ `set_ipv4_addr`/`set_netmask`/`set_broadcast`/`set_mtu`/`set_if_up`（read-modify-write IFF_UP）+ `ifconfig` 写 codepath（`IFACE ADDR [netmask NM] [broadcast BC] [mtu N] [up\|down]`，EPERM 不静默） | ✅ | (本批) | 464/5 |
 
-> 下一批：批5 Wave 1c `ifconfig` 写操作（ADDR/netmask/up/down/mtu，`SIOCSIF*`，需 root + 抽 `ctl_socket` helper）。之后转 Wave 2：批6 `icmp.hpp`（checksum/build_echo/parse/open_raw/recv_icmp）+ `ping`，批7 `traceroute`（UDP 探测复用 icmp 收包）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md) / [notes/2026-07-06-phase3-ip-route-hostname.md](../notes/2026-07-06-phase3-ip-route-hostname.md) / [notes/2026-07-06-phase3-netstat.md](../notes/2026-07-06-phase3-netstat.md)。
+> 下一批：批6 Wave 2 `icmp.hpp`（checksum/build_echo_request/parse_icmp/open_raw/recv_icmp）+ `ping`（SOCK_RAW IPPROTO_ICMP）。之后批7 `traceroute`（UDP 探测 + 复用 icmp 收包）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md) / [notes/2026-07-06-phase3-ip-route-hostname.md](../notes/2026-07-06-phase3-ip-route-hostname.md) / [notes/2026-07-06-phase3-netstat.md](../notes/2026-07-06-phase3-netstat.md) / [notes/2026-07-06-phase3-ifconfig-write.md](../notes/2026-07-06-phase3-ifconfig-write.md)。
 
 ## OPEN GOTCHAS（跨批陷阱，改前必看）
 

@@ -168,6 +168,105 @@ inline auto split_fields(std::string_view line) -> std::vector<std::string> {
     return out;
 }
 
+// ---- write path (SIOCSIF* ioctls, requires CAP_NET_ADMIN) ----
+
+// Control socket used for both SIOCGIF* (read) and SIOCSIF* (write) ioctls.
+[[nodiscard]] inline auto ctl_socket() -> base::Result<io::unique_fd> {
+    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0)
+        return std::unexpected(base::Error{errno, "control socket failed"});
+    return io::unique_fd{fd};
+}
+
+// Parse dotted-quad → in_addr. nullopt on malformed input.
+[[nodiscard]] inline auto parse_ipv4(std::string_view s) -> std::optional<in_addr> {
+    char buf[INET_ADDRSTRLEN];
+    if (s.empty() || s.size() >= sizeof(buf))
+        return std::nullopt;
+    std::memcpy(buf, s.data(), s.size());
+    buf[s.size()] = '\0';
+    in_addr out{};
+    if (::inet_pton(AF_INET, buf, &out.s_addr) != 1)
+        return std::nullopt;
+    return out;
+}
+
+namespace detail {
+
+// Build an ifreq with name + an IPv4 sockaddr_in filled from `addr`. The
+// sockaddr is written via memcpy into a local then assigned, mirroring
+// ipv4_from_ioctl in reverse — a direct cast into ifr_ifru would trip
+// -Wcast-align on 32-bit ARM.
+inline auto ifreq_with_addr(std::string_view iface, int cmd, in_addr addr) -> ifreq {
+    ifreq ifr{};
+    iface.copy(ifr.ifr_name, IFNAMSIZ - 1); // zero-init → NUL-terminated
+    sockaddr_in sin{};
+    sin.sin_family = AF_INET;
+    sin.sin_addr = addr;
+    std::memcpy(&ifr.ifr_addr, &sin, sizeof(sin));
+    (void)cmd;
+    return ifr;
+}
+
+// Build a diagnostic Error carrying errno's text (e.g. "SIOCSIFADDR failed:
+// Operation not permitted") — the bare ioctl name alone is not enough for a
+// user to tell EPERM (no CAP_NET_ADMIN) from ENODEV (no such interface).
+inline auto ioctl_error(const char* what, int e) -> base::Error {
+    return base::Error{e, std::string{what} + ": " + std::strerror(e)};
+}
+
+} // namespace detail
+
+[[nodiscard]] inline auto set_ipv4_addr(int ctl, std::string_view iface, in_addr addr)
+    -> base::Result<void> {
+    auto ifr = detail::ifreq_with_addr(iface, SIOCSIFADDR, addr);
+    if (::ioctl(ctl, SIOCSIFADDR, &ifr) < 0)
+        return std::unexpected(detail::ioctl_error("SIOCSIFADDR failed", errno));
+    return {};
+}
+
+[[nodiscard]] inline auto set_netmask(int ctl, std::string_view iface, in_addr mask)
+    -> base::Result<void> {
+    auto ifr = detail::ifreq_with_addr(iface, SIOCSIFNETMASK, mask);
+    if (::ioctl(ctl, SIOCSIFNETMASK, &ifr) < 0)
+        return std::unexpected(detail::ioctl_error("SIOCSIFNETMASK failed", errno));
+    return {};
+}
+
+[[nodiscard]] inline auto set_broadcast(int ctl, std::string_view iface, in_addr bcast)
+    -> base::Result<void> {
+    auto ifr = detail::ifreq_with_addr(iface, SIOCSIFBRDADDR, bcast);
+    if (::ioctl(ctl, SIOCSIFBRDADDR, &ifr) < 0)
+        return std::unexpected(detail::ioctl_error("SIOCSIFBRDADDR failed", errno));
+    return {};
+}
+
+[[nodiscard]] inline auto set_mtu(int ctl, std::string_view iface, int mtu)
+    -> base::Result<void> {
+    ifreq ifr{};
+    iface.copy(ifr.ifr_name, IFNAMSIZ - 1);
+    ifr.ifr_mtu = mtu;
+    if (::ioctl(ctl, SIOCSIFMTU, &ifr) < 0)
+        return std::unexpected(detail::ioctl_error("SIOCSIFMTU failed", errno));
+    return {};
+}
+
+// Bring iface up/down via read-modify-write on flags (preserve BROADCAST/etc).
+[[nodiscard]] inline auto set_if_up(int ctl, std::string_view iface, bool up)
+    -> base::Result<void> {
+    ifreq ifr{};
+    iface.copy(ifr.ifr_name, IFNAMSIZ - 1);
+    if (::ioctl(ctl, SIOCGIFFLAGS, &ifr) < 0)
+        return std::unexpected(detail::ioctl_error("SIOCGIFFLAGS failed", errno));
+    if (up)
+        ifr.ifr_flags |= static_cast<short>(IFF_UP);
+    else
+        ifr.ifr_flags &= ~static_cast<short>(IFF_UP);
+    if (::ioctl(ctl, SIOCSIFFLAGS, &ifr) < 0)
+        return std::unexpected(detail::ioctl_error("SIOCSIFFLAGS failed", errno));
+    return {};
+}
+
 // Format an interface in the multi-line BusyBox ifconfig style.
 inline auto format_ifconfig(const InterfaceInfo& it) -> std::string {
     auto pad = [](const std::string& s, std::size_t w) -> std::string {
