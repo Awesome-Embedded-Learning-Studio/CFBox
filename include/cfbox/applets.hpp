@@ -368,6 +368,9 @@ extern auto poweroff_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_NC
 extern auto nc_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_IFCONFIG
+extern auto ifconfig_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -736,5 +739,8 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_NC
     {"nc", nc_main, "TCP connect/listen and relay"},
+#endif
+#if CFBOX_ENABLE_IFCONFIG
+    {"ifconfig", ifconfig_main, "configure a network interface"},
 #endif
 });
