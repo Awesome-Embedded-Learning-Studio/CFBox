@@ -3,7 +3,7 @@
 > Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)；结构标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)，性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)。
 > **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。
 > ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）+ ✅ **结构与性能标尺横切批**（PR#17/#18）—— STRUCTURE-TASTE + banned-pattern/layering gate、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化 + google-benchmark 脚手架。当前基线 **436 GTest / 439 KB size-opt / 123 applet**。
-> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` 基础设施 + `nc` applet）✅ —— 当前基线 **440 GTest / 451 KB / 124 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
+> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅ —— 当前基线 **446 GTest / 455 KB / 125 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -63,8 +63,9 @@
 | 批 | 范围 | 状态 | Commit | 测试 |
 |----|------|------|--------|------|
 | 批1（Wave 0） | `include/cfbox/socket.hpp` 基础设施（复用 `io::unique_fd`：make/resolve/dial/listen_on/accept_one/format_addr，双栈、header-only）+ `nc` applet（connect/listen 模式 + poll 双向 relay stdin→sock/sock→stdout + SHUT_WR 半关） | ✅ | 10f811f | 440/1 |
+| 批2（Wave 1a） | `include/cfbox/net_util.hpp` 基础设施（`read_interfaces` 解析 /proc/net/dev + ioctl SIOCGIF* 取 flags/mtu/hwaddr/ipv4；`format_ifconfig` BusyBox 多行格式；`ipv4_from_ioctl` memcpy 解 cast-align）+ `ifconfig` applet（`-a`/`IFACE` 只读显示） | ✅ | f4279d6 | 446/1 |
 
-> 下一批：Wave 1 `ifconfig`/`ip show` + `hostname` 深化（依赖新建 `net_util.hpp` 读 /proc/net + ioctl）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md)。
+> 下一批：Wave 1b `ifconfig` 写操作（ADDR/netmask/up/down/mtu）+ `ip addr/route show` + `hostname` 深化（依赖 `net_util.hpp` 已就绪）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md)。
 
 ## OPEN GOTCHAS（跨批陷阱，改前必看）
 
