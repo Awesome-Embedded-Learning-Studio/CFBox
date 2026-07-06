@@ -380,6 +380,9 @@ extern auto route_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_NETSTAT
 extern auto netstat_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_PING
+extern auto ping_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -760,5 +763,8 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_NETSTAT
     {"netstat", netstat_main, "display network sockets"},
+#endif
+#if CFBOX_ENABLE_PING
+    {"ping", ping_main, "send ICMP ECHO_REQUEST to a host"},
 #endif
 });

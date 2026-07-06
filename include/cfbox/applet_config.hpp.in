@@ -129,3 +129,4 @@
 #cmakedefine01 CFBOX_ENABLE_IP
 #cmakedefine01 CFBOX_ENABLE_ROUTE
 #cmakedefine01 CFBOX_ENABLE_NETSTAT
+#cmakedefine01 CFBOX_ENABLE_PING
