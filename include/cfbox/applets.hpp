@@ -365,6 +365,18 @@ extern auto swapoff_main(int argc, char* argv[]) -> int;
 extern auto reboot_main(int argc, char* argv[]) -> int;
 extern auto poweroff_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_NC
+extern auto nc_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_IFCONFIG
+extern auto ifconfig_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_IP
+extern auto ip_main(int argc, char* argv[]) -> int;
+#endif
+#if CFBOX_ENABLE_ROUTE
+extern auto route_main(int argc, char* argv[]) -> int;
+#endif
 
 // registry — one line per applet, conditionally compiled
 constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
@@ -730,5 +742,17 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #if CFBOX_ENABLE_REBOOT
     {"reboot", reboot_main, "reboot the system"},
     {"poweroff", poweroff_main, "power off the system"},
+#endif
+#if CFBOX_ENABLE_NC
+    {"nc", nc_main, "TCP connect/listen and relay"},
+#endif
+#if CFBOX_ENABLE_IFCONFIG
+    {"ifconfig", ifconfig_main, "configure a network interface"},
+#endif
+#if CFBOX_ENABLE_IP
+    {"ip", ip_main, "show / manipulate routing and devices"},
+#endif
+#if CFBOX_ENABLE_ROUTE
+    {"route", route_main, "show the IP routing table"},
 #endif
 });

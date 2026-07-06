@@ -1,9 +1,9 @@
 # CFBox — 当前焦点（批级进度）
 
-> Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)。
-> **Phase 1.5 代码质量审查 ✅ 完成**（体积 -14%、消 iostream/stoi、统一错误宏、fs 封装扩展，379 测试全绿）。
-> **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。基线 399 测试 / 418 KB / 123 applet。
-> ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）。下一站：Phase 3 网络最小闭环。
+> Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)；结构标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)，性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)。
+> **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。
+> ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）+ ✅ **结构与性能标尺横切批**（PR#17/#18）—— STRUCTURE-TASTE + banned-pattern/layering gate、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化 + google-benchmark 脚手架。当前基线 **436 GTest / 439 KB size-opt / 123 applet**。
+> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅ —— 当前基线 **452 GTest / 463 KB / 127 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -44,6 +44,29 @@
 | 展示 | README i.MX6ULL 端到端 + size-table 生成器 | ✅ | 8c45c77 |
 
 > 新增 6 applet（mount/mdev/umount/swapoff/reboot/poweroff），117→123。完整故事见 [changelogs/v0.3.0.md](../../changelogs/v0.3.0.md)。
+
+## ✅ 结构与性能标尺（横切批）— 已合并 PR#17 / PR#18（2026-07）
+
+> Phase 2 收尾后的两轮横切改进，建立两条季级标尺并落地首波优化。非 ROADMAP 某个 Phase，是跨 Phase 的工艺/性能基线（对标 Phase 1.5 的代码质量审查，但聚焦结构与性能维度）。
+
+| 批 | 范围 | 状态 | Commit | 测试 |
+|----|------|------|--------|------|
+| 结构标尺（PR#17 `feat/test-floor-gates`） | [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md) 季级标尺（职责/DRY/边界/机械护栏）+ 清 banned-pattern + 合并 helper + [tests/check_structure_gates.sh](../../tests/check_structure_gates.sh) banned-pattern/layering gate（CI 守护） | ✅ | a1c1028 / 1ef38be / 623fca7（merge fefcbc2） | 436/0（gate 独立于 GTest，CI 跑） |
+| 性能基线（PR#18 `feat/performance`） | [PERFORMANCE.md](PERFORMANCE.md) 季级标尺（wall-clock 不动输出/4 步闭环）+ google-benchmark harness + io/tar/cmp/md5sum/sed 流式化（line reader ~7x、tar O(1) 内存、sed 预编译 ~4x、cmp 早退）+ end-to-end timing 脚本 + armhf `-Wconversion`/charconv 修 | ✅ | e229f05 … 4f154e9（merge f979b8f） | 436/0（benchmark 独立于 GTest） |
+
+> 批级记录见 [notes/2026-07-06-structure-performance.md](../notes/2026-07-06-structure-performance.md)。两批均未增删 applet，GTest 基线沿用 Phase 2 末 436；size-opt 体积 v0.3.0 的 418 KB → 439 KB（+21 KB，主因 io/tar 流式缓冲与 benchmark 链接产物，仍在 ≤ 550 KB 预算内）。
+
+## 🔄 Phase 3（网络最小闭环）— 进行中
+
+> 目标：socket/http/net_util/icmp 基础设施 + ip/ifconfig/route/netstat/ping/traceroute/nslookup/wget/nc/tftp + hostname 深化（11 applet）。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。每批≈一 commit + 完成门。
+
+| 批 | 范围 | 状态 | Commit | 测试 |
+|----|------|------|--------|------|
+| 批1（Wave 0） | `include/cfbox/socket.hpp` 基础设施（复用 `io::unique_fd`：make/resolve/dial/listen_on/accept_one/format_addr，双栈、header-only）+ `nc` applet（connect/listen 模式 + poll 双向 relay stdin→sock/sock→stdout + SHUT_WR 半关） | ✅ | 10f811f | 440/1 |
+| 批2（Wave 1a） | `include/cfbox/net_util.hpp` 基础设施（`read_interfaces` 解析 /proc/net/dev + ioctl SIOCGIF* 取 flags/mtu/hwaddr/ipv4；`format_ifconfig` BusyBox 多行格式；`ipv4_from_ioctl` memcpy 解 cast-align）+ `ifconfig` applet（`-a`/`IFACE` 只读显示） | ✅ | f4279d6 | 446/1 |
+| 批3（Wave 1b） | `net_util.hpp` 扩展（`read_routes` 解析 /proc/net/route tab-hex + `format_route_table` BusyBox route -n + `hex_to_ipv4`/`prefix_len`）+ `ip addr show`（iproute2 风格 index/flags/mtu/link/inet）+ `route -n`（显示）+ `hostname` 深化（`-i`/`-f`/`-d` getaddrinfo + memcpy 解 cast-align） | ✅ | f0ff0db | 452/2 |
+
+> 下一批：Wave 1c `ifconfig` 写操作（ADDR/netmask/up/down/mtu，SIOCSIF*，需 root）+ `netstat`（依赖 net_util `read_sockets` 待建）；或转 Wave 2（`ping`/`traceroute`，需 `icmp.hpp` raw socket）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md) / [notes/2026-07-06-phase3-ip-route-hostname.md](../notes/2026-07-06-phase3-ip-route-hostname.md)。
 
 ## OPEN GOTCHAS（跨批陷阱，改前必看）
 

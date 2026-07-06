@@ -22,7 +22,7 @@
 - 兼容性裁决见 [compatibility-policy.md](../todo/compatibility-policy.md)；v1.0 验收边界见 [v1-production-criteria.md](../todo/v1-production-criteria.md)。
 
 ## 当前焦点
-**Phase 2 核心命令深化 ✅ 全部完成**（2026-06-28）。批2-5c：`cp -a`、`test` POSIX、`ls -R`/`--color`、`grep -A/-B/-C`、`find` 布尔、`sh` 全收（算术/case/函数/here-doc/高级`${}`/break N/read/trap）。基线 **436 GTest + 57 集成（sh）/ 438 KB** size-opt（v0.3.0 基线 399/418）。批级记录见 [PLAN.md](PLAN.md) 与 [notes/](../notes/)。
+**Phase 2 核心命令深化 ✅ 全部完成**（2026-06-28）+ **结构与性能标尺横切批 ✅ 完成**（2026-07，PR#17 / PR#18）。批2-5c：`cp -a`、`test` POSIX、`ls -R`/`--color`、`grep -A/-B/-C`、`find` 布尔、`sh` 全收（算术/case/函数/here-doc/高级`${}`/break N/read/trap）；横切批落 STRUCTURE-TASTE + banned-pattern/layering gate（CI 守护）、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化（line reader ~7x、tar O(1)、sed 预编译 ~4x）+ google-benchmark 脚手架。基线 **436 GTest + 57 集成（sh）/ 439 KB** size-opt（v0.3.0 基线 399/418）。批级记录见 [PLAN.md](PLAN.md) 与 [notes/](../notes/)。
 > **下一站**：Phase 3 网络最小闭环（基础网络配置/诊断/下载）。
 
 ## 当前焦点之后下一个可启动的
