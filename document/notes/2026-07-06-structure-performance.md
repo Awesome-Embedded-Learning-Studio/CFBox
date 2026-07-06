@@ -33,5 +33,5 @@
 ## 陷阱（留给后续批/维护者）
 - **benchmark 与 GTest 是两套**：google-benchmark 不计入 `ctest` 的 436；perf 回归看 benchmark + timing 脚本，不是看 GTest 数。结构与性能改动**不会**自动反映在 GTest 基线上，验收要换标尺。
 - **structure gate 是 CI-only**：本地 `ctest` 不跑 [check_structure_gates.sh](../../tests/check_structure_gates.sh)；新增 `using namespace` / 越层 include 在本地绿、CI 红。改公共头后本地最好 `bash tests/check_structure_gates.sh` 先自检。
-- **perf 批未做 armhf 冒烟**：流式化改了公共 IO 路径（for_each_line），armhf 32 位盲区（PLAN GOTCHA #2）在 PR#18 里只覆盖到 `-Wconversion` 编译错，没跑 qemu 直执行冒烟——Phase 3 启动前补（armhf static 交叉编译 + qemu 直执行冒烟，本机基线记在本地 memory `cfbox-armhf-smoke-environment`）。
+- **perf 批 armhf 冒烟已补（C 阶段，2026-07-06）**：PR#18 当初只覆盖到 `-Wconversion` 编译错，没跑 qemu 直执行冒烟。本批用 `/opt/arm-gnu-toolchain` static 编译 armhf 32 位干净（无回归），`qemu-arm-static` 跑 perf 批 5 个流式 applet 全绿（io `for_each_line` 经 grep、`md5sum`、`tar -cf`/`-tf`、`sed s/o/0/g`、`cmp` 早退）——确认 PR#18 流式化在 armhf 32 位无回归。环境基线见本地 memory `cfbox-armhf-smoke-environment`。
 - 文档债教训：批级工作必须**当批**写进 PLAN 批次表 + notes，否则 `/resume`、`/status` 漂移（本批就是还这个债）。

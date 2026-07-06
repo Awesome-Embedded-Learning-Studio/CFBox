@@ -26,5 +26,5 @@ Phase 3 网络最小闭环的第一锹。按 [phase-2-network.md](../todo/phases
 ## 陷阱（留给后续批/维护者）
 - **nc 是最小版**：只支持 `-l/-p/-s`。文档列的 `-w`(timeout)/`-e`(exec)/`-z`(scan)/UDP 模式均未实现（HELP 只列已实现的，避免名实不符）。Wave 3 收尾或后续批补。
 - **socket.hpp 无超时/DNS 缓存/keepalive**：后续 wget/traceroute 按需扩。`dial` 是 happy-eyeballs-lite（逐个试 resolved addr），非并行。
-- **armhf 未验证**：socket raw POSIX 在 32 位可能有 -Wconversion 盲区（`htons`/`socklen_t`/`ssize_t` 算术）。本机 `arm-linux-gnueabihf-g++` 当前未装（只有 aarch64），C 阶段补 armhf 冒烟。
+- **armhf 已验证（C 阶段）**：`/opt/arm-gnu-toolchain`（arm-none-linux-gnueabihf gcc 15.2）static 编译，32 位 `-Wconversion` 干净；`qemu-arm-static` 冒烟 nc loopback echo 端到端通过（`armhf-nc-works`，server+client 双进程）。armhf static 体积 1235 KB（v0.3.0 基线 1195 → +40 KB，nc + socket.hpp）。
 - **net_util.hpp 还没建**：Wave 1（ifconfig/ip/route/netstat）依赖它读 `/proc/net/*` + ioctl，是下一批的前置。
