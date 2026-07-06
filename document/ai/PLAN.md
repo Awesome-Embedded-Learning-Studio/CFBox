@@ -3,7 +3,7 @@
 > Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)；结构标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)，性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)。
 > **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。
 > ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）+ ✅ **结构与性能标尺横切批**（PR#17/#18）—— STRUCTURE-TASTE + banned-pattern/layering gate、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化 + google-benchmark 脚手架。当前基线 **436 GTest / 439 KB size-opt / 123 applet**。
-> 🔄 **下一站：Phase 3 网络最小闭环**（socket/http/net_util/icmp 基础设施 + ip/ifconfig/route/netstat/ping/traceroute/nslookup/wget/nc/tftp + hostname 深化）。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
+> 🔄 **Phase 3 网络最小闭环进行中**：批1（`socket.hpp` 基础设施 + `nc` applet）✅ —— 当前基线 **440 GTest / 451 KB / 124 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -55,6 +55,16 @@
 | 性能基线（PR#18 `feat/performance`） | [PERFORMANCE.md](PERFORMANCE.md) 季级标尺（wall-clock 不动输出/4 步闭环）+ google-benchmark harness + io/tar/cmp/md5sum/sed 流式化（line reader ~7x、tar O(1) 内存、sed 预编译 ~4x、cmp 早退）+ end-to-end timing 脚本 + armhf `-Wconversion`/charconv 修 | ✅ | e229f05 … 4f154e9（merge f979b8f） | 436/0（benchmark 独立于 GTest） |
 
 > 批级记录见 [notes/2026-07-06-structure-performance.md](../notes/2026-07-06-structure-performance.md)。两批均未增删 applet，GTest 基线沿用 Phase 2 末 436；size-opt 体积 v0.3.0 的 418 KB → 439 KB（+21 KB，主因 io/tar 流式缓冲与 benchmark 链接产物，仍在 ≤ 550 KB 预算内）。
+
+## 🔄 Phase 3（网络最小闭环）— 进行中
+
+> 目标：socket/http/net_util/icmp 基础设施 + ip/ifconfig/route/netstat/ping/traceroute/nslookup/wget/nc/tftp + hostname 深化（11 applet）。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。每批≈一 commit + 完成门。
+
+| 批 | 范围 | 状态 | Commit | 测试 |
+|----|------|------|--------|------|
+| 批1（Wave 0） | `include/cfbox/socket.hpp` 基础设施（复用 `io::unique_fd`：make/resolve/dial/listen_on/accept_one/format_addr，双栈、header-only）+ `nc` applet（connect/listen 模式 + poll 双向 relay stdin→sock/sock→stdout + SHUT_WR 半关） | ✅ | 10f811f | 440/1 |
+
+> 下一批：Wave 1 `ifconfig`/`ip show` + `hostname` 深化（依赖新建 `net_util.hpp` 读 /proc/net + ioctl）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md)。
 
 ## OPEN GOTCHAS（跨批陷阱，改前必看）
 
