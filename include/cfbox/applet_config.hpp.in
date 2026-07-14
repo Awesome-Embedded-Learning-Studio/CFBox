@@ -7,6 +7,7 @@
 #cmakedefine01 CFBOX_ENABLE_ECHO
 #cmakedefine01 CFBOX_ENABLE_PRINTF
 #cmakedefine01 CFBOX_ENABLE_CAT
+#cmakedefine01 CFBOX_ENABLE_DD
 #cmakedefine01 CFBOX_ENABLE_HEAD
 #cmakedefine01 CFBOX_ENABLE_TAIL
 #cmakedefine01 CFBOX_ENABLE_WC

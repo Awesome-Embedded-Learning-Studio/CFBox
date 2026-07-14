@@ -13,6 +13,9 @@ extern auto printf_main(int argc, char* argv[]) -> int;
 #if CFBOX_ENABLE_CAT
 extern auto cat_main(int argc, char* argv[]) -> int;
 #endif
+#if CFBOX_ENABLE_DD
+extern auto dd_main(int argc, char* argv[]) -> int;
+#endif
 #if CFBOX_ENABLE_HEAD
 extern auto head_main(int argc, char* argv[]) -> int;
 #endif
@@ -397,6 +400,9 @@ constexpr auto APPLET_REGISTRY = std::to_array<cfbox::applet::AppEntry>({
 #endif
 #if CFBOX_ENABLE_CAT
     {"cat", cat_main, "concatenate files and print"},
+#endif
+#if CFBOX_ENABLE_DD
+    {"dd", dd_main, "convert and copy a file"},
 #endif
 #if CFBOX_ENABLE_HEAD
     {"head", head_main, "output the first part of files"},

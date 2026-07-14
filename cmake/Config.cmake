@@ -30,6 +30,7 @@ set(CFBOX_APPLETS
     clear which mount mountpoint mdev chmod chown chgrp
     umount swapoff reboot
     nc ifconfig ip route netstat ping traceroute
+    dd
 )
 
 foreach(applet IN LISTS CFBOX_APPLETS)
