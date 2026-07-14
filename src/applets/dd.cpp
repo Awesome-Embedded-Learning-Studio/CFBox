@@ -66,8 +66,8 @@ auto to_lower(std::string_view s) -> std::string {
 }
 
 struct DdOpts {
-    std::uint64_t ibs = 512;
-    std::uint64_t obs = 512;
+    std::size_t ibs = 512;
+    std::size_t obs = 512;
     std::uint64_t count = 0;        // 0 = unlimited
     std::uint64_t skip = 0;
     std::uint64_t seek = 0;
@@ -137,13 +137,13 @@ auto dd_main(int argc, char* argv[]) -> int {
 
         if (key == "bs") {
             if (!parse_num(val, n) || n == 0) { CFBOX_ERR("dd", "invalid bs: %s", std::string(val).c_str()); return 1; }
-            o.ibs = o.obs = n;
+            o.ibs = o.obs = static_cast<std::size_t>(n);
         } else if (key == "ibs") {
             if (!parse_num(val, n) || n == 0) { CFBOX_ERR("dd", "invalid ibs: %s", std::string(val).c_str()); return 1; }
-            o.ibs = n;
+            o.ibs = static_cast<std::size_t>(n);
         } else if (key == "obs") {
             if (!parse_num(val, n) || n == 0) { CFBOX_ERR("dd", "invalid obs: %s", std::string(val).c_str()); return 1; }
-            o.obs = n;
+            o.obs = static_cast<std::size_t>(n);
         } else if (key == "count" || key == "skip" || key == "seek") {
             if (!parse_num(val, n)) { CFBOX_ERR("dd", "invalid %.*s: %s", static_cast<int>(key.size()), key.data(), std::string(val).c_str()); return 1; }
             if (key == "count") o.count = n;
