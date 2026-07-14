@@ -47,6 +47,9 @@ jobs:
       - name: Structure gates (banned-pattern + layering)
         run: bash tests/check_structure_gates.sh
 
+      - name: POSIX conformance coverage (only-up gate)
+        run: tests/posix/coverage.sh
+
       - name: clang-format dry-run (advisory — version skew until toolchain pinned)
         continue-on-error: true
         run: clang-format --dry-run --Werror $(find src include tests -name '*.cpp' -o -name '*.hpp')
