@@ -109,12 +109,9 @@ auto cut_main(int argc, char* argv[]) -> int {
     for (auto p : paths) {
         auto result = cfbox::stream::for_each_line(p, [&](const std::string& line, std::size_t) {
             if (char_mode) {
-                bool first = true;
                 for (int idx : indices) {
                     if (idx >= 1 && static_cast<std::size_t>(idx - 1) < line.size()) {
-                        if (!first) std::putchar(delim);
                         std::putchar(line[idx - 1]);
-                        first = false;
                     }
                 }
                 std::putchar('\n');

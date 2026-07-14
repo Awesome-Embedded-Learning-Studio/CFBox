@@ -47,10 +47,10 @@ auto wc_count(std::FILE* f) -> WcCounts {
 }
 
 auto print_counts(const WcCounts& c, bool show_lines, bool show_words,
-                  bool show_bytes, bool all) -> void {
-    if (all || show_lines)  std::printf("%8ld", c.lines);
-    if (all || show_words)  std::printf("%8ld", c.words);
-    if (all || show_bytes)  std::printf("%8ld", c.bytes);
+                  bool show_bytes, bool all, bool pad) -> void {
+    if (all || show_lines) { if (pad) std::printf("%8ld", c.lines); else std::printf("%ld", c.lines); }
+    if (all || show_words) { if (pad) std::printf("%8ld", c.words); else std::printf("%ld", c.words); }
+    if (all || show_bytes) { if (pad) std::printf("%8ld", c.bytes); else std::printf("%ld", c.bytes); }
 }
 
 auto wc_file(std::string_view path) -> cfbox::base::Result<WcCounts> {
@@ -91,7 +91,7 @@ auto wc_main(int argc, char* argv[]) -> int {
             CFBOX_ERR("wc", "%s", result.error().msg.c_str());
             return 1;
         }
-        print_counts(*result, show_lines, show_words, show_bytes, all);
+        print_counts(*result, show_lines, show_words, show_bytes, all, /*pad=*/false);
         std::putchar('\n');
         return 0;
     }
@@ -102,7 +102,7 @@ auto wc_main(int argc, char* argv[]) -> int {
             CFBOX_ERR("wc", "%s", result.error().msg.c_str());
             return 1;
         }
-        print_counts(*result, show_lines, show_words, show_bytes, all);
+        print_counts(*result, show_lines, show_words, show_bytes, all, /*pad=*/false);
         std::printf(" %s\n", std::string{pos[0]}.c_str());
         return 0;
     }
@@ -120,11 +120,11 @@ auto wc_main(int argc, char* argv[]) -> int {
         total.lines += result->lines;
         total.words += result->words;
         total.bytes += result->bytes;
-        print_counts(*result, show_lines, show_words, show_bytes, all);
+        print_counts(*result, show_lines, show_words, show_bytes, all, /*pad=*/true);
         std::printf(" %s\n", std::string{p}.c_str());
     }
 
-    print_counts(total, show_lines, show_words, show_bytes, all);
+    print_counts(total, show_lines, show_words, show_bytes, all, /*pad=*/true);
     std::puts(" total");
     return rc;
 }
