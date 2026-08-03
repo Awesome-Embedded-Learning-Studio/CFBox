@@ -85,4 +85,24 @@ run_diff     "printf str"   -- printf '%s\n' hello
 run_diff     "true rc"      -- true
 run_diff     "false rc"     -- false
 
+# --- grep ---
+run_diff_in "grep basic"    $'apple\nbanana\ncherry\n'  -- grep an
+run_diff_in "grep -i"       $'Apple\nBANANA\ncherry\n'  -- grep -i an
+run_diff_in "grep -v"       $'a\nb\nc\n'                -- grep -v b
+run_diff_in "grep -n"       $'a\nb\na\n'                -- grep -n a
+run_diff_in "grep -c"       $'a\nb\na\n'                -- grep -c a
+run_diff_in "grep -E"       $'a1\nb2\nc3\n'             -- grep -E '[a-z][0-9]'
+run_diff_in "grep -w"       $'a bat cat\n'              -- grep -w cat
+run_diff_in "grep -F"       $'a.b\nc.d\n'               -- grep -F .
+run_diff_in "grep nomatch"  $'a\nb\n'                   -- grep z
+
+# --- sed ---
+run_diff_in "sed s/g"       $'aaa\n'                    -- sed s/a/b/g
+run_diff_in "sed s first"   $'aaa\n'                    -- sed s/a/b/
+run_diff_in "sed d all"     $'a\nb\nc\n'                -- sed d
+run_diff_in "sed /pat/d"    $'a\nb\nc\n'                -- sed /b/d
+run_diff_in "sed -n p"      $'a\nb\n'                   -- sed -n p
+run_diff_in "sed addr 2d"   $'a\nb\nc\n'                -- sed 2d
+run_diff_in "sed multi -e"  $'a\nb\nc\n'                -- sed -e s/a/X/ -e s/c/Y/
+
 diff_summary "diff-coreutils"

@@ -8,6 +8,17 @@
 
 # (currently empty — test_diff_coreutils.sh's 33 cases all MATCH cfbox vs busybox)
 
+# ── Found by grep/sed expansion — cfbox sed gaps (fix in src/applets/sed.cpp,
+#    then delete these lines so the test re-watches them):
+#
+#   /pat/d — address + delete: the matched line is not removed (cfbox prints
+#            the input unchanged; busybox drops the matched line).
+DEFECT sed /pat/d
+#
+#   -e A -e B — only the first -e script is applied; later -e scripts are
+#               ignored (cfbox runs s/a/X/ but skips s/c/Y/).
+DEFECT sed multi -e
+
 # ── Pre-framework history (run_diff_smoke.sh vs system coreutils, kept as
 #    precedent for triaging future sort/wc divergences once busybox shows them):
 #
