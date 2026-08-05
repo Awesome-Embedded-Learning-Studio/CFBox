@@ -153,19 +153,20 @@ auto print_entry(const std::string& path, const LsOptions& opts, bool use_color)
     auto perm_str = format_permissions(perms);
     perm_str.insert(perm_str.begin(), type_char);
 
+    struct stat lst {};
+    bool have_stat = (::lstat(path.c_str(), &lst) == 0);
     auto nlinks = cfbox::fs::hard_link_count(path).value_or(1);
-    std::uintmax_t size = 0;
-    if (type == std::filesystem::file_type::regular) {
-        size = cfbox::fs::file_size(path).value_or(0);
-    }
+    // Report st_size for every type, not just regular files — directories
+    // have a meaningful byte size (busybox/GNU show it); cfbox formerly
+    // printed 0 for non-regular entries.
+    std::uintmax_t size = have_stat ? static_cast<std::uintmax_t>(lst.st_size) : 0;
     auto time_r = cfbox::fs::last_write_time(path);
     std::string time_str = time_r ? format_time(*time_r) : "";
     std::string size_str = opts.human ? format_size_human(size) : std::to_string(size);
 
     std::string owner = "?";
     std::string group = "?";
-    struct stat lst {};
-    if (::lstat(path.c_str(), &lst) == 0) {
+    if (have_stat) {
         owner = cfbox::fs::owner_name(lst.st_uid);
         group = cfbox::fs::group_name(lst.st_gid);
     }

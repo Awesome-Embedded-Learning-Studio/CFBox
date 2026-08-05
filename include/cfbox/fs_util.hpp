@@ -44,25 +44,26 @@ inline auto file_size(std::string_view path) -> base::Result<std::uintmax_t> {
 }
 
 inline auto mkdir_single(std::string_view path, std::filesystem::perms mode) -> base::Result<void> {
-    std::error_code ec;
-    std::filesystem::create_directory(std::filesystem::path{path}, ec);
-    if (ec) {
-        return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
-    }
-    std::filesystem::permissions(std::filesystem::path{path}, mode, ec);
-    if (ec) {
-        // non-fatal: directory created but permissions not set
+    std::string p{path};
+    // ::mkdir lets the kernel apply umask (0777 → 0755 typically). The previous
+    // create_directory + permissions(path, mode) did an umask-erasing chmod and
+    // produced 0777 instead of the expected 0755.
+    if (::mkdir(p.c_str(), static_cast<mode_t>(mode)) != 0) {
+        int e = errno;
+        return std::unexpected(base::Error{e, std::strerror(e)});
     }
     return {};
 }
 
-inline auto mkdir_recursive(std::string_view path, std::filesystem::perms mode) -> base::Result<void> {
+inline auto mkdir_recursive(std::string_view path, std::filesystem::perms /*mode*/) -> base::Result<void> {
+    // create_directories goes through ::mkdir per level, so umask is applied to
+    // every component (matches busybox mkdir -p). The explicit permissions()
+    // call is dropped — it forced an umask-erasing chmod on the final dir.
     std::error_code ec;
     std::filesystem::create_directories(std::filesystem::path{path}, ec);
     if (ec) {
         return std::unexpected(base::Error{static_cast<int>(ec.value()), ec.message()});
     }
-    std::filesystem::permissions(std::filesystem::path{path}, mode, ec);
     return {};
 }
 

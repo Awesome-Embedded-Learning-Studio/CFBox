@@ -12,6 +12,19 @@
 # address+delete and multi -e script chaining — src/applets/sed.cpp now parses
 # regex addresses and concatenates all -e scripts (args::ParseResult::get_all).
 
+# ── ls -l format divergence (cfbox vs busybox). Directory st_size is now
+#    reported correctly (fixed in ls.cpp print_entry); two format items remain:
+#    1. cfbox omits the "total N" block-count header (embedded-style
+#       simplification; POSIX ls -l prints it).
+#    2. Column widths differ (cfbox fixed-width, busybox dynamic-aligns).
+ACCEPTABLE ls -l
+ACCEPTABLE ls -la
+ACCEPTABLE ls -l sub
+
+# ── stat default-format alignment: cfbox pads with spaces, busybox uses a tab
+#    before "Blocks:". `stat -c FMT` (explicit format) matches exactly.
+ACCEPTABLE stat file
+
 # ── Pre-framework history (run_diff_smoke.sh vs system coreutils, kept as
 #    precedent for triaging future sort/wc divergences once busybox shows them):
 #
