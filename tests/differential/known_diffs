@@ -1,25 +1,37 @@
-# 对照冒烟测试 — 已登记差异清单。
-# STATUS：ACCEPTABLE = 可接受（格式风格 / POSIX 允许的行为差）
-#         DEFECT     = 待修缺陷（修好后把这一行删掉，对照测试会自动开始盯它）
-# 字段：STATUS applet case_id（case_id 见 run_diff_smoke.sh 里 compare() 的第二个参数）
+# Differential known differences — read by framework.sh.
+# Format: STATUS DESC...
+#   STATUS = ACCEPTABLE (intentional / format / POSIX-allowed diff)
+#          | DEFECT     (known bug — delete this line once fixed, test re-watches)
+#   DESC   = exact first arg of run_diff / run_diff_in (the case description)
+# Any unlisted divergence is reported as NEW_DIFF and makes run_all.sh exit 1.
+# Register here instead of weakening a test case.
 
-# ── 已修复（2026-06-28）：head/tail 在结尾无换行的文件上凭空补换行 → 现 MATCH，两条 DEFECT 已删 ──
+# (no active entries — test_diff_coreutils.sh cases all MATCH cfbox vs busybox)
+#
+# Previously fixed (lines removed so the test re-watches): cfbox sed /pat/d
+# address+delete and multi -e script chaining — src/applets/sed.cpp now parses
+# regex addresses and concatenates all -e scripts (args::ParseResult::get_all).
 
-# ── ACCEPTABLE：sort -rn 数值并列时 cfbox 保输入序（stable_sort），coreutils 用整行做 tiebreak ──
-#    原先是 DEFECT：比较器 `!less` 对相等数值键 (a,b) 与 (b,a) 都返 true，违反 strict-weak-ordering
-#    （std::stable_sort 的 UB）。UB 已修（反向改成交换操作数 b<a）。剩下的并列顺序差异是和
-#    sort -n 同类的、POSIX 允许的稳定性差异（无 -s 时并列顺序 unspecified），故改判 ACCEPTABLE。
-ACCEPTABLE sort rn_num
+# ── ls -l format divergence (cfbox vs busybox). Directory st_size is now
+#    reported correctly (fixed in ls.cpp print_entry); two format items remain:
+#    1. cfbox omits the "total N" block-count header (embedded-style
+#       simplification; POSIX ls -l prints it).
+#    2. Column widths differ (cfbox fixed-width, busybox dynamic-aligns).
+ACCEPTABLE ls -l
+ACCEPTABLE ls -la
+ACCEPTABLE ls -l sub
 
-# ── ACCEPTABLE：wc 输出列宽固定 8、空格右对齐；coreutils 用最小宽度。数字一致，纯格式差异 ──
-#    （等编译 BusyBox 后再核 BusyBox 的 wc 格式，决定是否对齐）
-ACCEPTABLE wc   small
-ACCEPTABLE wc   l_small
-ACCEPTABLE wc   w_small
-ACCEPTABLE wc   c_small
-ACCEPTABLE wc   m_small
-ACCEPTABLE wc   empty
-ACCEPTABLE wc   c_binary
+# ── stat default-format alignment: cfbox pads with spaces, busybox uses a tab
+#    before "Blocks:". `stat -c FMT` (explicit format) matches exactly.
+ACCEPTABLE stat file
 
-# ── ACCEPTABLE：sort -n 数值并列时 cfbox 保输入序，coreutils 用整行做 tiebreak（POSIX 允许）──
-ACCEPTABLE sort n_num
+# ── Pre-framework history (run_diff_smoke.sh vs system coreutils, kept as
+#    precedent for triaging future sort/wc divergences once busybox shows them):
+#
+#   sort -n / -rn on numeric tie: cfbox keeps input order (stable_sort),
+#       coreutils tiebreaks on the whole line. POSIX allows both (no -s ⇒
+#       unspecified tie order). Was a DEFECT (comparator violated strict-weak-
+#       ordering, since fixed); residual tie-order diff is ACCEPTABLE.
+#
+#   wc column width: cfbox pads to fixed width, coreutils uses minimal —
+#       numbers identical, pure format diff. ACCEPTABLE.

@@ -249,3 +249,25 @@ TEST(ArgsTest, OptSpecNoLongNameBackCompat) {
     EXPECT_TRUE(r.has('n'));
     EXPECT_EQ(r.positional()[0], "hello");
 }
+
+// ── get_all: repeatable value flag (e.g. sed -e A -e B) ──────
+
+TEST(ArgsTest, GetAllRepeatableValue) {
+    char a0[] = "prog", a1[] = "-e", a2[] = "A", a3[] = "-e", a4[] = "B";
+    char* argv[] = {a0, a1, a2, a3, a4};
+    auto r = parse(5, argv, {OptSpec{'e', true}});
+    ASSERT_TRUE(r.has('e'));
+    auto all = r.get_all('e');
+    ASSERT_EQ(all.size(), 2u);
+    EXPECT_EQ(all[0], "A");
+    EXPECT_EQ(all[1], "B");
+}
+
+TEST(ArgsTest, GetAllEmptyWhenAbsent) {
+    char a0[] = "prog", a1[] = "-n";
+    char* argv[] = {a0, a1};
+    auto r = parse(2, argv, {OptSpec{'n', false}, OptSpec{'e', true}});
+    auto all = r.get_all('e');
+    EXPECT_TRUE(all.empty());
+    EXPECT_FALSE(r.get('e').has_value());
+}

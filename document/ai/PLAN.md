@@ -3,7 +3,8 @@
 > Tier 3（批级，易变）。单一事实源（批级）。全树见 [ROADMAP.md](ROADMAP.md)，铁律见 [DIRECTIVES.md](DIRECTIVES.md)；结构标尺见 [STRUCTURE-TASTE.md](STRUCTURE-TASTE.md)，性能标尺见 [PERFORMANCE.md](PERFORMANCE.md)。
 > **v0.3.0 已发布**：L2 rootfs 启动骨架（init/mount/mdev/umount/swapoff/reboot/poweroff，117→123 applet）+ tail -f —— cfbox 在 i.MX6ULL 上作为 PID 1 替代 BusyBox。
 > ✅ **Phase 2 全部完成**（cp/test/ls/grep/find + sh 全收 8 项）+ ✅ **结构与性能标尺横切批**（PR#17/#18）—— STRUCTURE-TASTE + banned-pattern/layering gate、PERFORMANCE + io/tar/cmp/md5sum/sed 流式化 + google-benchmark 脚手架。当前基线 **436 GTest / 439 KB size-opt / 123 applet**。
-> ✅ **Phase 3 网络最小闭环完成**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅、批4（`netstat` 只读 + `split_fields` 抽取）✅、批5（`ifconfig` 写操作 SIOCSIF*）✅、批6（`icmp.hpp` + `ping`）✅、批7（`traceroute` UDP 探测 + ICMP 收包）✅ —— 最终基线 **479 GTest / 479 KB / 130 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
+> ✅ **Phase 3 网络最小闭环完成**：批1（`socket.hpp` + `nc`）✅、批2（`net_util.hpp` + `ifconfig` 显示）✅、批3（`ip`/`route`/`hostname` 深化）✅、批4（`netstat` 只读 + `split_fields` 抽取）✅、批5（`ifconfig` 写操作 SIOCSIF*）✅、批6（`icmp.hpp` + `ping`）✅、批7（`traceroute` UDP 探测 + ICMP 收包）✅ —— 基线 **479 GTest / 479 KB / 130 applet**。详见 [phase-2-network.md](../todo/phases/phase-2-network.md)。
+> 🔄 **Phase 4（生产质量门禁）推进**：批1（POSIX 符合度标尺 + CI only-up gate，baseline 71/97 → 82/97）✅、批2（`dd` + `sh` 10 POSIX builtins + 差分 harness，修 wc/cut）✅、批3（差异测试扩面：framework known_diffs 四级 + `run_diff_fs` 文件系统 + grep/sed/fileops 84 case + 修 sed/ls/mkdir 4 bug + 8 防回归 GTest）✅ —— **当前基线 493 GTest / 496 KB size-opt / 131 applet / POSIX 84% / 差分 84 case（80 MATCH + 4 ACCEPTABLE）**。剩余轨道见下 Phase 4 表。详见 [phase-3-quality.md](../todo/phases/phase-3-quality.md)。
 > 状态：✅ DONE / 🔄 NEXT / ⏳ PENDING / ⛔ BLOCKED。每批≈一 commit，完成门 `cmake --build build -j$(nproc) && ctest --test-dir build --output-on-failure` 全绿 + `bash tests/integration/run_all.sh`。
 
 ## ✅ Phase 1.5（代码质量审查）已完成 — 2026-05-26
@@ -71,6 +72,19 @@
 | 批7（Wave 2） | `traceroute` applet（UDP 探测 `setsockopt(IP_TTL)` 递增 + 每探 bump 目标端口避 conntrack + 复用 `icmp::open_raw`/`recv_icmp`(match_id=0) 收包 + `icmp::classify_reply` 判 time-exceeded/port-unreach）+ `net_util` 抽 `resolve_ipv4`/`name_of`（ping/traceroute 共享，ping.cpp 重构去重） | ✅ | (本批) | 479/3 |
 
 > **Phase 3 收口**：11 applet 全到位（socket/nc/ifconfig/ip/route/hostname/netstat + ifconfig 写 + ping/traceroute），3 基础设施（socket.hpp/net_util.hpp/icmp.hpp）。下一焦点待定（候选：route add/del、hostname NAME、netstat -r/-i、IPv6、或转 Phase 4 用户/文件权限）。批级记录见 [notes/2026-07-06-phase3-socket-nc.md](../notes/2026-07-06-phase3-socket-nc.md) / [notes/2026-07-06-phase3-ifconfig.md](../notes/2026-07-06-phase3-ifconfig.md) / [notes/2026-07-06-phase3-ip-route-hostname.md](../notes/2026-07-06-phase3-ip-route-hostname.md) / [notes/2026-07-06-phase3-netstat.md](../notes/2026-07-06-phase3-netstat.md) / [notes/2026-07-06-phase3-ifconfig-write.md](../notes/2026-07-06-phase3-ifconfig-write.md) / [notes/2026-07-06-phase3-icmp-ping.md](../notes/2026-07-06-phase3-icmp-ping.md) / [notes/2026-07-06-phase3-traceroute.md](../notes/2026-07-06-phase3-traceroute.md)。
+
+## 🔄 Phase 4（生产质量门禁）— 进行中
+
+> 目标：从「核心场景功能完整」推进到「可发布、可回归、可审计」—— 差异测试 / fuzzing / benchmark / 静态分析 / 替换测试 / 覆盖率 / 发布工程（Part 1-7 详见 [phase-3-quality.md](../todo/phases/phase-3-quality.md)）。每批≈一 commit + 完成门。批级记录见 [notes/2026-07-06-posix-coverage.md](../notes/2026-07-06-posix-coverage.md)（批1）。
+
+| 批 | 范围 | 状态 | Commit | 测试 |
+|----|------|------|--------|------|
+| 批1（PR#21 `feat/posix-coverage`） | `tests/posix/coverage.sh` 双维度标尺（utility 静态 vs POSIX.1-2017 XCU 77 个 / builtin 动态行为探针 vs POSIX 20 个）+ `tests/posix/baseline` 只升不降 floor + CI gate（native 阶段，structure gates 后）；baseline 锁 71/97（utility 61 / builtin 10） | ✅ | 58f2f6a（merge 7105bae） | 479/0（POSIX gate 独立于 GTest） |
+| 批2（PR#22 `feat/phase4-sweep`） | **a** `dd` applet（bs/ibs/obs/count/skip/seek/conv/status）+ armhf `-Wconversion` 修（ibs/obs 用 size_t）｜**b** `sh` 10 POSIX mandatory builtins（type/command/exec/getopts/hash/umask/ulimit/wait/times/unalias，builtin 50%→100%）｜**c** `tests/differential/` 差分 harness（cfbox vs busybox）+ 修 wc/cut 行为差；baseline 升 82/97（utility 62 / builtin 20） | ✅ | 7cd45d4 / 277a093 / e5d4fcf / 31a916a（merge 246b80e） | 489/0（+10：dd + sh builtins 测试） |
+| 批3（`feat/differential-expand`） | **a** framework.sh known_diffs 四级（MATCH/ACCEPTABLE/DEFECT/NEW_DIFF）+ 删孤儿 `run_diff_smoke.sh` ｜**b** `run_diff_fs`（双 fixture dir + stdout/exit/sorted-tree 比对 type/mode/size，支持写操作）｜**c** 扩 grep/sed/fileops 84 case（49 文本 + 35 文件系统）+ triage 4 ACCEPTABLE（ls -l ×3 / stat 默认格式）｜**d** 修 4 bug：sed `/pat/d` regex 地址、sed 多 `-e`、ls 目录 size=0、mkdir umask（+ `args::ParseResult::get_all`）+ 8 防回归 GTest | ✅ | ac7f08a / c8b9433 / be41019 / df0d123 | 493/0（+8 GTest；差分 84 独立 run_all） |
+
+> **POSIX 覆盖现状**：82/97（84%）—— utility 62/77（80%，缺 15：csplit/file/getconf/locale/logger/pathchk/pr/strings/strip/stty/tput/unexpand/uudecode/uuencode/what）｜builtin 20/20（100%）。
+> **Phase 4 剩余轨道**：①Part 1.2 P0 差异测试续扩（已 84 case：文本 49 + 文件系统 35，覆盖 echo/cat/wc/head/tail/sort/uniq/grep/sed/ls/find/test/cp/mv/rm/mkdir/ln/touch/chmod/stat；续扩 tar/gzip 需 framework 多步/归档 fixture）②Part 2 fuzzing（libFuzzer + 11 target：tar/cpio/ar/unzip/sh_parser/awk_parser/sed_parser/find_expr/patch…）③Part 4 静态分析（clang-tidy 低噪声规则 / cppcheck）④Part 5 替换测试（Alpine minirootfs / container profile；initramfs PID1 已在 v0.3.0）⑤Part 6 行覆盖率（gcov/lcov + 缺口填补；POSIX coverage 是行为覆盖，非行覆盖）⑥Part 7 发布工程（`scripts/release/build_release.sh` + git-cliff changelog + v0.4.0 RC）⑦utility 长尾（15 个 POSIX missing，stty/strings/file/logger 高频先排）。
 
 ## OPEN GOTCHAS（跨批陷阱，改前必看）
 
