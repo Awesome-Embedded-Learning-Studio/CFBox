@@ -44,6 +44,14 @@ public:
         return std::nullopt;
     }
 
+    // All values for a repeatable option (e.g. `sed -e A -e B`); empty if none.
+    [[nodiscard]] auto get_all(char flag) const -> std::vector<std::string_view> {
+        std::vector<std::string_view> out;
+        for (const auto& [c, v] : values_)
+            if (c == flag) out.push_back(v);
+        return out;
+    }
+
     [[nodiscard]] auto positional() const -> const std::vector<std::string_view>& {
         return positional_;
     }

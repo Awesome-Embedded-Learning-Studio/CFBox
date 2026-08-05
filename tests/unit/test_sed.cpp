@@ -112,4 +112,24 @@ TEST(SedTest, MissingScript) {
     EXPECT_NE(rc, 0);
 }
 
+TEST(SedTest, RegexAddressDelete) {
+    TempDir tmp;
+    auto f = tmp.write_file("data.txt", "keep\ndrop\nkeep2\n");
+    char a0[] = "sed", a1[] = "/drop/d", a2[256];
+    std::snprintf(a2, sizeof(a2), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2};
+    auto out = capture_stdout([&]{ return sed_main(3, argv); });
+    EXPECT_EQ(out, "keep\nkeep2\n");
+}
+
+TEST(SedTest, MultipleDashEScripts) {
+    TempDir tmp;
+    auto f = tmp.write_file("data.txt", "a\nb\nc\n");
+    char a0[] = "sed", a1[] = "-e", a2[] = "s/a/X/", a3[] = "-e", a4[] = "s/c/Y/", a5[256];
+    std::snprintf(a5, sizeof(a5), "%s", f.c_str());
+    char* argv[] = {a0, a1, a2, a3, a4, a5};
+    auto out = capture_stdout([&]{ return sed_main(6, argv); });
+    EXPECT_EQ(out, "X\nb\nY\n");
+}
+
 #endif // CFBOX_ENABLE_SED

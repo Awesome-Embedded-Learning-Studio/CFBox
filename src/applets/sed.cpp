@@ -30,10 +30,11 @@ constexpr cfbox::help::HelpEntry HELP = {
 };
 
 struct Address {
-    enum Type { None, Line, Last, Range };
+    enum Type { None, Line, Last, Range, Regex };
     Type type = None;
     std::size_t line1 = 0;
     std::size_t line2 = 0; // only used for Range
+    std::unique_ptr<cfbox::util::scoped_regex> compiled_re;  // Regex address: /pattern/
 };
 
 struct SedCommand {
@@ -50,6 +51,33 @@ struct SedCommand {
 auto parse_address(std::string_view& s) -> Address {
     Address addr;
     if (s.empty()) return addr;
+
+    // /pattern/ — regex address: matches any line whose content matches.
+    if (s[0] == '/') {
+        s.remove_prefix(1);
+        std::string pat;
+        bool closed = false;
+        for (std::size_t i = 0; i < s.size(); ++i) {
+            if (s[i] == '/') {
+                s.remove_prefix(i + 1);
+                closed = true;
+                break;
+            }
+            if (s[i] == '\\' && i + 1 < s.size()) {
+                pat += s[i + 1];
+                ++i;
+            } else {
+                pat += s[i];
+            }
+        }
+        if (!closed) s.remove_prefix(s.size());
+        addr.type = Address::Regex;
+        addr.compiled_re = std::make_unique<cfbox::util::scoped_regex>();
+        if (addr.compiled_re->compile(pat.c_str(), REG_EXTENDED) != 0) {
+            addr.compiled_re.reset();
+        }
+        return addr;
+    }
 
     if (s[0] == '$') {
         s.remove_prefix(1);
@@ -228,12 +256,18 @@ auto parse_script(const std::string& script) -> std::vector<SedCommand> {
     return commands;
 }
 
-auto address_matches(const Address& addr, std::size_t line, std::size_t total_lines) -> bool {
+auto address_matches(const Address& addr, std::size_t line, std::size_t total_lines,
+                     const std::string& content) -> bool {
     switch (addr.type) {
         case Address::None:  return true;
         case Address::Line:  return line == addr.line1;
         case Address::Last:  return line == total_lines;
         case Address::Range: return line >= addr.line1 && line <= addr.line2;
+        case Address::Regex: {
+            if (!addr.compiled_re) return false;
+            regmatch_t m;
+            return addr.compiled_re->exec(content.c_str(), 1, &m, 0) == 0;
+        }
     }
     return false;
 }
@@ -283,7 +317,7 @@ auto process_lines(const std::vector<std::string>& lines,
         bool extra_print = false;
 
         for (const auto& cmd : commands) {
-            if (!address_matches(cmd.addr, li + 1, total)) continue;
+            if (!address_matches(cmd.addr, li + 1, total, line)) continue;
 
             switch (cmd.action) {
                 case SedCommand::Substitute: {
@@ -332,7 +366,12 @@ auto sed_main(int argc, char* argv[]) -> int {
     std::vector<std::string_view> files;
 
     if (parsed.has('e')) {
-        script = std::string{parsed.get('e').value_or("")};
+        // POSIX: multiple -e scripts concatenate (newline-separated) into one
+        // command stream — `sed -e A -e B` ≡ `sed $'A\nB'`.
+        for (std::string_view sv : parsed.get_all('e')) {
+            if (!script.empty()) script += '\n';
+            script += std::string{sv};
+        }
         for (const auto& p : parsed.positional()) {
             files.push_back(p);
         }
