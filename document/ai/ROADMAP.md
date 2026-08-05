@@ -22,8 +22,8 @@
 - 兼容性裁决见 [compatibility-policy.md](../todo/compatibility-policy.md)；v1.0 验收边界见 [v1-production-criteria.md](../todo/v1-production-criteria.md)。
 
 ## 当前焦点
-**Phase 4 生产质量门禁 🔄 起步**（2026-07，PR#21/#22 已合）：批1 POSIX 符合度覆盖率标尺 `tests/posix/coverage.sh` + CI only-up gate（baseline 71/97 → 82/97）✅；批2 `dd` applet + `sh` 10 POSIX builtins + 差分测试 harness（cfbox vs busybox，修 wc/cut）✅。当前基线 **489 GTest / 495 KB size-opt / 131 applet / POSIX 84%**。之前：Phase 3 网络闭环（11 applet）+ 结构/性能标尺横切（PR#17/#18）。批级记录见 [PLAN.md](PLAN.md) 与 [notes/](../notes/)。
-> **下一站**：Phase 4 剩余轨道——Part 1.2 差异测试扩面、Part 2 fuzzing、Part 4 静态分析、Part 5 Alpine 替换测试、Part 7 发布工程（v0.4.0 RC）；或 Phase 3 增量（route add/del、hostname NAME、netstat -r/-i、IPv6）。
+**Phase 4 生产质量门禁 🔄 推进**（2026-07，PR#21/#22 已合 + `feat/differential-expand` 5 commits 待 push）：批1 POSIX 符合度标尺 + CI gate（baseline 71/97 → 82/97）✅；批2 `dd` + `sh` 10 POSIX builtins + 差分 harness（修 wc/cut）✅；批3 差异测试扩面（framework known_diffs 四级 + `run_diff_fs` 文件系统 + grep/sed/fileops 84 case + 修 sed/ls/mkdir 4 bug + 8 防回归 GTest）✅。当前基线 **493 GTest / 496 KB size-opt / 131 applet / POSIX 84% / 差分 84 case**。之前：Phase 3 网络闭环（11 applet）+ 结构/性能标尺横切（PR#17/#18）。批级记录见 [PLAN.md](PLAN.md) 与 [notes/](../notes/)。
+> **下一站**：Phase 4 剩余轨道——Part 1.2 差异测试续扩（tar/gzip 需 framework 多步）、Part 2 fuzzing、Part 4 静态分析、Part 5 Alpine 替换测试、Part 7 发布工程（v0.4.0 RC）；或 Phase 3 增量（route add/del、hostname NAME、netstat -r/-i、IPv6）。
 
 ## 当前焦点之后下一个可启动的
 **Phase 4 剩余轨道**（fuzzing/静态分析/Alpine 替换测试/release 工程）或 utility 长尾（15 个 POSIX missing，stty/strings/file/logger 先）；或回头补 Phase 3 增量（route add/del、hostname NAME、netstat -r/-i、IPv6）。更远：Phase 5 多用户 → Phase 6 长尾。
